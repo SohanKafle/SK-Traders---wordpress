@@ -80,7 +80,6 @@ class Cartflows_Frontend {
 			if ( $checkout_id ) {
 
 				$thankyou_step_id = wcf()->flow->get_thankyou_page_id( $order );
-
 				$thankyou_step_id = apply_filters( 'cartflows_checkout_next_step_id', $thankyou_step_id, $order, $checkout_id );
 
 				if ( $thankyou_step_id ) {
@@ -152,9 +151,7 @@ class Cartflows_Frontend {
 			return;
 		}
 
-		$page_template = get_post_meta( _get_wcf_step_id(), '_wp_page_template', true );
-
-		$page_template = apply_filters( 'cartflows_page_template', $page_template );
+		$page_template = Cartflows_Helper::get_current_page_template();
 
 		if ( ! _wcf_supported_template( $page_template ) ) {
 			return;
@@ -174,7 +171,7 @@ class Cartflows_Frontend {
 			// loop over all of the registered scripts..
 			foreach ( $wp_styles->registered as $handle => $data ) {
 
-				if ( strpos( $data->src, $get_template ) !== false || strpos( $data->src, $get_stylesheet ) !== false ) {
+				if ( ! empty( $data->src ) && ( strpos( $data->src, $get_template ) !== false || strpos( $data->src, $get_stylesheet ) !== false ) ) {
 
 					// remove it.
 					wp_deregister_style( $handle );
@@ -190,7 +187,7 @@ class Cartflows_Frontend {
 			// loop over all of the registered scripts.
 			foreach ( $wp_scripts->registered as $handle => $data ) {
 
-				if ( strpos( $data->src, $get_template ) !== false || strpos( $data->src, $get_stylesheet ) !== false ) {
+				if ( ! empty( $data->src ) && ( strpos( $data->src, $get_template ) !== false || strpos( $data->src, $get_stylesheet ) !== false ) ) {
 
 					// remove it.
 					wp_deregister_script( $handle );
@@ -198,7 +195,6 @@ class Cartflows_Frontend {
 				}
 			}
 		}
-
 	}
 
 	/**
@@ -316,7 +312,7 @@ class Cartflows_Frontend {
 			if ( isset( $_COOKIE[ CARTFLOWS_ACTIVE_CHECKOUT ] ) ) {
 				delete_transient( 'wcf_user_' . $user_key . '_checkout_' . sanitize_text_field( wp_unslash( $_COOKIE[ CARTFLOWS_ACTIVE_CHECKOUT ] ) ) ); //phpcs:ignore WordPressVIPMinimum.Variables.RestrictedVariables.cache_constraints___COOKIE
 				unset( $_COOKIE[ CARTFLOWS_ACTIVE_CHECKOUT ] ); //phpcs:ignore WordPressVIPMinimum.Variables.RestrictedVariables.cache_constraints___COOKIE
-				setcookie( CARTFLOWS_ACTIVE_CHECKOUT, '', time() - 3600 ); //phpcs:ignore WordPressVIPMinimum.Functions.RestrictedFunctions.cookies_setcookie
+				setcookie( CARTFLOWS_ACTIVE_CHECKOUT, '', time() - 3600, '/', COOKIE_DOMAIN, CARTFLOWS_HTTPS, true ); //phpcs:ignore WordPressVIPMinimum.Functions.RestrictedFunctions.cookies_setcookie 
 			}
 		}
 	}
@@ -335,7 +331,9 @@ class Cartflows_Frontend {
 		$flow_id       = wcf()->utils->get_flow_id_from_step_id( $post->ID );
 		$flow_indexing = get_post_meta( $flow_id, 'wcf-flow-indexing', true );
 
-		if ( ( '' === $flow_indexing && 'enable' === $common['disallow_indexing'] ) || 'disallow' === $flow_indexing ) {
+		$allow_indexing = ( ( '' === $flow_indexing && 'enable' === $common['disallow_indexing'] ) || 'disallow' === $flow_indexing );
+
+		if ( apply_filters( 'cartflows_step_add_noindex_meta', $allow_indexing, $flow_id ) ) {
 			echo '<meta name="robots" content="noindex,nofollow">';
 		}
 	}
@@ -429,6 +427,10 @@ class Cartflows_Frontend {
 
 		$fb_tracking_settings = Cartflows_Helper::get_facebook_settings();
 		$ga_tracking_settings = Cartflows_Helper::get_google_analytics_settings();
+		$tik_pixel_settings   = Cartflows_Helper::get_tiktok_settings();
+		$pinterest_settings   = Cartflows_Helper::get_pinterest_settings();
+		$gads_settings        = Cartflows_Helper::get_google_ads_settings();
+		$snapchat_settings    = Cartflows_Helper::get_snapchat_settings();
 
 		$localize = array(
 			'ajax_url'               => admin_url( 'admin-ajax.php', 'relative' ),
@@ -439,9 +441,14 @@ class Cartflows_Frontend {
 			'control_step'           => $control_step,
 			'next_step'              => $next_step_link,
 			'page_template'          => $page_template,
+			'default_page_builder'   => \Cartflows_Helper::get_common_setting( 'default_page_builder' ),
 			'is_checkout_page'       => $is_checkout,
 			'fb_setting'             => $fb_tracking_settings,
 			'ga_setting'             => $ga_tracking_settings,
+			'tik_setting'            => $tik_pixel_settings,
+			'pin_settings'           => $pinterest_settings,
+			'gads_setting'           => $gads_settings,
+			'snap_settings'          => $snapchat_settings,
 			'active_checkout_cookie' => CARTFLOWS_ACTIVE_CHECKOUT,
 			'is_optin'               => $is_optin,
 		);
@@ -465,8 +472,10 @@ class Cartflows_Frontend {
 		echo $localize_script; //phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 
 		if ( _wcf_supported_template( $page_template ) ) {
-
-			wp_enqueue_style( 'wcf-normalize-frontend-global', wcf()->utils->get_css_url( 'cartflows-normalize' ), array(), CARTFLOWS_VER );
+			$page_builder = Cartflows_Helper::get_common_setting( 'default_page_builder' );
+			if ( ! ( 'bricks-builder' === $page_builder && function_exists( 'bricks_is_builder' ) && bricks_is_builder() ) ) {
+				wp_enqueue_style( 'wcf-normalize-frontend-global', wcf()->utils->get_css_url( 'cartflows-normalize' ), array(), CARTFLOWS_VER );
+			}
 		}
 
 		if ( ! wcf()->is_woo_active ) {
@@ -512,7 +521,7 @@ class Cartflows_Frontend {
 		}
 
 		if ( '' !== $script ) {
-			if ( false === strpos( $script, htmlentities( '<script' ) ) ) {
+			if ( false === strpos( $script, htmlentities( '<script' ) ) && false === strpos( $script, htmlentities( '<style' ) ) ) {
 				$script = '<script>' . $script . '</script>';
 			}
 			echo '<!-- Custom CartFlows Script -->';
@@ -573,7 +582,6 @@ class Cartflows_Frontend {
 		$classes[] = 'cartflows-' . CARTFLOWS_VER;
 
 		return $classes;
-
 	}
 
 	/**
@@ -621,7 +629,6 @@ class Cartflows_Frontend {
 		}
 
 		return $script;
-
 	}
 
 	/**

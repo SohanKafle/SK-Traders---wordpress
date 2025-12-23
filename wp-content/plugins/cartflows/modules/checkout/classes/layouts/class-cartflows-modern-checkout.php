@@ -41,7 +41,6 @@ class Cartflows_Modern_Checkout {
 		add_action( 'cartflows_checkout_form_before', array( $this, 'modern_checkout_layout_actions' ), 10, 1 );
 
 		add_filter( 'woocommerce_checkout_fields', array( $this, 'unset_fields_for_modern_checkout' ), 10, 1 );
-
 	}
 
 	/**
@@ -67,7 +66,14 @@ class Cartflows_Modern_Checkout {
 			add_action( 'woocommerce_checkout_after_customer_details', array( $this, 'customer_info_parent_wrapper_close' ), 99, 1 );
 
 			/* Add the collapsable order review section at the top of Checkout form */
-			add_action( 'woocommerce_before_checkout_form', array( $this, 'add_custom_collapsed_order_review_table' ), 8 );
+			$order_summary_position        = wcf()->options->get_checkout_meta_value( $checkout_id, 'wcf-order-review-summary-position' );
+			$order_summery_position_action = 'woocommerce_before_checkout_form';
+
+			if ( 'bottom' === $order_summary_position ) {
+				$order_summery_position_action = 'woocommerce_checkout_after_customer_details';
+			}
+
+			add_action( $order_summery_position_action, array( $this, 'add_custom_collapsed_order_review_table' ), 8 );
 
 			// Re-arrange the position of payment section only for two column layout of modern checkout & not for one column.
 			if ( 'modern-checkout' === $checkout_layout ) {
@@ -149,7 +155,7 @@ class Cartflows_Modern_Checkout {
 			<div class="wcf-customer-info" id="customer_info">
 				<div class="wcf-customer-info__notice"></div>
 				<div class="woocommerce-billing-fields-custom">
-					<h3><?php echo esc_html( apply_filters( 'cartflows_woo_customer_info_text', __( 'Customer information', 'cartflows' ) ) ); ?>
+					<h3 id="customer_information_heading"><?php echo esc_html( apply_filters( 'cartflows_woo_customer_info_text', __( 'Customer information', 'cartflows' ) ) ); ?>
 						<?php if ( ! is_user_logged_in() && $is_allow_login ) { ?>
 							<div class="woocommerce-billing-fields__customer-login-label"><?php /* translators: %1$s: Link HTML start, %2$s Link HTML End */ echo wp_kses_post( sprintf( __( 'Already have an account? %1$1s Log in%2$2s', 'cartflows' ), '<a href="#!" class="wcf-customer-login-url">', '</a>' ) ); ?></div>
 						<?php } ?>
@@ -165,7 +171,7 @@ class Cartflows_Modern_Checkout {
 									'class'        => array( 'form-row-fill' ),
 									'required'     => true,
 									'label'        => __( 'Email Address', 'cartflows' ),
-									'default'      => $default,
+									'default'      => ! empty( $default ) ? $default : $current_user_email, // Default is false. Show the email ID received via URL parameter OR if show the current user email if he is logged in.
 									/* translators: %s: asterisk mark */
 									'placeholder'  => sprintf( __( 'Email Address %s', 'cartflows' ), $required_mark ),
 									'autocomplete' => 'email username',
@@ -248,7 +254,7 @@ class Cartflows_Modern_Checkout {
 								</div>
 						<?php } ?>
 					<?php } else { ?>
-								<div class="wcf-logged-in-customer-info"> <?php /* translators: %1$s: username, %2$s emailid */ echo esc_html( apply_filters( 'cartflows_logged_in_customer_info_text', sprintf( __( ' Welcome Back %1$s ( %2$s )', 'cartflows' ), $current_user_name, $current_user_email ) ) ); ?>
+								<div class="wcf-logged-in-customer-info"> <?php /* translators: %1$s: username, %2$s emailid */ echo esc_html( apply_filters( 'cartflows_logged_in_customer_info_text', sprintf( __( ' Welcome Back %1$s (%2$s)', 'cartflows' ), $current_user_name, $current_user_email ) ) ); ?>
 									<div><input type="hidden" class="wcf-email-address" id="billing_email" name="billing_email" value="<?php echo esc_attr( $current_user_email ); ?>"/></div>
 								</div>
 					<?php } ?>
@@ -293,6 +299,12 @@ class Cartflows_Modern_Checkout {
 	 * @return void
 	 */
 	public function add_custom_collapsed_order_review_table() {
+
+		$checkout_id = _get_wcf_checkout_id();
+
+		if ( ! $checkout_id ) {
+			$checkout_id = isset( $_GET['wcf_checkout_id'] ) && ! empty( $_GET['wcf_checkout_id'] ) ? intval( wp_unslash( $_GET['wcf_checkout_id'] ) ) : 0; //phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		}
 
 		include CARTFLOWS_CHECKOUT_DIR . 'templates/checkout/collapsed-order-summary.php';
 	}

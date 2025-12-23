@@ -254,6 +254,11 @@ if ( ! class_exists( 'Astra_Sites_Importer_Log' ) ) :
 				$log_file = self::$log_file;
 			}
 
+			if ( apply_filters( 'astra_sites_debug_logs', false ) ) {
+				error_log( $content ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- This is for the debug logs while importing. This is conditional and will not be logged in the debug.log file for normal users.
+			}
+
+
 			$existing_data = '';
 			if ( file_exists( $log_file ) ) {
 				$existing_data = Astra_Sites::get_instance()->get_filesystem()->get_contents( $log_file );
@@ -262,7 +267,10 @@ if ( ! class_exists( 'Astra_Sites_Importer_Log' ) ) :
 			// Style separator.
 			$separator = PHP_EOL;
 
-			Astra_Sites::get_instance()->get_filesystem()->put_contents( $log_file, $existing_data . $separator . $content, FS_CHMOD_FILE );
+			if ( null !== $log_file ) {
+				Astra_Sites::get_instance()->get_filesystem()->put_contents( $log_file, $existing_data . $separator . $content, FS_CHMOD_FILE );
+			}
+
 		}
 
 		/**

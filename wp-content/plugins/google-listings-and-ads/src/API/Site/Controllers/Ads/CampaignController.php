@@ -106,7 +106,7 @@ class CampaignController extends BaseController implements GoogleHelperAwareInte
 						$data = $this->prepare_item_for_response( $campaign, $request );
 						return $this->prepare_response_for_collection( $data );
 					},
-					$this->ads_campaign->get_campaigns( $exclude_removed )
+					$this->ads_campaign->get_campaigns( $exclude_removed, true, $request->get_params() )
 				);
 			} catch ( Exception $e ) {
 				return $this->response_from_exception( $e );
@@ -135,6 +135,32 @@ class CampaignController extends BaseController implements GoogleHelperAwareInte
 				}
 
 				$campaign = $this->ads_campaign->create_campaign( $fields );
+
+				/**
+				 * When a campaign has been successfully created.
+				 *
+				 * @event gla_created_campaign
+				 * @property int    id                 Campaign ID.
+				 * @property string status             Campaign status, `enabled` or `paused`.
+				 * @property string name               Campaign name, generated based on date.
+				 * @property float  amount             Campaign budget.
+				 * @property string country            Base target country code.
+				 * @property string targeted_locations Additional target country codes.
+				 * @property string source             The source of the campaign creation.
+				 */
+				do_action(
+					'woocommerce_gla_track_event',
+					'created_campaign',
+					[
+						'id'                 => $campaign['id'],
+						'status'             => $campaign['status'],
+						'name'               => $campaign['name'],
+						'amount'             => $campaign['amount'],
+						'country'            => $campaign['country'],
+						'targeted_locations' => join( ',', $campaign['targeted_locations'] ),
+						'source'             => $fields['label'] ?? '',
+					]
+				);
 
 				return $this->prepare_item_for_response( $campaign, $request );
 			} catch ( Exception $e ) {
@@ -192,6 +218,26 @@ class CampaignController extends BaseController implements GoogleHelperAwareInte
 
 				$campaign_id = $this->ads_campaign->edit_campaign( absint( $request['id'] ), $fields );
 
+				/**
+				 * When a campaign has been successfully edited.
+				 *
+				 * @event gla_edited_campaign
+				 * @property int    id     Campaign ID.
+				 * @property string status Campaign status, `enabled` or `paused`.
+				 * @property string name   Campaign name, generated based on date.
+				 * @property float  amount Campaign budget.
+				 */
+				do_action(
+					'woocommerce_gla_track_event',
+					'edited_campaign',
+					array_merge(
+						[
+							'id' => $campaign_id,
+						],
+						$fields,
+					)
+				);
+
 				return [
 					'status'  => 'success',
 					'message' => __( 'Successfully edited campaign.', 'google-listings-and-ads' ),
@@ -212,6 +258,20 @@ class CampaignController extends BaseController implements GoogleHelperAwareInte
 		return function ( Request $request ) {
 			try {
 				$deleted_id = $this->ads_campaign->delete_campaign( absint( $request['id'] ) );
+
+				/**
+				 * When a campaign has been successfully deleted.
+				 *
+				 * @event gla_deleted_campaign
+				 * @property int id Campaign ID.
+				 */
+				do_action(
+					'woocommerce_gla_track_event',
+					'deleted_campaign',
+					[
+						'id' => $deleted_id,
+					]
+				);
 
 				return [
 					'status'  => 'success',
@@ -234,6 +294,7 @@ class CampaignController extends BaseController implements GoogleHelperAwareInte
 			'name',
 			'status',
 			'amount',
+			'eu_political_advertising_confirmation',
 		];
 
 		$fields = array_intersect_key( $this->get_schema_properties(), array_flip( $allowed ) );
@@ -262,6 +323,14 @@ class CampaignController extends BaseController implements GoogleHelperAwareInte
 				'default'           => true,
 				'validate_callback' => 'rest_validate_request_arg',
 			],
+			'per_page'        => [
+				'description'       => __( 'Maximum number of rows to be returned in result data.', 'google-listings-and-ads' ),
+				'type'              => 'integer',
+				'minimum'           => 1,
+				'maximum'           => 10000,
+				'sanitize_callback' => 'absint',
+				'validate_callback' => 'rest_validate_request_arg',
+			],
 		];
 	}
 
@@ -272,41 +341,41 @@ class CampaignController extends BaseController implements GoogleHelperAwareInte
 	 */
 	protected function get_schema_properties(): array {
 		return [
-			'id'                 => [
+			'id'                                    => [
 				'type'        => 'integer',
 				'description' => __( 'ID number.', 'google-listings-and-ads' ),
 				'context'     => [ 'view' ],
 				'readonly'    => true,
 			],
-			'name'               => [
+			'name'                                  => [
 				'type'              => 'string',
 				'description'       => __( 'Descriptive campaign name.', 'google-listings-and-ads' ),
 				'context'           => [ 'view', 'edit' ],
 				'validate_callback' => 'rest_validate_request_arg',
 				'required'          => false,
 			],
-			'status'             => [
+			'status'                                => [
 				'type'              => 'string',
 				'enum'              => CampaignStatus::labels(),
 				'description'       => __( 'Campaign status.', 'google-listings-and-ads' ),
 				'context'           => [ 'view', 'edit' ],
 				'validate_callback' => 'rest_validate_request_arg',
 			],
-			'type'               => [
+			'type'                                  => [
 				'type'              => 'string',
 				'enum'              => CampaignType::labels(),
 				'description'       => __( 'Campaign type.', 'google-listings-and-ads' ),
 				'context'           => [ 'view', 'edit' ],
 				'validate_callback' => 'rest_validate_request_arg',
 			],
-			'amount'             => [
+			'amount'                                => [
 				'type'              => 'number',
 				'description'       => __( 'Daily budget amount in the local currency.', 'google-listings-and-ads' ),
 				'context'           => [ 'view', 'edit' ],
 				'validate_callback' => 'rest_validate_request_arg',
 				'required'          => true,
 			],
-			'country'            => [
+			'country'                               => [
 				'type'              => 'string',
 				'description'       => __( 'Country code of sale country in ISO 3166-1 alpha-2 format.', 'google-listings-and-ads' ),
 				'context'           => [ 'view', 'edit' ],
@@ -314,7 +383,7 @@ class CampaignController extends BaseController implements GoogleHelperAwareInte
 				'validate_callback' => $this->get_supported_country_code_validate_callback(),
 				'readonly'          => true,
 			],
-			'targeted_locations' => [
+			'targeted_locations'                    => [
 				'type'              => 'array',
 				'description'       => __( 'The locations that an Ads campaign is targeting in ISO 3166-1 alpha-2 format.', 'google-listings-and-ads' ),
 				'context'           => [ 'view', 'edit' ],
@@ -325,6 +394,22 @@ class CampaignController extends BaseController implements GoogleHelperAwareInte
 				'items'             => [
 					'type' => 'string',
 				],
+			],
+			'label'                                 => [
+				'type'              => 'string',
+				'description'       => __( 'The name of the label to assign to the campaign.', 'google-listings-and-ads' ),
+				'context'           => [ 'edit' ],
+				'validate_callback' => 'rest_validate_request_arg',
+				'required'          => false,
+
+			],
+			'eu_political_advertising_confirmation' => [
+				'type'              => 'boolean',
+				'description'       => __( 'Whether the Campaign has political content as defined by Google\'s EU political content policy.', 'google-listings-and-ads' ),
+				'context'           => [ 'view', 'edit' ],
+				'validate_callback' => 'rest_validate_request_arg',
+				'required'          => false,
+				'default'           => false,
 			],
 		];
 	}

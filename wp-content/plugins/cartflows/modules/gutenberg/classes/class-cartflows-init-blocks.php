@@ -91,7 +91,7 @@ class Cartflows_Init_Blocks {
 	 * @param WP_Theme_JSON_Data $theme_json_data The Data from the theme.json file.
 	 * @return WP_Theme_JSON_Data $theme_json_data Modified data of theme.json file.
 	 *
-	 * @since x.x.x
+	 * @since 2.0.0
 	 */
 	public function update_theme_json_file_config( $theme_json_data ) {
 		$theme_json_data_two = $theme_json_data->get_data();
@@ -109,7 +109,8 @@ class Cartflows_Init_Blocks {
 			$new_color_palette = Cartflows_Helper::generate_css_var_array( $flow_id );
 
 			if ( ! empty( $new_color_palette ) ) {
-				$theme_json_data_two['settings']['color']['palette']['theme'] = array_merge( $theme_json_data_two['settings']['color']['palette']['theme'], $new_color_palette );
+				$theme_color_pallet = ! empty( $theme_json_data_two['settings']['color']['palette']['theme'] ) ? $theme_json_data_two['settings']['color']['palette']['theme'] : array();
+				$theme_json_data_two['settings']['color']['palette']['theme'] = ! empty( $theme_color_pallet ) ? array_merge( $theme_color_pallet, $new_color_palette ) : $new_color_palette;
 			}
 		}
 
@@ -122,7 +123,7 @@ class Cartflows_Init_Blocks {
 	 *
 	 * Note: Currently the GCP support is added for Elementor and Block Builder.
 	 *
-	 * @since x.x.x
+	 * @since 2.0.0
 	 * @return void
 	 */
 	public function add_gcp_vars_to_block_editor() {
@@ -168,10 +169,23 @@ class Cartflows_Init_Blocks {
 			);
 		}
 
+		add_filter(
+			'cartflows_thankyou_meta_wcf-tq-layout',
+			function( $layout ) {
+				check_ajax_referer( 'wpcf_ajax_nonce', 'nonce' );
+
+				$layout = isset( $_POST['layout'] ) ? sanitize_title( wp_unslash( $_POST['layout'] ) ) : '';
+				return $layout;
+			},
+			10,
+			1
+		);
+
 		$thankyou_id          = isset( $_POST['id'] ) ? intval( wp_unslash( $_POST['id'] ) ) : 0;
 		$data['html']         = do_shortcode( '[cartflows_order_details]' );
 		$data['thankyouText'] = wcf()->options->get_thankyou_meta_value( $thankyou_id, 'wcf-tq-text' );
-
+		$data['layout']       = wcf()->options->get_thankyou_meta_value( $thankyou_id, 'wcf-tq-layout' );
+		
 		wp_send_json_success( $data );
 	}
 
@@ -392,7 +406,7 @@ class Cartflows_Init_Blocks {
 					wp_enqueue_style( 'wcf-editor-helper-style', CARTFLOWS_URL . 'modules/gutenberg/assets/css/editor-assets.css', array( 'wp-edit-blocks', 'wp-editor' ), CARTFLOWS_VER );
 					wp_enqueue_script( 'wcf-editor-helper-script', CARTFLOWS_URL . 'modules/gutenberg/assets/js/editor-assets.js', array( 'wp-editor', 'jquery' ), CARTFLOWS_VER, true );
 				}
-			}       
+			}
 		}
 
 	}
@@ -526,7 +540,7 @@ class Cartflows_Init_Blocks {
 
 		}
 
-		if ( $flow_id === $store_checkout && apply_filters( 'cartflows_show_store_checkout_product_tab', false ) ) {
+		if ( $flow_id === $store_checkout && Cartflows_Helper::display_product_tab_in_store_checkout() ) {
 			return true;
 		}
 

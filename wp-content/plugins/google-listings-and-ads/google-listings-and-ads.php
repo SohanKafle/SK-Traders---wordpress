@@ -1,20 +1,23 @@
 <?php
 /**
- * Plugin Name: Google Listings and Ads
+ * Plugin Name: Google for WooCommerce
  * Plugin URL: https://wordpress.org/plugins/google-listings-and-ads/
  * Description: Native integration with Google that allows merchants to easily display their products across Google’s network.
- * Version: 2.5.12
+ * Version: 3.5.1
  * Author: WooCommerce
- * Author URI: https://woo.com/
+ * Author URI: https://woocommerce.com/
  * Text Domain: google-listings-and-ads
- * Requires at least: 5.9
- * Tested up to: 6.4
+ * Requires at least: 6.6
+ * Tested up to: 6.9
  * Requires PHP: 7.4
  * Requires PHP Architecture: 64 bits
- *
- * WC requires at least: 6.9
- * WC tested up to: 8.3
+ * Requires Plugins: woocommerce
+ * WC requires at least: 10.1
+ * WC tested up to: 10.4
  * Woo:
+ *
+ * License: GPLv3
+ * License URI: https://www.gnu.org/licenses/gpl-3.0.html
  *
  * @package WooCommerce\Admin
  */
@@ -30,9 +33,9 @@ use Automattic\WooCommerce\Utilities\FeaturesUtil;
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'WC_GLA_VERSION', '2.5.12' ); // WRCS: DEFINED_VERSION.
+define( 'WC_GLA_VERSION', '3.5.1' ); // WRCS: DEFINED_VERSION.
 define( 'WC_GLA_MIN_PHP_VER', '7.4' );
-define( 'WC_GLA_MIN_WC_VER', '6.9' );
+define( 'WC_GLA_MIN_WC_VER', '10.1' );
 
 // Load and initialize the autoloader.
 require_once __DIR__ . '/src/Autoloader.php';
@@ -60,6 +63,7 @@ add_action(
 		if ( class_exists( FeaturesUtil::class ) ) {
 			FeaturesUtil::declare_compatibility( 'custom_order_tables', __FILE__ );
 			FeaturesUtil::declare_compatibility( 'cart_checkout_blocks', __FILE__ );
+			FeaturesUtil::declare_compatibility( 'product_block_editor', __FILE__ );
 		}
 	}
 );

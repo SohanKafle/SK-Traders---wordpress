@@ -16,17 +16,17 @@ const LicenseValidation = () => {
 	}, [] );
 
 	const accessLinkOutput = __(
-		`This is a premium template and comes with our Essentials and Growth Bundle. <br/><br/> Get access to this premium template and 100+ more.`,
+		`This is a premium template and comes with our Essentials and Business Toolkits. <br/><br/> Get access to this premium template and 100+ more.`,
 		'astra-sites'
 	);
 
 	const getAccessLink = () => {
-		window.open( astraSitesVars.cta_links[ builder ] );
+		window.open( astraSitesVars?.cta_links[ builder ] );
 	};
 
 	const getwhiteLabelLink = () => {
-		if ( astraSitesVars.whiteLabelUrl !== '#' ) {
-			window.open( astraSitesVars.whiteLabelUrl );
+		if ( astraSitesVars?.whiteLabelUrl !== '#' ) {
+			window.open( astraSitesVars?.whiteLabelUrl );
 		}
 	};
 

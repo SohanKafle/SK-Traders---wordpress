@@ -92,6 +92,8 @@ class AdminMenu {
 		add_action( 'admin_footer', array( $this, 'back_to_new_step_ui_for_gutenberg' ), 999 );
 
 		add_action( 'admin_notices', array( $this, 'back_to_new_step_ui_for_classic_editor' ) );
+
+		add_action( 'wp_ajax_cartflows_fetch_whats_new_data', array( $this, 'fetch_whats_new_data' ) );
 	}
 
 	/**
@@ -124,7 +126,6 @@ class AdminMenu {
 			</div>
 			<?php
 		}
-
 	}
 
 	/**
@@ -168,7 +169,7 @@ class AdminMenu {
 			$flow_redirect_url = esc_url( admin_url() . 'admin.php?page=' . $this->menu_slug . '&path=' . $path . '&action=wcf-edit-flow&flow_id=' . $flow_id );
 			?>
 		<script id="wcf-gutenberg-back-step-button" type="text/html">
-			<div class="wcf-notice-back-edit-step gutenberg-button" style="display: flex; align-content: center; margin: 0 5px 0 0;flex-basis: 100%;">
+			<div class="wcf-notice-back-edit-step gutenberg-button" style="display: flex; margin: 2px 5px;">
 				<a href="<?php echo esc_url( $flow_redirect_url ); ?>" class="button button-primary button-large wcf-header-back-button" style="text-decoration: none; font-size: 13px; line-height: 2.5;"><?php esc_html_e( 'Edit Funnel', 'cartflows' ); ?></a>
 			</div>
 		</script>
@@ -271,6 +272,33 @@ class AdminMenu {
 			);
 
 			if ( current_user_can( 'cartflows_manage_settings' ) ) {
+				add_submenu_page(
+					$parent_slug,
+					__( 'Automations', 'cartflows' ),
+					// Here the inline CSS is added to make sure that the menu's tag css should display correctly on all pages.
+					__( 'Automations', 'cartflows' ) . '<span class="submenu-tag" style="margin-left: 4px; color: #f06434; vertical-align: super; font-size: 9px;">' . __( 'New', 'cartflows' ) . '</span>',
+					$capability,
+					'admin.php?page=' . $this->menu_slug . '&path=automations'
+				);
+
+				if ( 'active' !== $this->get_plugin_status( 'modern-cart/modern-cart.php' ) ) {
+					add_submenu_page(
+						$parent_slug,
+						__( 'Modern Cart', 'cartflows' ),
+						// Here the inline CSS is added to make sure that the menu's tag css should display correctly on all pages.
+						__( 'Modern Cart', 'cartflows' ) . '<span class="submenu-tag" style="margin-left: 4px; color: #f06434; vertical-align: super; font-size: 9px;">' . __( 'New', 'cartflows' ) . '</span>',
+						$capability,
+						'admin.php?page=' . $this->menu_slug . '&path=modern-cart'
+					);
+				}
+
+				add_submenu_page(
+					$parent_slug,
+					__( 'Add-ons', 'cartflows' ),
+					__( 'Add-ons', 'cartflows' ),
+					! wcf_file_mod_disabled() ? $capability : 'do_not_allow',
+					'admin.php?page=' . $this->menu_slug . '&path=addons'
+				);
 
 				if ( ! get_option( 'wcf_setup_page_skipped', false ) && '1' === get_option( 'wcf_setup_skipped', false ) && $this->maybe_skip_setup_menu() ) {
 
@@ -280,6 +308,16 @@ class AdminMenu {
 						__( 'Setup', 'cartflows' ),
 						$capability,
 						'admin.php?page=' . $this->menu_slug . '&path=setup'
+					);
+				}
+
+				if ( ! _is_cartflows_pro() ) {
+					add_submenu_page(
+						$parent_slug,
+						__( 'Get CartFlows Pro', 'cartflows' ),
+						__( 'Get CartFlows Pro', 'cartflows' ),
+						$capability,
+						\Cartflows_Helper::get_upgrade_to_pro_link()
 					);
 				}
 			}
@@ -321,7 +359,6 @@ class AdminMenu {
 
 		update_option( 'wcf_setup_page_skipped', true );
 		return false;
-
 	}
 
 	/**
@@ -394,11 +431,16 @@ class AdminMenu {
 
 		$admin_slug = 'cartflows-admin';
 
+		// Load the custom font for admin area.
+		wp_enqueue_style( $admin_slug . '-font', 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap', array(), CARTFLOWS_VER );
+
 		// Styles.
 		wp_enqueue_style( $admin_slug . '-common', CARTFLOWS_ADMIN_CORE_URL . 'assets/css/common.css', array(), CARTFLOWS_VER );
 		wp_style_add_data( $admin_slug . '-common', 'rtl', 'replace' );
 
 		wp_enqueue_script( $admin_slug . '-common-script', CARTFLOWS_ADMIN_CORE_URL . 'assets/js/common.js', array( 'jquery' ), CARTFLOWS_VER, false );
+
+		wp_enqueue_script( $admin_slug . '-suretriggers-integration', CARTFLOWS_SURETRIGGERS_INTEGRATION_BASE_URL . 'js/v2/embed.js', array(), CARTFLOWS_VER, true );
 
 		$current_flow_steps = array();
 		$flow_id            = isset( $_GET['flow_id'] ) ? intval( $_GET['flow_id'] ) : 0; //phpcs:ignore WordPress.Security.NonceVerification.Recommended
@@ -416,7 +458,6 @@ class AdminMenu {
 			)
 		);
 
-		$page_builder = \Cartflows_Helper::get_common_setting( 'default_page_builder' );
 
 		$page_builder      = \Cartflows_Helper::get_common_setting( 'default_page_builder' );
 		$page_builder_name = \Cartflows_Helper::get_page_builder_name( $page_builder );
@@ -450,7 +491,7 @@ class AdminMenu {
 			'cartflows_admin_localized_vars',
 			array(
 				'current_user'                      => ! empty( wp_get_current_user()->user_firstname ) ? wp_get_current_user()->user_firstname : wp_get_current_user()->display_name,
-				'cf_pro_status'                     => $this->get_cartflows_pro_plugin_status(),
+				'cf_pro_status'                     => $cf_pro_status,
 				'cf_pro_type'                       => 'free',
 				'cf_pro_type_inactive'              => $cf_pro_type_inactive,
 				'woocommerce_status'                => $this->get_plugin_status( 'woocommerce/woocommerce.php' ),
@@ -473,6 +514,7 @@ class AdminMenu {
 				'is_rtl'                            => is_rtl(),
 				'home_slug'                         => $this->menu_slug,
 				'is_pro'                            => _is_cartflows_pro(),
+				'is_file_mod_disabled'              => function_exists( 'wcf_file_mod_disabled' ) ? wcf_file_mod_disabled() : false, // Keep false by default if function not exists.
 				'page_builder'                      => $page_builder,
 				'page_builder_name'                 => $page_builder_name,
 				'global_checkout'                   => \Cartflows_Helper::get_common_setting( 'global_checkout' ),
@@ -480,8 +522,10 @@ class AdminMenu {
 				'currentFlowSteps'                  => $current_flow_steps,
 				// Delete this code after 3 major update. Added in 1.10.4.
 				'license_status'                    => \_is_cartflows_pro_license_activated(),
-				'license_popup_url'                 => admin_url( 'plugins.php?cartflows-license-popup' ),
+				'license_popup_url'                 => admin_url( 'admin.php?page=cartflows&settings=1&tab=license' ),
+				'store_checkout_show_product_tab'   => \Cartflows_Helper::display_product_tab_in_store_checkout(),
 				'cf_domain_url'                     => CARTFLOWS_DOMAIN_URL,
+				'cf_upgrade_to_pro_url'             => \Cartflows_Helper::get_upgrade_to_pro_link(),
 				'logo_url'                          => esc_url_raw( CARTFLOWS_URL . 'assets/images/cartflows-logo.svg' ),
 				'create_product_src'                => $product_src,
 				'cf_font_family'                    => AdminHelper::get_font_family(),
@@ -507,15 +551,24 @@ class AdminMenu {
 				'flow_action'                       => $flow_action,
 				'step_action'                       => $step_action,
 				'old_global_checkout'               => get_option( '_cartflows_old_global_checkout', false ),
-				'cpsw_status'                       => $this->get_plugin_status( 'checkout-plugins-stripe-woo/checkout-plugins-stripe-woo.php' ),
-				'cppw_status'                       => $this->get_plugin_status( 'checkout-paypal-woo/checkout-paypal-woo.php' ),
+				'woopayments_status'                => $this->get_plugin_status( 'woocommerce-payments/woocommerce-payments.php' ),
 				'ca_status'                         => $this->get_plugin_status( 'woo-cart-abandonment-recovery/woo-cart-abandonment-recovery.php' ),
+				'suretriggers_status'               => $this->get_plugin_status( 'suretriggers/suretriggers.php' ),
+				'moderncart_status'                 => $this->get_plugin_status( 'modern-cart/modern-cart.php' ),
 				'cpsw_connection_status'            => 'success' === get_option( 'cpsw_test_con_status', false ) || 'success' === get_option( 'cpsw_con_status', false ),
 				'current_user_can_manage_cartflows' => current_user_can( 'cartflows_manage_settings' ),
 				'is_set_report_email_ids'           => get_option( 'cartflows_stats_report_email_ids', false ),
 				'cf_docs_data'                      => get_option( 'cartflows_docs_data', false ),
 				'woo_order_url'                     => $order_url,
 				'integrations'                      => $this->get_recommendation_integrations(),
+				'plugin_installer_nonce'            => wp_create_nonce( 'updates' ),
+				'instant_checkout_notice_status'    => \Cartflows_Helper::get_admin_settings_option( 'wcf-instant-checkout-notice-skipped', false, false ),
+				'cartflows_admin_notices'           => $this->cartflows_admin_notices(),
+				'whats_new_rss_feed'                => $this->get_whats_new_rss_feeds_data(),
+				'cartflows_current_version'         => CARTFLOWS_VER,
+				'cartflows_previous_versions'       => \Cartflows_Helper::get_rollback_versions_options(),
+				'rollback_url'                      => esc_url( add_query_arg( 'version', 'VERSION', wp_nonce_url( admin_url( 'admin-post.php?action=cartflows_rollback' ), 'cartflows_rollback' ) ) ),
+				'utm_param_pro_plans'               => 'utm_source=carflows-dashboard&utm_medium=free-cartflows&utm_campaign=go-pro',
 			)
 		);
 
@@ -527,6 +580,97 @@ class AdminMenu {
 			$this->editor_app_scripts( $localize );
 		}
 	}
+
+	/**
+	 * Get recommendation integrations.
+	 *
+	 * @since 1.11.8
+	 *
+	 * @return array
+	 */
+	public function cartflows_admin_notices() {
+		$notices = array();
+
+		$notices = $this->page_builder_plugin_notices( $notices );
+		$notices = apply_filters( 'cartflows_admin_notices', $notices );
+
+		return $notices;
+	}
+
+	/**
+	 * Get builder plugin notices.
+	 *
+	 * @since 1.11.8
+	 * @param array $notices Notices array.
+	 * @return array
+	 */
+	public function page_builder_plugin_notices( $notices ) {
+		$required_plugins_missing = $this->get_any_required_plugins_status();
+		$default_page_builder     = \Cartflows_Helper::get_common_setting( 'default_page_builder' );
+		$required_plugins         = array();
+		if ( isset( \Cartflows_Helper::get_plugins_groupby_page_builders()[ $default_page_builder ] ) ) {
+			$required_plugins = \Cartflows_Helper::get_plugins_groupby_page_builders()[ $default_page_builder ];
+		}
+
+		$page_builder_plugins = isset( $required_plugins['plugins'] ) ? $required_plugins['plugins'] : array();
+		$any_inactive         = false;
+		if ( ! empty( $page_builder_plugins ) ) {
+			foreach ( $page_builder_plugins as $plugin ) {
+				if ( 'activated' !== $plugin['status'] ) {
+					$any_inactive = true;
+					break; // Stop checking if we found an active plugin.
+				}
+			}
+		}
+
+		// Get the titles.
+		$titles = $this->generate_plugin_titles( $page_builder_plugins );
+
+		if ( 'yes' === $required_plugins_missing && $any_inactive ) {
+			$notices[] = '<div class="wcf-payment-gateway-notice--text"><p class="text-sm text-yellow-700">' . wp_kses_post(
+				sprintf(
+					// Translators: %1$s is the required page builder title, %2$s is the opening anchor tag to plugins.php, %3$s is the closing anchor tag, %4$s is the plugin title.
+					__( 'The default page builder is set to %1$s. Please %2$sinstall & activate%3$s the %4$s to start editing the steps.', 'cartflows' ),  //phpcs:ignore
+					'<span class="capitalize">' . esc_html( $required_plugins['title'] ) . '</span>',
+					'<span class="font-medium"><a href="' . esc_url( admin_url() . 'plugins.php' ) . '" class="underline text-yellow-700 hover:text-yellow-600" target="_blank">',
+					'</a></span>',
+					'<span class="capitalize">' . esc_html( implode( ', ', $titles ) ) . '</span>'
+				)
+			) . '</p></div>';
+
+		}
+		return $notices;
+	}
+
+	/**
+	 * Get required plugin titles from their slugs.
+	 *
+	 * @since 2.1.6
+	 * @param array $plugins plugins array.
+	 * @return array
+	 */
+	public function generate_plugin_titles( $plugins ) {
+		$titles = array();
+
+		if ( ! is_array( $plugins ) || empty( $plugins ) ) {
+			return $titles;
+		}
+
+		foreach ( $plugins as $plugin ) {
+
+			if ( 'ultimate-addons-for-gutenberg' === $plugin['slug'] ) {
+				$title = 'Spectra'; // Don't add this for translation as it is a plugin name.
+			} else {
+				$slug_parts = explode( '-', $plugin['slug'] );
+				$title      = implode( ' ', array_map( 'ucfirst', $slug_parts ) ); // Convert each part to title case.
+			}
+
+			$titles[] = $title;
+		}
+
+		return $titles;
+	}
+
 
 	/**
 	 * Get required plugin status.
@@ -630,6 +774,34 @@ class AdminMenu {
 	}
 
 	/**
+	 * Get plugin status
+	 *
+	 * @since 1.1.4
+	 *
+	 * @param  string $theme_name Theme slug file.
+	 * @return string
+	 */
+	public function get_themes_status( $theme_name ) {
+
+		$theme = wp_get_theme();
+
+		// Theme installed and activate.
+		if ( $theme_name === $theme->name || $theme_name === $theme->parent_theme ) {
+			return 'active';
+		}
+
+		// Theme installed but not activate.
+		foreach ( (array) wp_get_themes() as $theme_dir => $theme ) {
+			if ( $theme_name === $theme->name || $theme_name === $theme->parent_theme ) {
+				return 'inactive';
+			}
+		}
+
+		// If none of the above conditions are found then the theme is not installed.
+		return 'not-installed';
+	}
+
+	/**
 	 * Settings app scripts
 	 *
 	 * @param array $localize Variable names.
@@ -675,7 +847,6 @@ class AdminMenu {
 		$localize = $this->debugger_scripts( $localize );
 
 		wp_localize_script( $handle, 'cartflows_admin', $localize );
-
 	}
 
 	/**
@@ -819,71 +990,206 @@ class AdminMenu {
 	 */
 	public function get_recommendation_integrations() {
 
-		return apply_filters(
-			'cartflows_admin_integrated_plugins',
-			array(
+		return array(
+			'plugins' => apply_filters(
+				'cartflows_admin_integrated_plugins',
 				array(
-					'title'       => __( 'WooCommerce', 'cartflows' ),
-					'subtitle'    => __( 'WooCommerce is a customizable, open-source ecommerce platform built on WordPress.', 'cartflows' ),
-					'isPro'       => false,
-					'status'      => $this->get_plugin_status( 'woocommerce/woocommerce.php' ),
-					'slug'        => 'woocommerce',
-					'path'        => 'woocommerce/woocommerce.php',
-					'redirection' => admin_url( 'admin.php?page=wc-admin' ),
-					'logoPath'    => array(
-						'icon_path' => CARTFLOWS_ADMIN_CORE_URL . 'assets/images/plugins/woo.svg',
+					array(
+						'title'       => __( 'WooCommerce', 'cartflows' ),
+						'subtitle'    => __( 'WooCommerce is a customizable, open-source ecommerce platform built on WordPress.', 'cartflows' ),
+						'isPro'       => false,
+						'status'      => $this->get_plugin_status( 'woocommerce/woocommerce.php' ),
+						'slug'        => 'woocommerce',
+						'path'        => 'woocommerce/woocommerce.php',
+						'redirection' => admin_url( 'admin.php?page=wc-admin' ),
+						'logoPath'    => array(
+							'icon_path' => CARTFLOWS_ADMIN_CORE_URL . 'assets/images/plugins/woo.svg',
+						),
 					),
-				),
+					array(
+						'title'       => __( 'Modern Cart for WooCommerce', 'cartflows' ),
+						'subtitle'    => __( 'A fast, customizable cart built to boost conversions, maximise profits, and elevate the shopping experience.', 'cartflows' ),
+						'isPro'       => false,
+						'status'      => $this->get_plugin_status( 'modern-cart/modern-cart.php' ),
+						'slug'        => 'modern-cart',
+						'path'        => 'modern-cart/modern-cart.php',
+						'redirection' => admin_url( 'admin.php?page=moderncart_settings' ),
+						'logoPath'    => array(
+							'icon_path' => CARTFLOWS_ADMIN_CORE_URL . 'assets/images/plugins/modern-cart-for-woocommerce.svg',
+						),
+						'hot_badge'   => true,
+					),
+					array(
+						'title'       => __( 'Cart Abandonment Recovery', 'cartflows' ),
+						'subtitle'    => __( 'Recover abandonded carts with ease in less than 10 minutes.', 'cartflows' ),
+						'isPro'       => false,
+						'status'      => $this->get_plugin_status( 'woo-cart-abandonment-recovery/woo-cart-abandonment-recovery.php' ),
+						'slug'        => 'woo-cart-abandonment-recovery',
+						'path'        => 'woo-cart-abandonment-recovery/woo-cart-abandonment-recovery.php',
+						'redirection' => admin_url( 'admin.php?page=woo-cart-abandonment-recovery' ),
+						'logoPath'    => array(
+							'icon_path' => CARTFLOWS_ADMIN_CORE_URL . 'assets/images/plugins/wcar.svg',
+						),
+						'hot_badge'   => true,
+					),
+					array(
+						'title'       => __( 'Variation Swatches for WooCommerce', 'cartflows' ),
+						'subtitle'    => __( 'Convert dropdown boxes into highly engaging variation swatches.', 'cartflows' ),
+						'isPro'       => false,
+						'status'      => $this->get_plugin_status( 'variation-swatches-woo/variation-swatches-woo.php' ),
+						'slug'        => 'variation-swatches-woo',
+						'path'        => 'variation-swatches-woo/variation-swatches-woo.php',
+						'redirection' => admin_url( 'admin.php?page=variation-swatches-woo' ),
+						'logoPath'    => array(
+							'icon_path' => CARTFLOWS_ADMIN_CORE_URL . 'assets/images/plugins/variation-swatches-woo.svg',
+						),
+						'hot_badge'   => true,
+					),
+					array(
+						'title'       => __( 'WooPayments: Integrated WooCommerce Payments', 'cartflows' ),
+						'subtitle'    => __( 'Payments made simple, with no monthly fees – designed exclusively for WooCommerce stores.', 'cartflows' ),
+						'isPro'       => false,
+						'status'      => $this->get_plugin_status( 'woocommerce-payments/woocommerce-payments.php' ),
+						'redirection' => admin_url( 'admin.php?page=wc-admin&path=/payments/connect' ),
+						'slug'        => 'woocommerce-payments',
+						'path'        => 'woocommerce-payments/woocommerce-payments.php',
+						'logoPath'    => array(
+							'icon_path' => CARTFLOWS_ADMIN_CORE_URL . 'assets/images/plugins/woocommere-payments.png',
+						),
+					),
+					array(
+						'title'       => __( 'OttoKit', 'cartflows' ),
+						'subtitle'    => __( 'OttoKit helps people automate their work by integrating multiple apps and plugins, allowing them to share data and perform tasks automatically.', 'cartflows' ),
+						'isPro'       => true,
+						'status'      => $this->get_plugin_status( 'suretriggers/suretriggers.php' ),
+						'slug'        => 'suretriggers',
+						'path'        => 'suretriggers/suretriggers.php',
+						'link'        => 'https://ottokit.com/pricing/',
+						'redirection' => admin_url( 'admin.php?page=suretriggers' ),
+						'logoPath'    => array(
+							'icon_path' => CARTFLOWS_ADMIN_CORE_URL . 'assets/images/plugins/suretriggers-emblem.svg',
+						),
+					),
+					array(
+						'title'       => __( 'Ultimate addons for Elementor', 'cartflows' ),
+						'subtitle'    => __( 'Powerful Elementor addon with InfoCard, Fancy Heading, Before/After Slider, Price Box, FAQ Schema, WooCommerce widgets & Header-Footer builder.', 'cartflows' ),
+						'isPro'       => false,
+						'status'      => $this->get_plugin_status( 'header-footer-elementor/header-footer-elementor.php' ),
+						'slug'        => 'header-footer-elementor',
+						'path'        => 'header-footer-elementor/header-footer-elementor.php',
+						'redirection' => admin_url( 'admin.php?page=hfe#dashboard' ),
+						'logoPath'    => array(
+							'icon_path' => CARTFLOWS_ADMIN_CORE_URL . 'assets/images/plugins/uael.png',
+						),
+					),
+					array(
+						'title'       => __( 'Spectra', 'cartflows' ),
+						'subtitle'    => __( 'Power-up the Gutenberg editor with advanced and powerful blocks.', 'cartflows' ),
+						'isPro'       => false,
+						'status'      => $this->get_plugin_status( 'ultimate-addons-for-gutenberg/ultimate-addons-for-gutenberg.php' ),
+						'slug'        => 'ultimate-addons-for-gutenberg',
+						'path'        => 'ultimate-addons-for-gutenberg/ultimate-addons-for-gutenberg.php',
+						'redirection' => admin_url( 'options-general.php?page=spectra' ),
+						'logoPath'    => array(
+							'icon_path' => CARTFLOWS_ADMIN_CORE_URL . 'assets/images/plugins/spectra.svg',
+						),
+					),
+					array(
+						'title'       => __( 'SureForms', 'cartflows' ),
+						'subtitle'    => __( 'Transform your WordPress form-building experience with stunning designs, ai integration, and no-code flexibility.', 'cartflows' ),
+						'isPro'       => false,
+						'status'      => $this->get_plugin_status( 'sureforms/sureforms.php' ),
+						'slug'        => 'sureforms',
+						'path'        => 'sureforms/sureforms.php',
+						'redirection' => admin_url( 'admin.php?page=sureforms_menu' ),
+						'logoPath'    => array(
+							'icon_path' => CARTFLOWS_ADMIN_CORE_URL . 'assets/images/plugins/sureforms.svg',
+						),
+					),
+					array(
+						'title'       => __( 'SureMembers', 'cartflows' ),
+						'subtitle'    => __( 'A simple yet powerful way to add content restriction to your website.', 'cartflows' ),
+						'isPro'       => true,
+						'status'      => $this->get_plugin_status( 'suremembers/suremembers.php' ),
+						'slug'        => 'suremembers',
+						'path'        => 'suremembers/suremembers.php',
+						'link'        => 'https://suremembers.com/pricing/',
+						'redirection' => admin_url( 'edit.php?post_type=wsm_access_group' ),
+						'logoPath'    => array(
+							'icon_path' => CARTFLOWS_ADMIN_CORE_URL . 'assets/images/plugins/suremembers.svg',
+						),
+					),
+				)
+			),
+			'themes'  => apply_filters(
+				'cartflows_admin_integrated_themes',
 				array(
-					'title'       => __( 'Cart Abandonment', 'cartflows' ),
-					'subtitle'    => __( 'Recover abandonded carts with ease in less than 10 minutes.', 'cartflows' ),
-					'isPro'       => false,
-					'status'      => $this->get_plugin_status( 'woo-cart-abandonment-recovery/woo-cart-abandonment-recovery.php' ),
-					'slug'        => 'woo-cart-abandonment-recovery',
-					'path'        => 'woo-cart-abandonment-recovery/woo-cart-abandonment-recovery.php',
-					'redirection' => admin_url( 'admin.php?page=woo-cart-abandonment-recovery' ),
-					'logoPath'    => array(
-						'icon_path' => CARTFLOWS_ADMIN_CORE_URL . 'assets/images/plugins/wcar.svg',
+					array(
+						'title'       => __( 'Astra', 'cartflows' ),
+						'subtitle'    => __( 'Astra is fast, fully customizable & beautiful WordPress theme suitable for blog, personal portfolio, business website and WooCommerce storefront.', 'cartflows' ),
+						'isPro'       => false,
+						'status'      => $this->get_themes_status( 'Astra' ),
+						'slug'        => 'astra',
+						'redirection' => admin_url( 'admin.php?page=wc-admin' ),
+						'logoPath'    => array(
+							'icon_path' => CARTFLOWS_ADMIN_CORE_URL . 'assets/images/themes/astra-icon.svg',
+						),
 					),
-				),
-				array(
-					'title'       => __( 'Spectra', 'cartflows' ),
-					'subtitle'    => __( 'Power-up the Gutenberg editor with advanced and powerful blocks.', 'cartflows' ),
-					'isPro'       => false,
-					'status'      => $this->get_plugin_status( 'ultimate-addons-for-gutenberg/ultimate-addons-for-gutenberg.php' ),
-					'slug'        => 'ultimate-addons-for-gutenberg',
-					'path'        => 'ultimate-addons-for-gutenberg/ultimate-addons-for-gutenberg.php',
-					'redirection' => admin_url( 'options-general.php?page=spectra' ),
-					'logoPath'    => array(
-						'icon_path' => CARTFLOWS_ADMIN_CORE_URL . 'assets/images/plugins/spectra.svg',
+					array(
+						'title'       => __( 'Spectra One', 'cartflows' ),
+						'subtitle'    => __( 'Spectra One is a beautiful and modern WordPress theme built with the Full Site Editing (FSE) feature. It\'s a versatile theme that can be used for blogs, portfolios, businesses, and more.', 'cartflows' ),
+						'isPro'       => false,
+						'status'      => $this->get_themes_status( 'Spectra One' ),
+						'slug'        => 'spectra-one',
+						'redirection' => admin_url( 'admin.php?page=wc-admin' ),
+						'logoPath'    => array(
+							'icon_path' => CARTFLOWS_ADMIN_CORE_URL . 'assets/images/themes/spectra-one.svg',
+						),
 					),
-				),
-				array(
-					'title'       => __( 'Stripe Payments For WooCommerce', 'cartflows' ),
-					'subtitle'    => __( 'Accept credit card payments in your store with Stripe for WooCommerce.', 'cartflows' ),
-					'isPro'       => false,
-					'status'      => $this->get_plugin_status( 'checkout-plugins-stripe-woo/checkout-plugins-stripe-woo.php' ),
-					'redirection' => admin_url( 'index.php?page=cpsw-onboarding' ),
-					'slug'        => 'checkout-plugins-stripe-woo',
-					'path'        => 'checkout-plugins-stripe-woo/checkout-plugins-stripe-woo.php',
-					'logoPath'    => array(
-						'icon_path' => CARTFLOWS_ADMIN_CORE_URL . 'assets/images/plugins/cpsw.svg',
-					),
-				),
-				array(
-					'title'       => __( 'PayPal Payments For WooCommerce', 'cartflows' ),
-					'subtitle'    => __( 'Accept payments in your store with PayPal for WooCommerce.', 'cartflows' ),
-					'isPro'       => false,
-					'status'      => $this->get_plugin_status( 'checkout-paypal-woo/checkout-paypal-woo.php' ),
-					'slug'        => 'checkout-paypal-woo',
-					'path'        => 'checkout-paypal-woo/checkout-paypal-woo.php',
-					'redirection' => admin_url( 'admin.php?page=wc-settings&tab=cppw_api_settings' ),
-					'logoPath'    => array(
-						'icon_path' => CARTFLOWS_ADMIN_CORE_URL . 'assets/images/plugins/cppw.svg',
-					),
-				),
-			)
+				)
+			),
 		);
+	}
+
+	/**
+	 * Prepare the array of RSS Feeds of CartFlows for Whats New slide-our pannel.
+	 *
+	 * @since 2.1.6
+	 * @return array The prepared array of RSS feeds.
+	 */
+	public function get_whats_new_rss_feeds_data() {
+		return array(
+			array(
+				'key'   => 'cartflows',
+				'label' => 'CartFlows',
+				'url'   => add_query_arg(
+					array(
+						'action' => 'cartflows_fetch_whats_new_data',
+						'nonce'  => wp_create_nonce( 'cartflows_fetch_whats_new_data' ),
+					),
+					admin_url( 'admin-ajax.php' )
+				), // 'https://cartflows.com/whats-new/feed/'
+			),
+		);
+	}
+
+	/**
+	 * Fetch the Whats New RSS feed from the URL.
+	 *
+	 * @since 1.0.3
+	 * @return void
+	 */
+	public function fetch_whats_new_data() {
+		if ( ! isset( $_GET['nonce'] ) || ! wp_verify_nonce( sanitize_text_field( $_GET['nonce'] ), 'cartflows_fetch_whats_new_data' ) ) {
+			// Verify the nonce, if it fails, return an error.
+			wp_send_json_error( array( 'message' => __( 'Nonce verification failed.', 'cartflows' ) ) );
+		}
+
+		// Fetch the RSS feed from the URL. This saves us from the CORS issue.
+		$feed = wp_remote_retrieve_body( wp_remote_get( 'https://cartflows.com/product/cartflows/feed/' ) ); // phpcs:ignore -- This is a valid use case cannot use VIP rules here.
+
+		echo $feed; // phpcs:ignore -- Cannot sanitize the XML data as it is not in our control here.
+		exit;
 	}
 }
 

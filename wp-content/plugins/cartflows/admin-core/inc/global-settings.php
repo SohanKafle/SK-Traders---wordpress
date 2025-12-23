@@ -47,12 +47,12 @@ class GlobalSettings {
 								array(
 									'value'   => 'access_to_cartflows',
 									'label'   => __( 'Full Access', 'cartflows' ),
-									'tooltip' => __( 'A full access to all settings.', 'cartflows' ),
+									'tooltip' => __( 'Allow full access to all settings to customize everything.', 'cartflows' ),
 								),
 								array(
 									'value'   => 'access_to_flows_and_step',
 									'label'   => __( 'Limited Access', 'cartflows' ),
-									'tooltip' => __( 'Can create/edit/delete/import flows and steps only.', 'cartflows' ),
+									'tooltip' => __( 'Allow limited access to create, edit, delete, or import flows and steps.', 'cartflows' ),
 								),
 							),
 						),
@@ -83,6 +83,11 @@ class GlobalSettings {
 								'image' => esc_url_raw( CARTFLOWS_URL . 'admin-core/assets/images/page-builders/elementor.svg' ),
 							),
 							array(
+								'value' => 'bricks-builder',
+								'label' => __( 'Bricks', 'cartflows' ),
+								'image' => esc_url_raw( CARTFLOWS_URL . 'admin-core/assets/images/page-builders/bricks.png' ),
+							),
+							array(
 								'value' => 'beaver-builder',
 								'label' => __( 'Beaver', 'cartflows' ),
 								'image' => esc_url_raw( CARTFLOWS_URL . 'admin-core/assets/images/page-builders/beaver-builder.svg' ),
@@ -104,7 +109,7 @@ class GlobalSettings {
 						'name'     => '_cartflows_common[override_global_checkout]',
 						'label'    => __( 'Override Store Checkout', 'cartflows' ),
 						/* translators: %1$1s: link html start, %2$12: link html end*/
-						'desc'     => sprintf( __( 'For more information about the Store Checkout settings please %1$sClick here%2$s.', 'cartflows' ), '<a href="https://cartflows.com/docs/global-checkout/?utm_source=dashboard&utm_medium=free-cartflows&utm_campaign=docs" target="_blank">', '</a>' ),
+						'desc'     => sprintf( __( 'For more information about the Store Checkout settings please %1$sclick here%2$s.', 'cartflows' ), '<a href="https://cartflows.com/docs/store-checkout/?utm_source=dashboard&utm_medium=free-cartflows&utm_campaign=docs" target="_blank">', '</a>' ),
 					),
 					'global_checkout_seperator' => array(
 						'type' => 'separator',
@@ -195,7 +200,7 @@ class GlobalSettings {
 					),
 					'enable-fb-pixel-for-site'      => array(
 						'type'       => 'toggle',
-						'label'      => __( 'Enable For the whole site', 'cartflows' ),
+						'label'      => __( 'Enable for the whole site', 'cartflows' ),
 						'name'       => '_cartflows_facebook[facebook_pixel_tracking_for_site]',
 						'desc'       => __( 'If checked, page view and view content event will also be triggered for other pages/posts of site.', 'cartflows' ),
 						'conditions' => array(
@@ -308,6 +313,7 @@ class GlobalSettings {
 							),
 						),
 						'backComp'   => true,
+						'is_pro'     => true,
 					),
 
 					'pixel-event-purchase-complete' => array(
@@ -340,7 +346,8 @@ class GlobalSettings {
 							),
 						),
 						'backComp'   => true,
-						'tooltip'    => __( 'Optin Lead event will be trigger for optin page.', 'cartflows' ),
+						'tooltip'    => __( 'This event will trigger when someone subscribes or signs up on the opt-in page.', 'cartflows' ),
+						'is_pro'     => true,
 					),
 
 					'pixel-not-work-doc'            => array(
@@ -384,7 +391,7 @@ class GlobalSettings {
 					),
 					'enable-ga-analytics-for-site'    => array(
 						'type'       => 'toggle',
-						'label'      => __( 'Enable For the whole site', 'cartflows' ),
+						'label'      => __( 'Enable for the whole site', 'cartflows' ),
 						'name'       => '_cartflows_google_analytics[enable_google_analytics_for_site]',
 						'desc'       => __( 'If checked, page view event will also be triggered for other pages/posts of site.', 'cartflows' ),
 						'conditions' => array(
@@ -497,6 +504,7 @@ class GlobalSettings {
 							),
 						),
 						'backComp'   => true,
+						'is_pro'     => true,
 					),
 					'ga-event-purchase-complete'      => array(
 						'type'       => 'checkbox',
@@ -528,7 +536,8 @@ class GlobalSettings {
 							),
 						),
 						'backComp'   => true,
-						'tooltip'    => __( 'Optin Lead event will be trigger for optin page.', 'cartflows' ),
+						'tooltip'    => __( 'This event will trigger when someone subscribes or signs up on the opt-in page.', 'cartflows' ),
+						'is_pro'     => true,
 					),
 
 					'ga-not-work-doc'                 => array(
@@ -565,17 +574,814 @@ class GlobalSettings {
 					),
 				),
 			),
+			'tiktok-pixel'           => array(
+				'title'  => '',
+				'fields' => array(
+					'enable-tiktok-pixel'             => array(
+						'type'     => 'toggle',
+						'label'    => __( 'Enable For CartFlows Pages', 'cartflows' ),
+						'name'     => '_cartflows_tiktok[tiktok_pixel_tracking]',
+						'backComp' => true,
+					),
+					'tiktok-pixel-separator'          => array(
+						'type'       => 'separator',
+						'conditions' => array(
+							'fields' => array(
+								array(
+									'name'     => '_cartflows_tiktok[tiktok_pixel_tracking]',
+									'operator' => '===',
+									'value'    => 'enable',
+								),
+							),
+						),
+					),
+					'enable-tiktok-pixel-for-site'    => array(
+						'type'       => 'toggle',
+						'label'      => __( 'Enable for the whole site', 'cartflows' ),
+						'name'       => '_cartflows_tiktok[tiktok_pixel_tracking_for_site]',
+						'desc'       => __( 'If checked, PageView event will also be triggered for other pages/posts of site.', 'cartflows' ),
+						'conditions' => array(
+							'fields' => array(
+								array(
+									'name'     => '_cartflows_tiktok[tiktok_pixel_tracking]',
+									'operator' => '===',
+									'value'    => 'enable',
+								),
+							),
+						),
+						'backComp'   => true,
+					),
+					'tiktok-pixel-for-site-separator' => array(
+						'type'       => 'separator',
+						'conditions' => array(
+							'fields' => array(
+								array(
+									'name'     => '_cartflows_tiktok[tiktok_pixel_tracking]',
+									'operator' => '===',
+									'value'    => 'enable',
+								),
+							),
+						),
+					),
+					'tiktok-id'                       => array(
+						'type'       => 'text',
+						'label'      => __( 'Enter TikTok ID', 'cartflows' ),
+						'name'       => '_cartflows_tiktok[tiktok_pixel_id]',
+						'class'      => 'input-field',
+						/* translators: %1$1s: link html start, %2$12: link html end*/
+						'desc'       => sprintf( __( 'Log into your %1$1s TikTok business account %2$2s to find your ID.', 'cartflows' ), '<a href="https://ads.tiktok.com/" target="_blank">', '</a>' ),
+						'conditions' => array(
+							'fields' => array(
+								array(
+									'name'     => '_cartflows_tiktok[tiktok_pixel_tracking]',
+									'operator' => '===',
+									'value'    => 'enable',
+								),
+							),
+						),
+					),
+					'tiktok-id-separator'             => array(
+						'type'       => 'separator',
+						'conditions' => array(
+							'fields' => array(
+								array(
+									'name'     => '_cartflows_tiktok[tiktok_pixel_tracking]',
+									'operator' => '===',
+									'value'    => 'enable',
+								),
+							),
+						),
+					),
+					'tiktok-event-heading'            => array(
+						'type'       => 'heading',
+						'label'      => __( 'TikTok Events', 'cartflows' ),
+						'conditions' => array(
+							'fields' => array(
+								array(
+									'name'     => '_cartflows_tiktok[tiktok_pixel_tracking]',
+									'operator' => '===',
+									'value'    => 'enable',
+								),
+							),
+						),
+					),
+					'tiktok-event-begin-checkout'     => array(
+						'type'       => 'checkbox',
+						'label'      => __( 'Begin Checkout', 'cartflows' ),
+						'name'       => '_cartflows_tiktok[enable_tiktok_begin_checkout]',
+						'conditions' => array(
+							'fields' => array(
+								array(
+									'name'     => '_cartflows_tiktok[tiktok_pixel_tracking]',
+									'operator' => '===',
+									'value'    => 'enable',
+								),
+							),
+						),
+						'backComp'   => true,
+					),
+
+					'tiktok-event-add-to-cart'        => array(
+						'type'       => 'checkbox',
+						'label'      => __( 'Add To Cart', 'cartflows' ),
+						'name'       => '_cartflows_tiktok[enable_tiktok_add_to_cart]',
+						'conditions' => array(
+							'fields' => array(
+								array(
+									'name'     => '_cartflows_tiktok[tiktok_pixel_tracking]',
+									'operator' => '===',
+									'value'    => 'enable',
+								),
+							),
+						),
+						'backComp'   => true,
+					),
+					'tiktok-event-view-content'       => array(
+						'type'       => 'checkbox',
+						'label'      => __( 'View Content', 'cartflows' ),
+						'name'       => '_cartflows_tiktok[enable_tiktok_view_content]',
+						'conditions' => array(
+							'fields' => array(
+								array(
+									'name'     => '_cartflows_tiktok[tiktok_pixel_tracking]',
+									'operator' => '===',
+									'value'    => 'enable',
+								),
+							),
+						),
+						'backComp'   => true,
+					),
+					'tiktok-event-payment-info'       => array(
+						'type'       => 'checkbox',
+						'label'      => __( 'Add Payment Info', 'cartflows' ),
+						'name'       => '_cartflows_tiktok[enable_tiktok_add_payment_info]',
+						'conditions' => array(
+							'fields' => array(
+								array(
+									'name'     => '_cartflows_tiktok[tiktok_pixel_tracking]',
+									'operator' => '===',
+									'value'    => 'enable',
+								),
+							),
+						),
+						'backComp'   => true,
+						'is_pro'     => true,
+					),
+					'tiktok-event-purchase-complete'  => array(
+						'type'       => 'checkbox',
+						'label'      => __( 'Purchase', 'cartflows' ),
+						'name'       => '_cartflows_tiktok[enable_tiktok_purchase_event]',
+						'conditions' => array(
+							'fields' => array(
+								array(
+									'name'     => '_cartflows_tiktok[tiktok_pixel_tracking]',
+									'operator' => '===',
+									'value'    => 'enable',
+								),
+							),
+						),
+						'backComp'   => true,
+					),
+
+					'tiktok-event-lead-info'          => array(
+						'type'       => 'checkbox',
+						'label'      => __( 'Optin Lead', 'cartflows' ),
+						'name'       => '_cartflows_tiktok[enable_tiktok_optin_lead]',
+						'conditions' => array(
+							'fields' => array(
+								array(
+									'name'     => '_cartflows_tiktok[tiktok_pixel_tracking]',
+									'operator' => '===',
+									'value'    => 'enable',
+								),
+							),
+						),
+						'backComp'   => true,
+						'tooltip'    => __( 'Optin Lead event will be triggered for optin page.', 'cartflows' ),
+						'is_pro'     => true,
+					),
+				),
+			),
+			'snapchat-pixel'         => array(
+				'title'  => '',
+				'fields' => array(
+					'enable-snapchat-pixel'             => array(
+						'type'     => 'toggle',
+						'label'    => __( 'Enable for CartFlows pages', 'cartflows' ),
+						'name'     => '_cartflows_snapchat[snapchat_pixel_tracking]',
+						'backComp' => true,
+					),
+					'snapchat-pixel-separator'          => array(
+						'type'       => 'separator',
+						'conditions' => array(
+							'fields' => array(
+								array(
+									'name'     => '_cartflows_snapchat[snapchat_pixel_tracking]',
+									'operator' => '===',
+									'value'    => 'enable',
+								),
+							),
+						),
+					),
+					'enable-snapchat-pixel-for-site'    => array(
+						'type'       => 'toggle',
+						'label'      => __( 'Enable for the whole site', 'cartflows' ),
+						'name'       => '_cartflows_snapchat[snapchat_pixel_tracking_for_site]',
+						'desc'       => __( 'If checked, PageView event will also be triggered for other pages/posts of site.', 'cartflows' ),
+						'conditions' => array(
+							'fields' => array(
+								array(
+									'name'     => '_cartflows_snapchat[snapchat_pixel_tracking]',
+									'operator' => '===',
+									'value'    => 'enable',
+								),
+							),
+						),
+						'backComp'   => true,
+					),
+					'snapchat-pixel-for-site-separator' => array(
+						'type'       => 'separator',
+						'conditions' => array(
+							'fields' => array(
+								array(
+									'name'     => '_cartflows_snapchat[snapchat_pixel_tracking]',
+									'operator' => '===',
+									'value'    => 'enable',
+								),
+							),
+						),
+					),
+					'snapchat-id'                       => array(
+						'type'       => 'text',
+						'label'      => __( 'Enter Snapchat pixel ID', 'cartflows' ),
+						'name'       => '_cartflows_snapchat[snapchat_pixel_id]',
+						'class'      => 'input-field',
+						/* translators: %1$1s: link html start, %2$12: link html end*/
+						'desc'       => sprintf( __( 'Log into your %1$1s Snapchat business account %2$2s to find your ID.', 'cartflows' ), '<a href="https://ads.snapchat.com/" target="_blank">', '</a>' ),
+						'conditions' => array(
+							'fields' => array(
+								array(
+									'name'     => '_cartflows_snapchat[snapchat_pixel_tracking]',
+									'operator' => '===',
+									'value'    => 'enable',
+								),
+							),
+						),
+					),
+					'snapchat-id-separator'             => array(
+						'type'       => 'separator',
+						'conditions' => array(
+							'fields' => array(
+								array(
+									'name'     => '_cartflows_snapchat[snapchat_pixel_tracking]',
+									'operator' => '===',
+									'value'    => 'enable',
+								),
+							),
+						),
+					),
+					'snapchat-event-heading'            => array(
+						'type'       => 'heading',
+						'label'      => __( 'Snapchat Events', 'cartflows' ),
+						'conditions' => array(
+							'fields' => array(
+								array(
+									'name'     => '_cartflows_snapchat[snapchat_pixel_tracking]',
+									'operator' => '===',
+									'value'    => 'enable',
+								),
+							),
+						),
+					),
+					'snapchat-event-begin-checkout'     => array(
+						'type'       => 'checkbox',
+						'label'      => __( 'Begin Checkout', 'cartflows' ),
+						'name'       => '_cartflows_snapchat[enable_snapchat_begin_checkout]',
+						'conditions' => array(
+							'fields' => array(
+								array(
+									'name'     => '_cartflows_snapchat[snapchat_pixel_tracking]',
+									'operator' => '===',
+									'value'    => 'enable',
+								),
+							),
+						),
+						'backComp'   => true,
+					),
+					'snapchat-event-add-to-cart'        => array(
+						'type'       => 'checkbox',
+						'label'      => __( 'Add To Cart', 'cartflows' ),
+						'name'       => '_cartflows_snapchat[enable_snapchat_add_to_cart]',
+						'conditions' => array(
+							'fields' => array(
+								array(
+									'name'     => '_cartflows_snapchat[snapchat_pixel_tracking]',
+									'operator' => '===',
+									'value'    => 'enable',
+								),
+							),
+						),
+						'backComp'   => true,
+					),
+					'snapchat-event-view-content'       => array(
+						'type'       => 'checkbox',
+						'label'      => __( 'View Content', 'cartflows' ),
+						'name'       => '_cartflows_snapchat[enable_snapchat_view_content]',
+						'conditions' => array(
+							'fields' => array(
+								array(
+									'name'     => '_cartflows_snapchat[snapchat_pixel_tracking]',
+									'operator' => '===',
+									'value'    => 'enable',
+								),
+							),
+						),
+						'backComp'   => true,
+					),
+					'snapchat-event-purchase-complete'  => array(
+						'type'       => 'checkbox',
+						'label'      => __( 'Purchase', 'cartflows' ),
+						'name'       => '_cartflows_snapchat[enable_snapchat_purchase_event]',
+						'conditions' => array(
+							'fields' => array(
+								array(
+									'name'     => '_cartflows_snapchat[snapchat_pixel_tracking]',
+									'operator' => '===',
+									'value'    => 'enable',
+								),
+							),
+						),
+						'backComp'   => true,
+					),
+					'snapchat-event-subscribe'          => array(
+						'type'       => 'checkbox',
+						'label'      => __( 'Subscribe', 'cartflows' ),
+						'name'       => '_cartflows_snapchat[enable_snapchat_subscribe_event]',
+						'conditions' => array(
+							'fields' => array(
+								array(
+									'name'     => '_cartflows_snapchat[snapchat_pixel_tracking]',
+									'operator' => '===',
+									'value'    => 'enable',
+								),
+							),
+						),
+						'backComp'   => true,
+						'tooltip'    => __( 'This option is only available for products that are part of a subscription.', 'cartflows' ),
+					),
+					'snapchat-event-lead-info'          => array(
+						'type'       => 'checkbox',
+						'label'      => __( 'Optin Lead', 'cartflows' ),
+						'name'       => '_cartflows_snapchat[enable_snapchat_optin_lead]',
+						'conditions' => array(
+							'fields' => array(
+								array(
+									'name'     => '_cartflows_snapchat[snapchat_pixel_tracking]',
+									'operator' => '===',
+									'value'    => 'enable',
+								),
+							),
+						),
+						'backComp'   => true,
+						'tooltip'    => __( 'Optin Lead event will be triggered for optin page.', 'cartflows' ),
+						'is_pro'     => true,
+					),
+				),
+			),
+			'google-ads'             => array(
+				'title'  => '',
+				'fields' => array(
+					'enable-google-ads'                  => array(
+						'type'     => 'toggle',
+						'label'    => __( 'Enable For CartFlows Pages', 'cartflows' ),
+						'name'     => '_cartflows_google_ads[google_ads_tracking]',
+						'backComp' => true,
+					),
+					'google-ads-separator'               => array(
+						'type'       => 'separator',
+						'conditions' => array(
+							'fields' => array(
+								array(
+									'name'     => '_cartflows_google_ads[google_ads_tracking]',
+									'operator' => '===',
+									'value'    => 'enable',
+								),
+							),
+						),
+					),
+					'enable-google-ads-for-site'         => array(
+						'type'       => 'toggle',
+						'label'      => __( 'Enable for the whole site', 'cartflows' ),
+						'name'       => '_cartflows_google_ads[google_ads_for_site]',
+						'desc'       => __( 'If checked, PageView event will also be triggered for other pages/posts of site.', 'cartflows' ),
+						'conditions' => array(
+							'fields' => array(
+								array(
+									'name'     => '_cartflows_google_ads[google_ads_tracking]',
+									'operator' => '===',
+									'value'    => 'enable',
+								),
+							),
+						),
+						'backComp'   => true,
+					),
+					'google-ads-for-site-separator'      => array(
+						'type'       => 'separator',
+						'conditions' => array(
+							'fields' => array(
+								array(
+									'name'     => '_cartflows_google_ads[google_ads_tracking]',
+									'operator' => '===',
+									'value'    => 'enable',
+								),
+							),
+						),
+					),
+					'google-ads-id'                      => array(
+						'type'       => 'text',
+						'label'      => __( 'Enter Google Ads Conversion ID', 'cartflows' ),
+						'name'       => '_cartflows_google_ads[google_ads_id]',
+						'class'      => 'input-field',
+						/* translators: %1$1s: link html start, %2$12: link html end*/
+						'desc'       => sprintf( __( 'Log into your %1$1s Google Ads account %2$2s to find your conversion ID.', 'cartflows' ), '<a href="https://ads.google.com/home/" target="_blank">', '</a>' ),
+						'conditions' => array(
+							'fields' => array(
+								array(
+									'name'     => '_cartflows_google_ads[google_ads_tracking]',
+									'operator' => '===',
+									'value'    => 'enable',
+								),
+							),
+						),
+					),
+					'google-ads-label'                   => array(
+						'type'       => 'text',
+						'label'      => __( 'Enter Google Ads Conversion Label', 'cartflows' ),
+						'name'       => '_cartflows_google_ads[google_ads_label]',
+						'class'      => 'input-field',
+						/* translators: %1$1s: link html start, %2$12: link html end*/
+						'desc'       => sprintf( __( 'Log into your %1$1s Google Ads account %2$2s to find your conversion label.', 'cartflows' ), '<a href="https://ads.google.com/home/" target="_blank">', '</a>' ),
+						'conditions' => array(
+							'fields' => array(
+								array(
+									'name'     => '_cartflows_google_ads[google_ads_tracking]',
+									'operator' => '===',
+									'value'    => 'enable',
+								),
+							),
+						),
+					),
+					'google-ads-id-separator'            => array(
+						'type'       => 'separator',
+						'conditions' => array(
+							'fields' => array(
+								array(
+									'name'     => '_cartflows_google_ads[google_ads_tracking]',
+									'operator' => '===',
+									'value'    => 'enable',
+								),
+							),
+						),
+					),
+
+					'google-ads-event-heading'           => array(
+						'type'       => 'heading',
+						'label'      => __( 'Google Ads Events', 'cartflows' ),
+						'conditions' => array(
+							'fields' => array(
+								array(
+									'name'     => '_cartflows_google_ads[google_ads_tracking]',
+									'operator' => '===',
+									'value'    => 'enable',
+								),
+							),
+						),
+					),
+					'google-ads-event-begin-checkout'    => array(
+						'type'       => 'checkbox',
+						'label'      => __( 'Begin Checkout', 'cartflows' ),
+						'name'       => '_cartflows_google_ads[enable_google_ads_begin_checkout]',
+						'conditions' => array(
+							'fields' => array(
+								array(
+									'name'     => '_cartflows_google_ads[google_ads_tracking]',
+									'operator' => '===',
+									'value'    => 'enable',
+								),
+							),
+						),
+						'backComp'   => true,
+					),
+
+					'google-ads-event-add-to-cart'       => array(
+						'type'       => 'checkbox',
+						'label'      => __( 'Add To Cart', 'cartflows' ),
+						'name'       => '_cartflows_google_ads[enable_google_ads_add_to_cart]',
+						'conditions' => array(
+							'fields' => array(
+								array(
+									'name'     => '_cartflows_google_ads[google_ads_tracking]',
+									'operator' => '===',
+									'value'    => 'enable',
+								),
+							),
+						),
+						'backComp'   => true,
+					),
+					'google-ads-event-view-content'      => array(
+						'type'       => 'checkbox',
+						'label'      => __( 'View Content', 'cartflows' ),
+						'name'       => '_cartflows_google_ads[enable_google_ads_view_content]',
+						'conditions' => array(
+							'fields' => array(
+								array(
+									'name'     => '_cartflows_google_ads[google_ads_tracking]',
+									'operator' => '===',
+									'value'    => 'enable',
+								),
+							),
+						),
+						'backComp'   => true,
+					),
+					'google-ads-event-payment-info'      => array(
+						'type'       => 'checkbox',
+						'label'      => __( 'Add Payment Info', 'cartflows' ),
+						'name'       => '_cartflows_google_ads[enable_google_ads_add_payment_info]',
+						'conditions' => array(
+							'fields' => array(
+								array(
+									'name'     => '_cartflows_google_ads[google_ads_tracking]',
+									'operator' => '===',
+									'value'    => 'enable',
+								),
+							),
+						),
+						'backComp'   => true,
+						'is_pro'     => true,
+					),
+					'google-ads-event-purchase-complete' => array(
+						'type'       => 'checkbox',
+						'label'      => __( 'Purchase', 'cartflows' ),
+						'name'       => '_cartflows_google_ads[enable_google_ads_purchase_event]',
+						'conditions' => array(
+							'fields' => array(
+								array(
+									'name'     => '_cartflows_google_ads[google_ads_tracking]',
+									'operator' => '===',
+									'value'    => 'enable',
+								),
+							),
+						),
+						'backComp'   => true,
+					),
+
+					'google-ads-event-lead-info'         => array(
+						'type'       => 'checkbox',
+						'label'      => __( 'Optin Lead', 'cartflows' ),
+						'name'       => '_cartflows_google_ads[enable_google_ads_optin_lead]',
+						'conditions' => array(
+							'fields' => array(
+								array(
+									'name'     => '_cartflows_google_ads[google_ads_tracking]',
+									'operator' => '===',
+									'value'    => 'enable',
+								),
+							),
+						),
+						'backComp'   => true,
+						'tooltip'    => __( 'Optin Lead event will be triggered for optin page.', 'cartflows' ),
+						'is_pro'     => true,
+					),
+				),
+			),
+			'pinterest-tag'          => array(
+				'title'  => '',
+				'fields' => array(
+					'enable-pinterest-tag'              => array(
+						'type'     => 'toggle',
+						'label'    => __( 'Enable for CartFlows pages', 'cartflows' ),
+						'name'     => '_cartflows_pinterest[pinterest_tag_tracking]',
+						'backComp' => true,
+					),
+					'pinterest-tag-separator'           => array(
+						'type'       => 'separator',
+						'conditions' => array(
+							'fields' => array(
+								array(
+									'name'     => '_cartflows_pinterest[pinterest_tag_tracking]',
+									'operator' => '===',
+									'value'    => 'enable',
+								),
+							),
+						),
+					),
+					'enable-pinterest-tag-for-site'     => array(
+						'type'       => 'toggle',
+						'label'      => __( 'Enable for the whole site', 'cartflows' ),
+						'name'       => '_cartflows_pinterest[pinterest_tag_tracking_for_site]',
+						'desc'       => __( 'If checked, PageVisit event will also be triggered for other pages/posts of site.', 'cartflows' ),
+						'conditions' => array(
+							'fields' => array(
+								array(
+									'name'     => '_cartflows_pinterest[pinterest_tag_tracking]',
+									'operator' => '===',
+									'value'    => 'enable',
+								),
+							),
+						),
+						'backComp'   => true,
+					),
+					'pinterest-tag-for-site-separator'  => array(
+						'type'       => 'separator',
+						'conditions' => array(
+							'fields' => array(
+								array(
+									'name'     => '_cartflows_pinterest[pinterest_tag_tracking]',
+									'operator' => '===',
+									'value'    => 'enable',
+								),
+							),
+						),
+					),
+					'pinterest-id'                      => array(
+						'type'       => 'text',
+						'label'      => __( 'Enter Pinterest Tag ID', 'cartflows' ),
+						'name'       => '_cartflows_pinterest[pinterest_tag_id]',
+						'class'      => 'input-field',
+						/* translators: %1$1s: link html start, %2$12: link html end*/
+						'desc'       => sprintf( __( 'Log into your %1$1s Pinterest business account %2$2s to find your ID.', 'cartflows' ), '<a href="https://www.pinterest.com/business/hub/" target="_blank">', '</a>' ),
+						'conditions' => array(
+							'fields' => array(
+								array(
+									'name'     => '_cartflows_pinterest[pinterest_tag_tracking]',
+									'operator' => '===',
+									'value'    => 'enable',
+								),
+							),
+						),
+					),
+					'pinterest-id-separator'            => array(
+						'type'       => 'separator',
+						'conditions' => array(
+							'fields' => array(
+								array(
+									'name'     => '_cartflows_pinterest[pinterest_tag_tracking]',
+									'operator' => '===',
+									'value'    => 'enable',
+								),
+							),
+						),
+					),
+					'pinterest-consent'                 => array(
+						'type'       => 'checkbox',
+						'label'      => __( 'Enable Pinterest tag tracking consent notice', 'cartflows' ),
+						'name'       => '_cartflows_pinterest[enable_pinterest_consent]',
+						'conditions' => array(
+							'fields' => array(
+								array(
+									'name'     => '_cartflows_pinterest[pinterest_tag_tracking]',
+									'operator' => '===',
+									'value'    => 'enable',
+								),
+							),
+						),
+						'backComp'   => true,
+						/* translators: %1$1s: link html start, %2$2s: link html end */
+						'desc'       => sprintf( __( 'This setting enables a consent notice for Pinterest Tag tracking on your website. For more information check %1$1sPinterest documentation%2$2s.', 'cartflows' ), '<a href="https://help.pinterest.com/en/business/article/install-the-base-code" target="_blank">', '</a>' ),
+					),
+					'pinterest-consent-separator'       => array(
+						'type'       => 'separator',
+						'conditions' => array(
+							'fields' => array(
+								array(
+									'name'     => '_cartflows_pinterest[pinterest_tag_tracking]',
+									'operator' => '===',
+									'value'    => 'enable',
+								),
+							),
+						),
+					),
+					'pinterest-event-heading'           => array(
+						'type'       => 'heading',
+						'label'      => __( 'Pinterest Events', 'cartflows' ),
+						'conditions' => array(
+							'fields' => array(
+								array(
+									'name'     => '_cartflows_pinterest[pinterest_tag_tracking]',
+									'operator' => '===',
+									'value'    => 'enable',
+								),
+							),
+						),
+					),
+					'pinterest-event-begin-checkout'    => array(
+						'type'       => 'checkbox',
+						'label'      => __( 'Begin Checkout', 'cartflows' ),
+						'name'       => '_cartflows_pinterest[enable_pinterest_begin_checkout]',
+						'conditions' => array(
+							'fields' => array(
+								array(
+									'name'     => '_cartflows_pinterest[pinterest_tag_tracking]',
+									'operator' => '===',
+									'value'    => 'enable',
+								),
+							),
+						),
+						'backComp'   => true,
+					),
+					'pinterest-event-add-to-cart'       => array(
+						'type'       => 'checkbox',
+						'label'      => __( 'Add To Cart', 'cartflows' ),
+						'name'       => '_cartflows_pinterest[enable_pinterest_add_to_cart]',
+						'conditions' => array(
+							'fields' => array(
+								array(
+									'name'     => '_cartflows_pinterest[pinterest_tag_tracking]',
+									'operator' => '===',
+									'value'    => 'enable',
+								),
+							),
+						),
+						'backComp'   => true,
+					),
+					'pinterest-event-payment-info'      => array(
+						'type'       => 'checkbox',
+						'label'      => __( 'Add Payment Info', 'cartflows' ),
+						'name'       => '_cartflows_pinterest[enable_pinterest_add_payment_info]',
+						'conditions' => array(
+							'fields' => array(
+								array(
+									'name'     => '_cartflows_pinterest[pinterest_tag_tracking]',
+									'operator' => '===',
+									'value'    => 'enable',
+								),
+							),
+						),
+						'backComp'   => true,
+						'is_pro'     => true,
+					),
+					'pinterest-event-purchase-complete' => array(
+						'type'       => 'checkbox',
+						'label'      => __( 'Purchase', 'cartflows' ),
+						'name'       => '_cartflows_pinterest[enable_pinterest_purchase_event]',
+						'conditions' => array(
+							'fields' => array(
+								array(
+									'name'     => '_cartflows_pinterest[pinterest_tag_tracking]',
+									'operator' => '===',
+									'value'    => 'enable',
+								),
+							),
+						),
+						'backComp'   => true,
+					),
+					'pinterest-event-signup'            => array(
+						'type'       => 'checkbox',
+						'label'      => __( 'Signup', 'cartflows' ),
+						'name'       => '_cartflows_pinterest[enable_pinterest_signup]',
+						'conditions' => array(
+							'fields' => array(
+								array(
+									'name'     => '_cartflows_pinterest[pinterest_tag_tracking]',
+									'operator' => '===',
+									'value'    => 'enable',
+								),
+							),
+						),
+						'backComp'   => true,
+						'tooltip'    => __( 'Signup event will be triggered for optin page.', 'cartflows' ),
+						'is_pro'     => true,
+					),
+					'pinterest-event-lead-info'         => array(
+						'type'       => 'checkbox',
+						'label'      => __( 'Optin Lead', 'cartflows' ),
+						'name'       => '_cartflows_pinterest[enable_pinterest_optin_lead]',
+						'conditions' => array(
+							'fields' => array(
+								array(
+									'name'     => '_cartflows_pinterest[pinterest_tag_tracking]',
+									'operator' => '===',
+									'value'    => 'enable',
+								),
+							),
+						),
+						'backComp'   => true,
+						'tooltip'    => __( 'Optin Lead event will be triggered for optin page.', 'cartflows' ),
+						'is_pro'     => true,
+					),
+				),
+			),
 			'other'                  => array(
 				'title'  => '',
 				'fields' => array(
-					'weekly-report-separator'    => array(
+					'weekly-report-separator'      => array(
 						'type' => 'separator',
 					),
-					'weekly-report-heading'      => array(
+					'weekly-report-heading'        => array(
 						'type'  => 'heading',
 						'label' => __( 'Store Revenue Report Emails', 'cartflows' ),
 					),
-					'enable_weekly_emails'       => array(
+					'enable_weekly_emails'         => array(
 						'type'     => 'toggle',
 						'name'     => 'cartflows_stats_report_emails',
 						'label'    => __( 'Enable Store Report Email.', 'cartflows' ),
@@ -583,7 +1389,7 @@ class GlobalSettings {
 						/* translators: %1$1s: link html start, %2$12: link html end*/
 						'desc'     => __( 'If enabled, you will receive the weekly report emails of your store for the revenue stats generated by CartFlows.', 'cartflows' ),
 					),
-					'email_id_for_weekly_emails' => array(
+					'email_id_for_weekly_emails'   => array(
 						'type'       => 'textarea',
 						'rows'       => 2,
 						'cols'       => 38,
@@ -600,10 +1406,20 @@ class GlobalSettings {
 							),
 						),
 					),
-					'delete-data-separator'      => array(
+					'non-sensitive-data-analytics-separator' => array(
 						'type' => 'separator',
 					),
-					'delete_data'                => array(
+					'non-sensitive-data-analytics' => array(
+						'type'  => 'toggle',
+						'name'  => 'cf_analytics_optin',
+						'label' => __( 'Help Us Improve Your Experience', 'cartflows' ),
+						/* translators: %1$1s: link html start, %2$12: link html end*/
+						'desc'  => sprintf( __( 'Collect non-sensitive information from your website, such as the PHP version and features used, to help us fix bugs faster, make smarter decisions, and build features that actually matter to you. %1$1s Learn More%2$2s.', 'cartflows' ), '<a href="https://my.cartflows.com/usage-tracking/?utm_source=dashboard&utm_medium=free-cartflows&utm_campaign=docs" target="_blank">', '</a>' ),
+					),
+					'delete-data-separator'        => array(
+						'type' => 'separator',
+					),
+					'delete_data'                  => array(
 						'type'     => 'toggle',
 						'name'     => 'cartflows_delete_plugin_data',
 						'label'    => __( 'Delete plugin data on plugin deletion', 'cartflows' ),
@@ -623,6 +1439,9 @@ class GlobalSettings {
 				'roles' => (
 					$all_roles
 				),
+			),
+			'automations'            => array(
+				'title' => '',
 			),
 		);
 

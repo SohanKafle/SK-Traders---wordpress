@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Tooltip } from '@WizardFields';
 import { addFilter } from '@wordpress/hooks';
 import { sendPostMessage } from '@Utils/Helpers';
 import { PhotoIcon, XMarkIcon } from '@heroicons/react/24/outline';
@@ -107,33 +108,38 @@ function UploadSiteLogo( props ) {
 					// multiple={ false }
 					render={ ( { open } ) => (
 						<>
-							<div className="wcf-media-upload-wrapper flex gap-4">
+							<div className="wcf-media-upload-wrapper flex gap-4 items-center">
 								{ '' !== site_logo.url &&
 								undefined !== site_logo.url ? (
 									<div className="wcf-site-logo-wrapper">
 										<div className="wcf-media-upload--selected-image">
-											<div
-												className="wcf-media-upload--preview relative wcf-inline-tooltip"
-												data-tooltip={ __(
-													'Remove logo',
-													'cartflows'
-												) }
-											>
+											<div className="wcf-media-upload--preview relative">
 												<span
 													className="wcf-close-site-logo absolute p-0.5 -left-2.5 bg-white rounded-full border border-gray-300 -top-1.5 cursor-pointer"
 													onClick={ removeImage }
 												>
-													<XMarkIcon
-														className="w-2.5 h-2.5 stroke-2 text-gray-600 hover:text-gray-800 "
-														aria-hidden="true"
+													<Tooltip
+														text={ __(
+															'Remove logo',
+															'cartflows'
+														) }
+														classes={
+															'text-gray-400 !ml-0'
+														}
+														icon={
+															<XMarkIcon
+																className="w-2.5 h-2.5 stroke-2 text-gray-600 hover:text-gray-800"
+																aria-hidden="true"
+															/>
+														}
 													/>
 												</span>
 												<img
-													src={ site_logo.url }
+													src={ site_logo?.url }
 													alt={
 														'wcf-selected-logo-preview'
 													}
-													className="wcf-selected-image w-11 h-11"
+													className="wcf-selected-image w-auto h-auto max-w-44 max-h-11"
 													data-logo-data={ JSON.stringify(
 														site_logo
 													) }

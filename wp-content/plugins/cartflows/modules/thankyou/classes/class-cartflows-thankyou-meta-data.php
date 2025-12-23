@@ -59,7 +59,7 @@ class Cartflows_Thankyou_Meta_Data extends Cartflows_Step_Meta_Base {
 				'id'       => 'settings',
 				'class'    => '',
 				'icon'     => 'dashicons-format-aside',
-				'priority' => 40,
+				'priority' => 70,
 			),
 
 		);
@@ -89,10 +89,10 @@ class Cartflows_Thankyou_Meta_Data extends Cartflows_Step_Meta_Base {
 		$settings = array(
 			'settings' => array(
 				'shortcode'        => array(
-					'title'    => __( 'Shortcode', 'cartflows' ),
-					'slug'     => 'shortcode',
-					'priority' => 10,
-					'fields'   => array(
+					'title'      => __( 'Shortcode', 'cartflows' ),
+					'slug'       => 'shortcode',
+					'priority'   => 10,
+					'fields'     => array(
 						'thankyou-shortcode' => array(
 							'type'          => 'text',
 							'name'          => 'thankyou-shortcode',
@@ -103,18 +103,77 @@ class Cartflows_Thankyou_Meta_Data extends Cartflows_Step_Meta_Base {
 							'display_align' => 'vertical',
 						),
 					),
+					'conditions' => array(
+						'relation' => 'and',
+						'fields'   => array(
+							array(
+								'name'     => 'instant-layout-style',
+								'operator' => '!==',
+								'value'    => 'yes',
+							),
+						),
+					),
+				),
+				'thankyou-design'  => array(
+					'title'    => __( 'Design', 'cartflows' ),
+					'slug'     => 'design',
+					'priority' => 20,
+					'fields'   => array(
+						'tq-primary-color' => array(
+							'type'       => 'color-picker',
+							'name'       => 'wcf-tq-primary-color',
+							'label'      => __( 'Primary Color', 'cartflows' ),
+							'value'      => $options['wcf-tq-primary-color'],
+							'conditions' => array(
+								'fields' => array(
+									array(
+										'name'     => 'instant-layout-style',
+										'operator' => '===',
+										'value'    => 'yes',
+									),
+								),
+							),
+						),
+						'thankyou-skin'    => array(
+							'type'          => 'select',
+							'label'         => __( 'Thank You Skin', 'cartflows' ),
+							'name'          => 'wcf-tq-layout',
+							'value'         => $options['wcf-tq-layout'],
+							'options'       => array(
+								array(
+									'value' => 'legacy-tq-layout',
+									'label' => esc_html__( 'Legacy', 'cartflows' ),
+								),
+								array(
+									'value' => 'modern-tq-layout',
+									'label' => esc_html__( 'Modern', 'cartflows' ),
+								),
+							),
+							'display_align' => 'vertical',
+							'conditions'    => array(
+								'relation' => 'and',
+								'fields'   => array(
+									array(
+										'name'     => 'instant-layout-style',
+										'operator' => '!==',
+										'value'    => 'yes',
+									),
+								),
+							),
+						),
+					),
 				),
 
 				'heading'          => array(
-					'title'  => __( 'Heading', 'cartflows' ),
-					'slug'   => 'heading',
-					'fields' => array(
+					'title'    => __( 'Heading', 'cartflows' ),
+					'slug'     => 'heading',
+					'priority' => 30,
+					'fields'   => array(
 						'heading-color'       => array(
-							'type'   => 'color-picker',
-							'name'   => 'wcf-tq-heading-color',
-							'label'  => __( 'Color', 'cartflows' ),
-							'value'  => $options['wcf-tq-heading-color'],
-							'withBg' => true,
+							'type'  => 'color-picker',
+							'name'  => 'wcf-tq-heading-color',
+							'label' => __( 'Color', 'cartflows' ),
+							'value' => $options['wcf-tq-heading-color'],
 						),
 						'heading-font-family' => array(
 							'type'              => 'font-family',
@@ -130,15 +189,15 @@ class Cartflows_Thankyou_Meta_Data extends Cartflows_Step_Meta_Base {
 				),
 
 				'text'             => array(
-					'title'  => __( 'Text', 'cartflows' ),
-					'slug'   => 'text',
-					'fields' => array(
+					'title'    => __( 'Text', 'cartflows' ),
+					'slug'     => 'text',
+					'priority' => 40,
+					'fields'   => array(
 						'text-color'       => array(
-							'type'   => 'color-picker',
-							'name'   => 'wcf-tq-text-color',
-							'label'  => __( 'Color', 'cartflows' ),
-							'value'  => $options['wcf-tq-text-color'],
-							'withBg' => true,
+							'type'  => 'color-picker',
+							'name'  => 'wcf-tq-text-color',
+							'label' => __( 'Color', 'cartflows' ),
+							'value' => $options['wcf-tq-text-color'],
 						),
 						'text-font-family' => array(
 							'type'          => 'font-family',
@@ -151,6 +210,7 @@ class Cartflows_Thankyou_Meta_Data extends Cartflows_Step_Meta_Base {
 							'type'          => 'number',
 							'name'          => 'wcf-tq-font-size',
 							'label'         => __( 'Font Size (In px)', 'cartflows' ),
+							'min'           => 0,
 							'value'         => $options['wcf-tq-font-size'],
 							'display_align' => 'vertical',
 						),
@@ -158,9 +218,10 @@ class Cartflows_Thankyou_Meta_Data extends Cartflows_Step_Meta_Base {
 				),
 
 				'advanced-options' => array(
-					'title'  => __( 'Advanced Options', 'cartflows' ),
-					'slug'   => 'advanced_options',
-					'fields' => array(
+					'title'      => __( 'Advanced Options', 'cartflows' ),
+					'slug'       => 'advanced_options',
+					'priority'   => 100,
+					'fields'     => array(
 						'wcf-tq-advance-options-fields' => array(
 							'type'         => 'toggle',
 							'label'        => __( 'Enable Advanced Options', 'cartflows' ),
@@ -181,6 +242,11 @@ class Cartflows_Thankyou_Meta_Data extends Cartflows_Step_Meta_Base {
 										'operator' => '===',
 										'value'    => 'yes',
 									),
+									array(
+										'name'     => 'instant-layout-style',
+										'operator' => '!==',
+										'value'    => 'yes',
+									),
 								),
 							),
 						),
@@ -189,15 +255,113 @@ class Cartflows_Thankyou_Meta_Data extends Cartflows_Step_Meta_Base {
 							'name'       => 'wcf-tq-section-bg-color',
 							'label'      => __( 'Section Background Color', 'cartflows' ),
 							'value'      => $options['wcf-tq-section-bg-color'],
-							'withBg'     => true,
 							'conditions' => array(
-								'fields' => array(
+								'relation' => 'and',
+								'fields'   => array(
 									array(
 										'name'     => 'wcf-tq-advance-options-fields',
 										'operator' => '===',
 										'value'    => 'yes',
 									),
+									array(
+										'name'     => 'instant-layout-style',
+										'operator' => '!==',
+										'value'    => 'yes',
+									),
 								),
+							),
+						),
+					),
+					'conditions' => array(
+						'fields' => array(
+							array(
+								'name'     => 'instant-layout-style',
+								'operator' => '!==',
+								'value'    => 'yes',
+							),
+						),
+					),
+				),
+
+				'buttons'          => array(
+					'title'      => __( 'Buttons', 'cartflows' ),
+					'slug'       => 'buttons',
+					'priority'   => 50,
+					'fields'     => array(
+						'button-text-color'       => array(
+							'type'  => 'color-picker',
+							'name'  => 'wcf-tq-button-text-color',
+							'label' => __( 'Button Text Color', 'cartflows' ),
+							'value' => $options['wcf-tq-button-text-color'],
+						),
+						'button-background-color' => array(
+							'type'  => 'color-picker',
+							'name'  => 'wcf-tq-button-background-color',
+							'label' => __( 'Button Background Color', 'cartflows' ),
+							'value' => $options['wcf-tq-button-background-color'],
+						),
+						'button-font-family'      => array(
+							'type'          => 'font-family',
+							'name'          => 'wcf-tq-button-font-family',
+							'label'         => __( 'Font Family', 'cartflows' ),
+							'value'         => $options['wcf-tq-button-font-family'],
+							'display_align' => 'vertical',
+						),
+					),
+					'conditions' => array(
+						'fields' => array(
+							array(
+								'name'     => 'instant-layout-style',
+								'operator' => '===',
+								'value'    => 'yes',
+							),
+						),
+					),
+				),
+				'background'       => array(
+					'title'      => __( 'Background', 'cartflows' ),
+					'slug'       => 'background',
+					'priority'   => 60,
+					'fields'     => array(
+						array(
+							'type'       => 'color-picker',
+							'label'      => __( 'Left Column Background Color', 'cartflows' ),
+							'name'       => 'wcf-instant-thankyou-left-side-bg-color',
+							'value'      => $options['wcf-instant-thankyou-left-side-bg-color'],
+							'tooltip'    => __( 'Background color of left side column for Instant Thank You Layout.', 'cartflows' ),
+							'conditions' => array(
+								'fields' => array(
+									array(
+										'name'     => 'instant-layout-style',
+										'operator' => '===',
+										'value'    => 'yes',
+									),
+								),
+							),
+						),
+						array(
+							'type'       => 'color-picker',
+							'label'      => __( 'Right Column Background Color', 'cartflows' ),
+							'name'       => 'wcf-instant-thankyou-right-side-bg-color',
+							'value'      => $options['wcf-instant-thankyou-right-side-bg-color'],
+							'tooltip'    => __( 'Background color of right side column for Instant Thank You Layout.', 'cartflows' ),
+							'conditions' => array(
+								'fields' => array(
+									array(
+										'name'     => 'instant-layout-style',
+										'operator' => '===',
+										'value'    => 'yes',
+									),
+								),
+							),
+						),
+					),
+					'conditions' => array(
+						'fields' => array(
+							array(
+								'name'     => 'instant-layout-style',
+								'operator' => '===',
+								'value'    => 'yes',
 							),
 						),
 					),
@@ -206,7 +370,7 @@ class Cartflows_Thankyou_Meta_Data extends Cartflows_Step_Meta_Base {
 			),
 		);
 
-		return $settings;
+		return apply_filters( 'cartflows_admin_thankyou_design_fields', $settings, $options, $step_id );
 	}
 
 
@@ -224,22 +388,13 @@ class Cartflows_Thankyou_Meta_Data extends Cartflows_Step_Meta_Base {
 				'general'         => array(
 					'title'    => __( 'General', 'cartflows' ),
 					'slug'     => 'general',
-					'priority' => 20,
+					'priority' => 30,
 					'fields'   => array(
 						'slug'                     => array(
 							'type'          => 'text',
-							'name'          => 'post_name',
+							'name'          => 'step_post_name',
 							'label'         => __( 'Step Slug', 'cartflows' ),
-							'value'         => get_post_field( 'post_name', $step_id ),
-							'display_align' => 'vertical',
-						),
-						'step-note'                => array(
-							'type'          => 'textarea',
-							'name'          => 'wcf-step-note',
-							'label'         => __( 'Step Note', 'cartflows' ),
-							'value'         => get_post_meta( $step_id, 'wcf-step-note', true ),
-							'rows'          => 2,
-							'cols'          => 38,
+							'value'         => get_post_field( 'post_name' ),
 							'display_align' => 'vertical',
 						),
 						'wcf-thanku-custom-script' => array(
@@ -247,7 +402,7 @@ class Cartflows_Thankyou_Meta_Data extends Cartflows_Step_Meta_Base {
 							'label'         => __( 'Custom Script', 'cartflows' ),
 							'name'          => 'wcf-custom-script',
 							'value'         => $options['wcf-custom-script'],
-							'tooltip'       => __( 'Enter custom JS/CSS. Wrap your custom CSS in style tag.', 'cartflows' ),
+							'tooltip'       => __( 'Add your own custom code here. If you\'re adding CSS, make sure to wrap it inside &lt;style&gt; tags.', 'cartflows' ),
 							'display_align' => 'vertical',
 						),
 					),
@@ -285,13 +440,41 @@ class Cartflows_Thankyou_Meta_Data extends Cartflows_Step_Meta_Base {
 							'value'        => $options['wcf-show-shipping-section'],
 							'is_fullwidth' => true,
 						),
+						'instant-thank-you-order-review-summary-position' => array(
+							'type'          => 'select',
+							'name'          => 'wcf-instant-thankyou-order-review-summary-position',
+							'label'         => __( 'Order Summary Position', 'cartflows' ),
+							'display_align' => 'vertical',
+							'value'         => $options['wcf-instant-thankyou-order-review-summary-position'],
+							'tooltip'       => __( 'Choose this option to adjust where the order summary appears on mobile devices.', 'cartflows' ),
+							'options'       => array(
+								array(
+									'value' => 'top',
+									'label' => __( 'Top', 'cartflows' ),
+								),
+								array(
+									'value' => 'bottom',
+									'label' => __( 'Bottom', 'cartflows' ),
+								),
+							),
+							'conditions'    => array(
+								'relation' => 'and',
+								'fields'   => array(
+									array(
+										'name'     => 'instant-layout-style',
+										'operator' => '===',
+										'value'    => 'yes',
+									),
+								),
+							),
+						),
 					),
 				),
 
 				'settings'        => array(
 					'title'    => __( 'Advanced', 'cartflows' ),
 					'slug'     => 'advanced_setting',
-					'priority' => 30,
+					'priority' => 20,
 					'fields'   => array(
 						'wcf-tq-text'                  => array(
 							'type'          => 'text',
@@ -315,7 +498,7 @@ class Cartflows_Thankyou_Meta_Data extends Cartflows_Step_Meta_Base {
 							'name'          => 'wcf-tq-redirect-link',
 							'value'         => $options['wcf-tq-redirect-link'],
 							'placeholder'   => __( 'https://', 'cartflows' ),
-							'tooltip'       => __( 'Users will be redirected to this URL instead of thank you page.', 'cartflows' ),
+							'tooltip'       => __( 'After submitting, users will be sent to this URL instead of the usual thank you page.', 'cartflows' ),
 							'conditions'    => array(
 								'fields' => array(
 									array(
@@ -333,7 +516,19 @@ class Cartflows_Thankyou_Meta_Data extends Cartflows_Step_Meta_Base {
 			),
 		);
 
-		return $settings;
+		if ( wcf_show_deprecated_step_notes() ) {
+			$settings['settings']['general']['fields']['step-note'] = array(
+				'type'          => 'textarea',
+				'name'          => 'wcf-step-note',
+				'label'         => __( 'Step Note', 'cartflows' ),
+				'value'         => get_post_meta( $step_id, 'wcf-step-note', true ),
+				'rows'          => 2,
+				'cols'          => 38,
+				'display_align' => 'vertical',
+			);
+		}
+
+		return apply_filters( 'cartflows_admin_thank_you_editor_settings', $settings, $options, $step_id );
 	}
 
 	/**

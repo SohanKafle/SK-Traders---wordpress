@@ -117,8 +117,9 @@ class FlowsStats extends AjaxBase {
 				$wpdb->prepare(
 					"SELECT DATE_FORMAT(o.$order_date_key, '%%Y-%%m-%%d') AS OrderDate, ROUND(SUM(o.total_amount), $decimal_point_pos) AS Revenue
 					FROM $order_table o
+					INNER JOIN $order_meta_table om ON o.$order_table_id = om.$order_id_key AND om.meta_key IN ('_wcf_flow_id', '_cartflows_parent_flow_id')
 					WHERE o.$order_type_key = 'shop_order'
-						AND o.$order_status_key IN ('wc-completed', 'wc-processing', 'wc-cancelled')
+						AND o.$order_status_key IN ('wc-completed', 'wc-processing')
 						AND o.$order_date_key >= %s
 						AND o.$order_date_key <= %s
 					GROUP BY OrderDate
@@ -144,9 +145,10 @@ class FlowsStats extends AjaxBase {
 				$wpdb->prepare(
 					"SELECT DATE_FORMAT(o.$order_date_key, '%%Y-%%m-%%d') AS OrderDate, ROUND(SUM(m.meta_value), $decimal_point_pos) AS Revenue
 					FROM $order_table o
-					INNER JOIN $order_meta_table m ON o.$order_table_id = m.$order_id_key
+					INNER JOIN $order_meta_table m ON o.$order_table_id = m.$order_id_key AND m.meta_key = '_order_total'
+					INNER JOIN $order_meta_table om ON o.$order_table_id = om.$order_id_key AND om.meta_key IN ('_wcf_flow_id', '_cartflows_parent_flow_id')
 					WHERE o.$order_type_key = 'shop_order'
-						AND o.$order_status_key IN ('wc-completed', 'wc-processing', 'wc-cancelled')
+						AND o.$order_status_key IN ('wc-completed', 'wc-processing')
 						AND m.meta_key = '_order_total'
 						AND o.$order_date_key >= %s
 						AND o.$order_date_key <= %s
@@ -163,17 +165,12 @@ class FlowsStats extends AjaxBase {
 		$orders_by_date = $wpdb->get_results(
 			$wpdb->prepare(
 				"SELECT DATE_FORMAT($order_date_key, '%%Y-%%m-%%d') AS OrderDate, COUNT(*) AS OrderCount
-				FROM $order_table
+				FROM $order_table o
+				INNER JOIN $order_meta_table om ON o.$order_table_id = om.$order_id_key AND om.meta_key IN ('_wcf_flow_id', '_cartflows_parent_flow_id')
 				WHERE $order_type_key = 'shop_order'
 					AND $order_status_key IN ('wc-completed', 'wc-processing', 'wc-cancelled')
 					AND $order_date_key >= %s
 					AND $order_date_key <= %s
-					AND EXISTS (
-						SELECT 1
-						FROM $order_meta_table AS om
-						WHERE $order_id_key = $order_table.$order_table_id
-							AND (om.meta_key = '_wcf_flow_id' OR om.meta_key = '_cartflows_parent_flow_id')
-					)
 				GROUP BY OrderDate
 				ORDER BY OrderDate ASC
 				",
@@ -192,7 +189,6 @@ class FlowsStats extends AjaxBase {
 		);
 
 		wp_send_json_success( $response );
-
 	}
 
 	/**

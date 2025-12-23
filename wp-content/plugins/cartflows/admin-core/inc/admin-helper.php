@@ -47,11 +47,40 @@ class AdminHelper {
 	public static $facebook = null;
 
 	/**
+	 * TikTok.
+	 *
+	 * @var object instance
+	 */
+	public static $tiktok = null;
+
+	/**
+	 * Snapchat.
+	 *
+	 * @var object instance
+	 */
+	public static $snapchat = null;
+
+	/**
 	 * Google_analytics_settings.
 	 *
 	 * @var object instance
 	 */
 	public static $google_analytics_settings = null;
+
+	/**
+	 * Google_analytics_settings.
+	 *
+	 * @var object instance
+	 */
+	public static $pinterest = null;
+
+	/**
+	 * Google_ads_settings.
+	 *
+	 * @since 2.1.0
+	 * @var object instance
+	 */
+	public static $google_ads_settings_data = null;
 
 	/**
 	 * Options.
@@ -160,7 +189,7 @@ class AdminHelper {
 			)
 		);
 
-		$common = self::get_admin_settings_option( '_cartflows_common', false, false );
+		$common = self::get_admin_settings_option( '_cartflows_common', false, true );
 
 		$common = wp_parse_args( $common, $common_default );
 
@@ -173,6 +202,8 @@ class AdminHelper {
 
 	/**
 	 * Get admin settings.
+	 *
+	 * Note: Use this function to access any properties to backend-end of the website i:e in admin-core.
 	 *
 	 * @param string $key key.
 	 * @param bool   $default key.
@@ -190,6 +221,26 @@ class AdminHelper {
 		}
 
 		return $value;
+	}
+
+	/**
+	 * Update admin settings.
+	 *
+	 * Note: Use this function to access any properties to backend-end of the website i:e in admin-core.
+	 *
+	 * @param string $key key.
+	 * @param mixed  $value key.
+	 * @param bool   $network network.
+	 * @return void
+	 */
+	public static function update_admin_settings_option( $key, $value, $network = false ) {
+
+		// Update the site-wide option since we're in the network admin.
+		if ( $network && is_multisite() ) {
+			update_site_option( $key, $value );
+		} else {
+			update_option( $key, $value );
+		}
 	}
 
 	/**
@@ -211,7 +262,7 @@ class AdminHelper {
 			)
 		);
 
-		$permalink_data = self::get_admin_settings_option( '_cartflows_permalink', false, false );
+		$permalink_data = self::get_admin_settings_option( '_cartflows_permalink', false, true );
 
 		$permalink_data = wp_parse_args( $permalink_data, $permalink_default );
 
@@ -243,7 +294,7 @@ class AdminHelper {
 			'facebook_pixel_tracking_for_site' => 'disable',
 		);
 
-		$facebook = self::get_admin_settings_option( '_cartflows_facebook', false, false );
+		$facebook = self::get_admin_settings_option( '_cartflows_facebook', false, true );
 
 		$facebook = wp_parse_args( $facebook, $facebook_default );
 
@@ -278,12 +329,154 @@ class AdminHelper {
 			)
 		);
 
-		$google_analytics_settings_data = self::get_admin_settings_option( '_cartflows_google_analytics', false, true );
+		$google_analytics_settings_data = self::get_admin_settings_option( '_cartflows_google_analytics', false, false );
 
 		$google_analytics_settings_data = wp_parse_args( $google_analytics_settings_data, $google_analytics_settings_default );
 
 		foreach ( $google_analytics_settings_data as $key => $data ) {
 			$options[ '_cartflows_google_analytics[' . $key . ']' ] = $data;
+		}
+
+		return $options;
+	}
+
+	/**
+	 * Get Common settings.
+	 *
+	 * @return array.
+	 */
+	public static function get_tiktok_settings() {
+
+		$options = array();
+
+		$tiktok_default = array(
+			'tiktok_pixel_id'                => '',
+			'enable_tiktok_begin_checkout'   => 'disable',
+			'enable_tiktok_add_to_cart'      => 'disable',
+			'enable_tiktok_view_content'     => 'disable',
+			'enable_tiktok_add_payment_info' => 'disable',
+			'enable_tiktok_purchase_event'   => 'disable',
+			'enable_tiktok_optin_lead'       => 'disable',
+			'tiktok_pixel_tracking'          => 'disable',
+			'tiktok_pixel_tracking_for_site' => 'disable',
+		);
+
+		$tiktok = self::get_admin_settings_option( '_cartflows_tiktok', false, false );
+
+		$tiktok = wp_parse_args( $tiktok, $tiktok_default );
+
+		$tiktok = apply_filters( 'cartflows_tiktok_settings_default', $tiktok );
+
+		foreach ( $tiktok as $key => $data ) {
+			$options[ '_cartflows_tiktok[' . $key . ']' ] = $data;
+		}
+
+		return $options;
+	}
+
+	/**
+	 * Get Common settings of pinterest.
+	 *
+	 * @return array.
+	 */
+	public static function get_pinterest_settings() {
+
+		$options = array();
+
+		$pinterest_default = array(
+			'pinterest_tag_id'                  => '',
+			'enable_pinterest_consent'          => 'disable',
+			'enable_pinterest_begin_checkout'   => 'disable',
+			'enable_pinterest_add_to_cart'      => 'disable',
+			'enable_pinterest_add_payment_info' => 'disable',
+			'enable_pinterest_purchase_event'   => 'disable',
+			'enable_pinterest_optin_lead'       => 'disable',
+			'enable_pinterest_signup'           => 'disable',
+			'pinterest_tag_tracking'            => 'disable',
+			'pinterest_tag_tracking_for_site'   => 'disable',
+		);
+
+		$pinterest = self::get_admin_settings_option( '_cartflows_pinterest', false, false );
+
+		$pinterest = wp_parse_args( $pinterest, $pinterest_default );
+
+		$pinterest = apply_filters( 'cartflows_pinterest_settings_default', $pinterest );
+
+		foreach ( $pinterest as $key => $data ) {
+			$options[ '_cartflows_pinterest[' . $key . ']' ] = $data;
+		}
+
+		return $options;
+	}
+
+	/**
+	 * Get Common settings.
+	 *
+	 * @since 2.1.0
+	 * @return array.
+	 */
+	public static function get_google_ads_settings() {
+
+		$options = array();
+
+		$google_ads_settings_default = apply_filters(
+			'cartflows_google_ads_settings_default',
+			array(
+				'google_ads_id'                      => '',
+				'google_ads_label'                   => '',
+				'enable_google_ads_begin_checkout'   => 'disable',
+				'enable_google_ads_add_to_cart'      => 'disable',
+				'enable_google_ads_view_content'     => 'disable',
+				'enable_google_ads_add_payment_info' => 'disable',
+				'enable_google_ads_purchase_event'   => 'disable',
+				'enable_google_ads_optin_lead'       => 'disable',
+				'google_ads_tracking'                => 'disable',
+				'google_ads_for_site'                => 'disable',
+			)
+		);
+
+		$google_ads_settings_data = self::get_admin_settings_option( '_cartflows_google_ads', false, false );
+
+		$google_ads_settings_data = wp_parse_args( $google_ads_settings_data, $google_ads_settings_default );
+
+		foreach ( $google_ads_settings_data as $key => $data ) {
+			$options[ '_cartflows_google_ads[' . $key . ']' ] = $data;
+		}
+
+		return $options;
+	}
+
+	/**
+	 * Get Snapchat settings.
+	 *
+	 * @since 2.1.0
+	 * @return array.
+	 */
+	public static function get_snapchat_settings() {
+
+		$options = array();
+
+		$snapchat_settings_default = apply_filters(
+			'cartflows_snapchat_settings_default',
+			array(
+				'snapchat_pixel_id'               => '',
+				'enable_snapchat_begin_checkout'  => 'disable',
+				'enable_snapchat_add_to_cart'     => 'disable',
+				'enable_snapchat_view_content'    => 'disable',
+				'enable_snapchat_purchase_event'  => 'disable',
+				'enable_snapchat_optin_lead'      => 'disable',
+				'enable_snapchat_subscribe_event' => 'disable',
+				'snapchat_pixel_tracking'         => 'disable',
+				'snapchat_pixel_for_site'         => 'disable',
+			)
+		);
+
+		$snapchat_settings_data = self::get_admin_settings_option( '_cartflows_snapchat', false, false );
+
+		$snapchat_settings_data = wp_parse_args( $snapchat_settings_data, $snapchat_settings_default );
+
+		foreach ( $snapchat_settings_data as $key => $data ) {
+			$options[ '_cartflows_snapchat[' . $key . ']' ] = $data;
 		}
 
 		return $options;
@@ -336,7 +529,7 @@ class AdminHelper {
 			)
 		);
 
-		$google_auto_fields_settings_data = self::get_admin_settings_option( '_cartflows_google_auto_address', false, true );
+		$google_auto_fields_settings_data = self::get_admin_settings_option( '_cartflows_google_auto_address', false, false );
 
 		$google_auto_fields_settings_data = wp_parse_args( $google_auto_fields_settings_data, $google_auto_fields_setting_default );
 
@@ -467,10 +660,14 @@ class AdminHelper {
 		$general_settings   = self::get_common_settings();
 		$permalink_settings = self::get_permalink_settings();
 		$fb_settings        = self::get_facebook_settings();
+		$tik_settings       = self::get_tiktok_settings();
 		$ga_settings        = self::get_google_analytics_settings();
+		$pin_settings       = self::get_pinterest_settings();
+		$gads_settings      = self::get_google_ads_settings();
+		$snap_settings      = self::get_snapchat_settings();
 		$urm_settings       = self::get_user_role_management_settings();
 		$auto_fields        = self::get_google_auto_fields_settings();
-		$options            = array_merge( $general_settings, $permalink_settings, $fb_settings, $ga_settings, $urm_settings, $auto_fields );
+		$options            = array_merge( $general_settings, $permalink_settings, $fb_settings, $tik_settings, $ga_settings, $gads_settings, $pin_settings, $snap_settings, $urm_settings, $auto_fields );
 		$options            = apply_filters( 'cartflows_admin_global_data_options', $options );
 
 		return $options;
@@ -542,7 +739,6 @@ class AdminHelper {
 		}
 
 		return $steps;
-
 	}
 
 	/**
@@ -584,6 +780,28 @@ class AdminHelper {
 					'ajaxcall'   => 'cartflows_delete_step',
 				),
 			);
+
+			if ( current_user_can( 'cartflows_manage_settings' ) ) {
+				// Show Automation action only if suretriggers is connected.
+				$is_suretriggers_connected = _is_suretriggers_connected();
+				$automation_link           = $is_suretriggers_connected ? '#' : admin_url( 'admin.php?page=' . CARTFLOWS_SLUG . '&path=automations' );
+
+				$actions = array_merge(
+					array(
+						'automation' => array(
+							'slug'       => 'automation',
+							'class'      => 'wcf-step-automation',
+							'icon_class' => 'dashicons dashicons-editor-code',
+							'text'       => __( 'Automation', 'cartflows' ),
+							'pro'        => false,
+							'link'       => $automation_link,
+							'tag'        => ! $is_suretriggers_connected ? __( '(Connect)', 'cartflows' ) : '',
+							'ajaxcall'   => 'cartflows_automation_step',
+						),
+					),
+					$actions
+				);
+			}       
 		} else {
 			$actions = array(
 				'view' => array(
@@ -788,12 +1006,12 @@ class AdminHelper {
 		return array(
 			'order_currency'       => $currency_symbol,
 			'total_orders'         => $order_count,
+			'total_revenue_raw'    => $gross_sale,
 			'total_revenue'        => str_replace( '&nbsp;', '', wc_price( (float) $gross_sale ) ),
 			'total_bump_revenue'   => '0',
 			'total_offers_revenue' => '0',
 			'total_visits'         => '0',
 		);
-
 	}
 
 
@@ -917,7 +1135,7 @@ class AdminHelper {
 
 			if ( false !== strpos( $error_body, 'MalCare' ) ) {
 				/* translators: %1$s: HTML, %2$s: HTML, %3$s: HTML */
-				$error_message     = $error_message . '<br>' . sprintf( __( 'Sorry for the inconvenience, but your website seems to be having trouble connecting to our server. %1$s Please open a technical %2$ssupport ticket%3$s and share the server\'s outgoing IP address.', 'cartflows' ), '<br><br>', '<a href="https://cartflows.com/support" target="_blank">', '</a>' );
+				$error_message     = $error_message . '<br>' . sprintf( __( 'Sorry for the inconvenience, but your website seems to be having trouble connecting to our server. %1$s Please open a technical %2$ssupport ticket%3$s and share the server\'s outgoing IP address.', 'cartflows' ), '<br><br>', '<a href="https://cartflows.com/support?utm_source=dashboard&utm_medium=free-cartflows&utm_campaign=support" target="_blank">', '</a>' );
 				$ip_address        = self::get_valid_ip_address();
 				$result['message'] = ! empty( $ip_address ) ? __( 'Server\'s outgoing IP address: ', 'cartflows' ) . $ip_address : '';
 			}
@@ -989,5 +1207,26 @@ class AdminHelper {
 
 		return $ip_address ? $ip_address : '';
 	}
-}
 
+	/**
+	 * Track funnel creation method for analytics.
+	 *
+	 * @param string $creation_method The method used to create the funnel (e.g., 'scratch', 'ready_made_template').
+	 * @return void
+	 */
+	public static function track_funnel_creation_method( $creation_method ) {
+		$funnel_creation_stats = get_option(
+			'cartflows_funnel_creation_method',
+			array(
+				'scratch'             => 0,
+				'ready_made_template' => 0,
+			)
+		);
+
+		if ( isset( $funnel_creation_stats[ $creation_method ] ) ) {
+			$funnel_creation_stats[ $creation_method ]++;
+		}
+
+		update_option( 'cartflows_funnel_creation_method', $funnel_creation_stats );
+	}
+}

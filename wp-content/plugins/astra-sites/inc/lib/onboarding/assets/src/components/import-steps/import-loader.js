@@ -172,7 +172,9 @@ const ImportLoader = () => {
 					className={ `ist-import-progress-info-text ${ doneClass }` }
 				>
 					<span className="import-status-string">
-						<p>{ importStatus + decodeEntities( '&nbsp;' ) }</p>
+						{ ! importStatus.includes( 'Failed' ) && (
+							<p>{ importStatus + decodeEntities( '&nbsp;' ) }</p>
+						) }
 					</span>
 					<div className="import-done-section">
 						<div className="tweet-import-success">
@@ -192,13 +194,19 @@ const ImportLoader = () => {
 						<div className="import-done-text">
 							<Button
 								className="view-website-btn import-done-button"
-								after
+								after={ true }
 								onClick={ () => {
 									window.open( siteUrl, '_blank' );
 								} }
 							>
 								{ __( 'View Your Website', 'astra-sites' ) }
 							</Button>
+							<a
+								className="view-dashboard-link"
+								href={ astraSitesVars?.finish_setup_url }
+							>
+								{ __( 'Finish Setup', 'astra-sites' ) }
+							</a>
 						</div>
 					</div>
 				</div>

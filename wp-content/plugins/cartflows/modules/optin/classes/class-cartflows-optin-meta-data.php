@@ -146,8 +146,9 @@ class Cartflows_Optin_Meta_Data extends Cartflows_Step_Meta_Base {
 
 			if ( $product_obj ) {
 				$options['wcf-optin-product'] = array(
-					'value' => $product_id,
-					'label' => $product_obj->get_name() . ' (#' . $product_obj->get_id() . ')',
+					'value'   => $product_id,
+					'label'   => $product_obj->get_name() . ' (#' . $product_obj->get_id() . ')',
+					'img_url' => get_the_post_thumbnail_url( $product_id ),
 				);
 			}
 		}
@@ -188,7 +189,7 @@ class Cartflows_Optin_Meta_Data extends Cartflows_Step_Meta_Base {
 				'id'       => 'settings',
 				'class'    => '',
 				'icon'     => 'dashicons-format-aside',
-				'priority' => 40,
+				'priority' => 70,
 			),
 		);
 
@@ -220,20 +221,9 @@ class Cartflows_Optin_Meta_Data extends Cartflows_Step_Meta_Base {
 		$settings = array(
 			'settings' => array(
 				'product' => array(
-					'title'    => __( 'Product', 'cartflows' ),
 					'priority' => 30,
 					'fields'   => array(
-						'optin-product' => array(
-							'type'                   => 'product',
-							'name'                   => 'wcf-optin-product',
-							'label'                  => __( 'Select Free Product', 'cartflows' ),
-							'help'                   => __( 'Select Free and Virtual product only.', 'cartflows' ),
-							'allowed_product_types'  => array( 'simple' ),
-							'placeholder'            => __( 'Type to search for a product...', 'cartflows' ),
-							'excluded_product_types' => array(),
-							'include_product_types'  => array(),
-						),
-						'optin-doc'     => array(
+						'optin-doc' => array(
 							'type'    => 'doc',
 							/* translators: %1$1s: link html start, %2$12: link html end*/
 							'content' => sprintf( __( 'For more information about the CartFlows Optin step please %1$sClick here.%2$s', 'cartflows' ), '<a href="https://cartflows.com/docs/introducing-cartflows-optin-feature/?utm_source=dashboard&utm_medium=free-cartflows&utm_campaign=docs" target="_blank">', '</a>' ),
@@ -570,22 +560,13 @@ class Cartflows_Optin_Meta_Data extends Cartflows_Step_Meta_Base {
 				'general'  => array(
 					'title'    => __( 'General', 'cartflows' ),
 					'slug'     => 'general',
-					'priority' => 10,
+					'priority' => 20,
 					'fields'   => array(
 						'slug'                    => array(
 							'type'          => 'text',
-							'name'          => 'post_name',
+							'name'          => 'step_post_name',
 							'label'         => __( 'Step Slug', 'cartflows' ),
-							'value'         => get_post_field( 'post_name', $step_id ),
-							'display_align' => 'vertical',
-						),
-						'step-note'               => array(
-							'type'          => 'textarea',
-							'name'          => 'wcf-step-note',
-							'label'         => __( 'Step Note', 'cartflows' ),
-							'value'         => get_post_meta( $step_id, 'wcf-step-note', true ),
-							'rows'          => 2,
-							'cols'          => 38,
+							'value'         => get_post_field( 'post_name' ),
 							'display_align' => 'vertical',
 						),
 						'wcf-optin-custom-script' => array(
@@ -593,7 +574,7 @@ class Cartflows_Optin_Meta_Data extends Cartflows_Step_Meta_Base {
 							'label'         => __( 'Custom Script', 'cartflows' ),
 							'name'          => 'wcf-custom-script',
 							'value'         => $options['wcf-custom-script'],
-							'tooltip'       => __( 'Enter custom JS/CSS. Wrap your custom CSS in style tag.', 'cartflows' ),
+							'tooltip'       => __( 'Add your own custom code here. If you\'re adding CSS, make sure to wrap it inside &lt;style&gt; tags.', 'cartflows' ),
 							'display_align' => 'vertical',
 						),
 					),
@@ -602,7 +583,7 @@ class Cartflows_Optin_Meta_Data extends Cartflows_Step_Meta_Base {
 				'settings' => array(
 					'title'    => __( 'Optin Settings', 'cartflows' ),
 					'slug'     => 'fields_settings',
-					'priority' => 20,
+					'priority' => 10,
 					'fields'   => array(
 						'button-text'                => array(
 							'type'          => 'text',
@@ -628,7 +609,7 @@ class Cartflows_Optin_Meta_Data extends Cartflows_Step_Meta_Base {
 							'help'          => __( 'Enter comma seprated field name. E.g. first_name, last_name', 'cartflows' ),
 							'placeholder'   => __( 'Fields to pass, separated by commas', 'cartflows' ),
 							/* translators: %s: link */
-							'desc'          => sprintf( __( 'You can pass field value as a URL parameter to the next step. %1$sLearn More >>%2$s', 'cartflows' ), '<a href="https://cartflows.com/docs/pass-variable-as-query-parameters-to-url/" target="_blank">', '</a>' ),
+							'desc'          => sprintf( __( 'You can pass field value as a URL parameter to the next step. %1$sLearn More >>%2$s', 'cartflows' ), '<a href="https://cartflows.com/docs/pass-variable-as-query-parameters-to-url/?utm_source=dashboard&utm_medium=free-cartflows&utm_campaign=docs" target="_blank">', '</a>' ),
 							'display_align' => 'vertical',
 							'conditions'    => array(
 								'fields' => array(
@@ -645,6 +626,18 @@ class Cartflows_Optin_Meta_Data extends Cartflows_Step_Meta_Base {
 				),
 			),
 		);
+
+		if ( wcf_show_deprecated_step_notes() ) {
+			$settings['settings']['general']['fields']['step-note'] = array(
+				'type'          => 'textarea',
+				'name'          => 'wcf-step-note',
+				'label'         => __( 'Step Note', 'cartflows' ),
+				'value'         => get_post_meta( $step_id, 'wcf-step-note', true ),
+				'rows'          => 2,
+				'cols'          => 38,
+				'display_align' => 'vertical',
+			);
+		}
 
 		return $settings;
 	}
@@ -717,7 +710,7 @@ class Cartflows_Optin_Meta_Data extends Cartflows_Step_Meta_Base {
 			'default'           => isset( $field_data['default'] ) ? $field_data['default'] : '',
 			'required'          => ( isset( $field_data['required'] ) && true == $field_data['required'] ) ? 'yes' : 'no',
 			'optimized'         => ( isset( $field_data['optimized'] ) && true == $field_data['optimized'] ) ? 'yes' : 'no',
-			'options'           => ( isset( $field_data['options'] ) && ! empty( $field_data['options'] ) ) ? implode( ',', $field_data['options'] ) : '',
+			'options'           => ( isset( $field_data['options'] ) && ! empty( $field_data['options'] ) && is_array( $field_data['options'] ) ) ? implode( '|', $field_data['options'] ) : $field_data['options'],
 			'show_in_email'     => ( isset( $field_data['show_in_email'] ) && true == $field_data['show_in_email'] ) ? 'yes' : 'no',
 		);
 

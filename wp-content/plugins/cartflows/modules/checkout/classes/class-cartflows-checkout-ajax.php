@@ -112,6 +112,9 @@ class Cartflows_Checkout_Ajax {
 			wp_send_json_error( $response_data );
 		}
 
+		// Update the billing email before adding a coupon required for coupon conditions.
+		$this->update_billing_email();
+
 		ob_start();
 
 		if ( ! empty( $_POST['coupon_code'] ) ) {
@@ -158,12 +161,21 @@ class Cartflows_Checkout_Ajax {
 		$product_title = get_the_title( $product_id );
 
 		$needs_shipping = false;
+		$is_order_bump  = false;
+		$order_bump_id  = '';
 
-		if ( empty( $product_key ) ) {
-			$msg = "<div class='woocommerce-message'>" . __( 'Sorry there was a problem removing ', 'cartflows' ) . $product_title;
-		} else {
+		// Check if the product is an order bump before removing it.
+		if ( ! empty( $product_key ) ) {
+			$cart_item = WC()->cart->get_cart_item( $product_key );
+			if ( isset( $cart_item['cartflows_bump'] ) && $cart_item['cartflows_bump'] ) {
+				$is_order_bump = true;
+				$order_bump_id = isset( $cart_item['ob_id'] ) ? $cart_item['ob_id'] : '';
+			}
+			
 			WC()->cart->remove_cart_item( $product_key );
 			$msg = "<div class='woocommerce-message'>" . $product_title . __( ' has been removed.', 'cartflows' ) . '</div>';
+		} else {
+			$msg = "<div class='woocommerce-message'>" . __( 'Sorry there was a problem removing ', 'cartflows' ) . $product_title;
 		}
 
 		foreach ( WC()->cart->get_cart() as $cart_item_key => $values ) {
@@ -176,6 +188,8 @@ class Cartflows_Checkout_Ajax {
 		$response = array(
 			'need_shipping' => $needs_shipping,
 			'msg'           => $msg,
+			'is_order_bump' => $is_order_bump,
+			'order_bump_id' => $order_bump_id,
 		);
 
 		echo wp_json_encode( $response );
@@ -203,9 +217,40 @@ class Cartflows_Checkout_Ajax {
 		wp_send_json_success( $response );
 	}
 
-		/**
-		 * Check email exist.
-		 */
+	/**
+	 * Update billing email address before applying the coupon. This is used for coupon conditions.
+	 *
+	 * @return void
+	 * @since 2.0.12
+	 */
+	public function update_billing_email() {
+
+		if ( ! wcf()->is_woo_active ) {
+			return;
+		}
+
+		if ( ! class_exists( 'Automattic\WooCommerce\Utilities\ArrayUtil' ) ) {
+			return;
+		}
+
+		// Sanitize the billing email.
+		$billing_email = ! empty( $_POST['billing_email'] ) ? sanitize_email( wp_unslash( $_POST['billing_email'] ) ) : ''; //phpcs:ignore WordPress.Security.NonceVerification.Missing
+
+		$billing_email = \Automattic\WooCommerce\Utilities\ArrayUtil::get_value_or_default(
+			array(
+				'billing_email' => $billing_email,
+			),
+			'billing_email' 
+		);
+
+		if ( is_string( $billing_email ) && is_email( $billing_email ) ) {
+			wc()->customer->set_billing_email( $billing_email );
+		}
+	}
+
+	/**
+	 * Check email exist.
+	 */
 	public function woocommerce_user_login() {
 
 		check_ajax_referer( 'woocommerce-login', 'security' );

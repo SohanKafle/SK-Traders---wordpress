@@ -322,6 +322,14 @@ class OAuth2 implements FetchAuthTokenInterface
     private ?string $issuedTokenType = null;
 
     /**
+     * From STS response.
+     * An identifier for the representation of the issued security token.
+     *
+     * @var array<mixed>
+     */
+    private array $additionalOptions;
+
+    /**
      * Create a new OAuthCredentials.
      *
      * The configuration array accepts various options
@@ -438,6 +446,7 @@ class OAuth2 implements FetchAuthTokenInterface
             'subjectTokenType' => null,
             'actorToken' => null,
             'actorTokenType' => null,
+            'additionalOptions' => [],
         ], $config);
 
         $this->setAuthorizationUri($opts['authorizationUri']);
@@ -466,6 +475,7 @@ class OAuth2 implements FetchAuthTokenInterface
         $this->subjectTokenType = $opts['subjectTokenType'];
         $this->actorToken = $opts['actorToken'];
         $this->actorTokenType = $opts['actorTokenType'];
+        $this->additionalOptions = $opts['additionalOptions'];
 
         $this->updateToken($opts);
     }
@@ -574,7 +584,7 @@ class OAuth2 implements FetchAuthTokenInterface
      * @param callable $httpHandler callback which delivers psr7 request
      * @return RequestInterface the authorization Url.
      */
-    public function generateCredentialsRequest(callable $httpHandler = null)
+    public function generateCredentialsRequest(?callable $httpHandler = null)
     {
         $uri = $this->getTokenCredentialUri();
         if (is_null($uri)) {
@@ -616,6 +626,9 @@ class OAuth2 implements FetchAuthTokenInterface
                     'actor_token'          => $this->actorToken,
                     'actor_token_type'     => $this->actorTokenType,
                 ]);
+                if ($this->additionalOptions) {
+                    $params['options'] = json_encode($this->additionalOptions);
+                }
                 break;
             default:
                 if (!is_null($this->getRedirectUri())) {
@@ -649,7 +662,7 @@ class OAuth2 implements FetchAuthTokenInterface
      * @param callable $httpHandler callback which delivers psr7 request
      * @return array<mixed> the response
      */
-    public function fetchAuthToken(callable $httpHandler = null)
+    public function fetchAuthToken(?callable $httpHandler = null)
     {
         if (is_null($httpHandler)) {
             $httpHandler = HttpHandlerFactory::build(HttpClientCache::getHttpClient());
@@ -1648,7 +1661,7 @@ class OAuth2 implements FetchAuthTokenInterface
      * @return string
      * @access private
      */
-    public function getClientName(callable $httpHandler = null)
+    public function getClientName(?callable $httpHandler = null)
     {
         return $this->getClientId();
     }

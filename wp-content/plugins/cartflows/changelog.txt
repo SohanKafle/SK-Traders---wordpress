@@ -1,3 +1,241 @@
+Version 2.1.19 - Monday, 22nd December 2025
+- Fix: Fixed the order review section not visible by default in instant layout.
+
+Version 2.1.18 - Monday, 22nd December 2025
+- Improvement: Eliminated redundant backend API calls when fetching funnel data during funnel editing.
+- Fix: Fixed Dutch billing address formatting issues caused by Google Address Autocomplete after page refresh.
+- Fix: Resolved the dashboard stats AJAX warning that occurred during stats retrieval.
+- Fix: Fixed `_load_textdomain_just_in_time` notices triggered by internal libraries.
+- Fix: Prevented the selected shipping method from being cleared when changing the address on the checkout page.
+- Fix: Resolved a conflict with CartFlows and LearnDash where course descriptions failed to display after saving.
+- Fix: Fixed an issue where the Thank You page displayed both main and upsell products depite Replace Main Order was enabled.
+- Fix: Fixed custom logo behavior on instant layout styles so it renders as expected.
+- Fix: Fixed an issue where the CartFlows Thank You page failed to display when using the WebToffee PayPal Gateway.
+- Fix: Resolved an issue where the DatePicker selected the previous day when choosing past dates.
+
+Version 2.1.17 - Monday, 17th November 2025
+- Improvement: Updated Google Fonts for improved consistency.
+- Improvement: Improved the Funnel Status toggle to make it more intuitive.
+- Improvement: Enhanced Funnel Test Mode by adding a dropdown for better usability.
+- Fix: Removed non-CartFlows revenue from the dashboard graph to ensure accurate reporting.
+- Fix: Removed cancelled-order revenue from the dashboard graph for correct revenue totals.
+- Fix: Fixed the Confirmation dialog failing to save Order Bump settings after confirmation.
+- Fix: Fixed custom CSS added within custom scripts settings not being applied issue.
+
+Version 2.1.16 - Tuesday, 14th October 2025
+- Fix: Resolved the duplicate image issue while importing a ready-made template.
+- Fix: Improved the code performance by fixing the Rollback feature transient cache mismatch.
+- Fix: Improved UI/UX and mobile responsiveness on the CartFlows Dashboard and Conditional Order Bump panel.
+
+Version 2.1.15 - Tuesday, 22nd July 2025
+- Fix: Addressed a conflict with LearnDash and the Classic Editor plugin.
+- Fix: Resolved issues in the onboarding flow for a smoother setup experience.
+- Fix: Page Builder and Permalink options were not saving correctly on WordPress Multisite installations.
+
+Version 2.1.14 - Thursday, 26th June 2025
+- Improvement: Funnel import from a JSON file is now possible even when no funnels exist, as the Import button is displayed.
+- Fix: Fixed the issue of image render on Instant Checkout Thank you page.
+
+Version 2.1.13 - Monday, 16th June 2025
+- Improvement: Enhanced the Create New Product popup for a better user experience.
+- Fix: Resolved an issue where the Order Bump stayed selected after the product was removed when cart editing on checkout was enabled.
+- Fix: Exported funnel JSON files now include previously missing funnel settings data.
+
+Version 2.1.12 - Wednesday, 21th May 2025
+- Improvement: Improved the toggle button with improved handling of disabled states, making the toggle button more intuitive and user-friendly.
+- Improvement: Added compatibility for future release of CartFlows Pro.
+
+Version 2.1.11 - Tuesday, 13th May 2025
+- New: Added option to upload a custom logo in the header of the Instant Layout style.
+- Improvement: Enhanced tooltips across the interface for better clarity.
+- Fix: Resolved a critical error caused by the latest update of the WooCommerce Stripe Gateway.
+- Fix: Fixed an issue where the “What’s New” notification was not being displayed.
+- Fix: Purchase event was not being tracked correctly for Facebook — now fixed.
+- Fix: Resolved dropdown overlap issue with country and state field labels.
+- Fix: Slide-out panel now closes properly when clicking outside the panel area.
+- Fix: Fixed styling issues for navigation tabs in the Order Bump and Checkout Offer settings panels.
+- Fix: Resolved a conflict with shipping methods when using the DPD Blastic shipping plugin on CartFlows Checkout.
+- Fix: Fixed checkout field order conflict with the PostNL plugin in CartFlows.
+- Fix: Shipping options now display correctly without needing to refresh the checkout page.
+- Fix: Custom content was not appearing on the Instant Layout of the Thank You page — now resolved.
+
+Version 2.1.10 - Wednesday, 9 April 2025
+- Improvement: SureTriggers is now OttoKit. We've updated the compatibility to keep everything working smoothly.
+- Improvement: Instant Layout will be auto-enabled when users create a funnel from scratch. This will help users get a ready-made structure right away.
+- Improvement: Improved design of Store Checkout pop-up
+
+Version 2.1.9 - Thursday, 3rd April 2025
+- New: Introduced a new style for thank you page.
+- Fix: Corrected the price display on the Instant Layout of the Thank You page when tax is enabled.
+- Fix: Improved UX and mobile responsiveness on the step’s template library page.
+- Fix: Fixed an error when adding an order bump product in step settings.
+- Fix: Ensured billing and shipping details are displayed for all users on the Thank You page, not just logged-in users.
+- Fix: Resolved an issue where the incorrect order number was shown on the Instant Layout of the Thank You page when using the Sequential Order Numbers plugin.
+
+Version 2.1.8 - Wednesday, 5th March 2025
+- New: Introduced language files for multiple languages for quick translation of the plugin.
+- Fix: Resolved issue preventing step pages from being edited with Oxygen Builder.
+- Fix: Resolved the conflict between CartFlows and custom templates of Bricks Builder on Shop page.
+- Fix: The funnel's GCP colors were not getting imported while importing the ready-made templates.
+- Fix: Removed the extra spacing at the bottom of the page while using the instant checkout layout on mobile devices.
+- Fix: The product image is not displaying properly for iOS mobile devices for instant checkout layout.
+- Fix: Corrected the issue where the next step button was active in the page builder's editor view, causing redirect problems during page editing.
+- Fix: Resolved UI/UX problems on the create new from scratch screen.
+- Improvement: Introduced a setup status checklist feature on the CartFlows dashboard.
+- Improvement: Displaying the selected product's information on the opt-in page consistently with the checkout page.
+- Improvement: Enhanced the custom field creation process with inline error messages.
+- Improvement: Enhanced the mobile experience of CartFlows Dashboard and Flow Listing page.
+- Improvement: Improved the onboarding steps to let the user complete the required steps to help setup the CartFlows easily.
+
+Version 2.1.7 - Friday, 24th January 2025
+- Fix: Resolved a critical issue caused by a missing compatibility class for the fix implemented for Oxygen Builder on the Thank You page.
+
+Version 2.1.6 - Thursday, 23rd January 2025
+- New: Introduced the Rollback feature for CartFlows.
+- Improvement: Enhanced block previews in Gutenberg for better clarity.
+- Improvement: Removed the General Panel from Landing step settings for a cleaner interface.
+- Improvement: Displayed product details in the Product Dropdown for easier selection.
+- Improvement: Modified the "No Access" message on the global settings popup for better communication.
+- Improvement: Updated the NPS Library for improved functionality.
+- Improvement: Added CartFlows branding to page builder widgets/blocks.
+- Fix: Resolved inconsistent style issues in the Store Checkout and Subscribe Tabs on onboarding pages.
+- Fix: Fixed color customization inconsistencies for checkout form fields.
+- Fix: Addressed a conflict with the Convert Pro plugin on the onboarding screen.
+- Fix: Changed the date picker theme to Light Mode for consistency.
+- Fix: Fixed display issues on the onboarding screen for the Automations page.
+- Fix: Turned off the "Required" toggle when the "Enable" toggle is disabled in the Field Editor.
+- Fix: Resolved CSS issues affecting the empty cart message block on the checkout page..
+- Fix: Allowed decimal values in the discount field for Checkout, Upsell, and Downsell steps.
+- Fix: Resolved an issue where SVG files failed to upload in Elementor templates, leading to blank image displays.
+- Fix: Fixed responsive issues for Instant Checkout on slightly larger tablets.
+- Fix: Addressed a CSS issue for Payment Options on Checkout Page with WooPayments.
+- Fix: Resolved a conflict with the Speedy - WooCommerce Shipping Method plugin.
+
+Version 2.1.5 - Wednesday, 25th December 2024
+- Fix: Resolved an issue where Instant Checkout design styles were not applying to the coupon button.
+- Fix: Added onboarding steps to simplify selecting and importing the Instant Checkout layout.
+- Fix: Updated the color picker component to enhance usability and address UX issues.
+- Fix: Fixed the step settings slide-out panel unexpectedly closing when changing the step title or adding a custom field.
+- Fix: Unable to able to select 'Less than or equal to' dropdown option in the dynamic offers.
+- Fix: The product options does not get saved when it is collapsed or close the settings panel.
+
+Version 2.1.4 - Tuesday, 10th December 2024
+- New: What’s New Feed: Added a feature to view the latest updates for the CartFlows plugin directly in the dashboard.
+- Improvement: Updated the "Activate License" section to clearly display the license status.
+- Improvement: Excluded "Out of Stock" products from the product list when selecting items for Checkout or Upsell steps.
+- Fix: Resolved an issue where the saved checkmark remained after reopening the Settings popup.
+- Fix: Fixed a problem where selecting inactive page builders redirected users to a blank screen.
+- Fix: Adjusted the "Choose Step" dropdown width to prevent text overflow on smaller screens.
+- Fix: Updated the origin column to show "Direct" for Upsell/Downsell orders instead of "Unknown."
+- Fix: Fixed a UI issue where the border of the discount input field appeared broken.
+- Fix: Resolved an issue where the Save button remained stuck in a loading state when the quantity field was set to 0.
+- Fix: Prevented negative values from being accepted in the percentage discount field.
+- Fix: Fixed a bug where changes were not saved after confirming "Yes" in the save changes popup.
+- Fix: Improved the visibility of the active checkout template and added a clear "Back" button for better navigation.
+- Fix: Resolved a problem where toggle fields did not update immediately without refreshing the page.
+- Fix: Fixed the Scroll to Top icon issue for the Astra theme.
+- Fix: Resolved an incorrect usage error for the _load_textdomain_just_in_time function.
+- Fix: Resolved an issue where shipping options appeared multiple times in the multistep checkout layout.
+- Fix: Fixed a bug preventing the CartFlows funnel landing page from being edited in Bricks Builder when set as the homepage.
+- Fix: Resolved an issue where the NPS survey appeared on fresh installs without any funnels created.
+- Fix: Fixed a spacing issue in the Global Settings popup that caused the Social Tracking accordion to display incorrectly.
+- Deprecated: The Step Note field is now marked as soft-deprecated across all steps.
+
+Version 2.1.3 - Tuesday, 19th November 2024
+- New: Added NPS Survey to gather your valuable feedback!
+- Improvement: Improved the UI of CartFlows in-plugin notices for better user experience.
+- Fix: Resolved an issue where the order summary price failed to update on mobile after adding an Order Bump.
+- Fix: Addressed a bug in the date filter that caused inaccuracies in analytics data.
+
+Version 2.1.2 - Wednesday, 13th November 2024
+- Fix: Improved the display of express checkout block of Checkout Plugins - Stripe for WooCommerce for Instant Checkout layout.
+- Fix: The next-step button UI of Two Step Checkout layout was not getting displayed properly after latest release of Elementor.
+
+Version 2.1.1 - Wednesday, 13th November 2024
+- New: Added new options in Funnel's setting to allow configurable logo width and height settings, conditionally applied for block (FSE) themes.
+- Fix: Resolved an issue with logo display on Instant Checkout pages when using the Bricks theme.
+- Fix: Resolved issue with shipping methods not refreshing correctly on the checkout page.
+- Fix: Improved CSS for shipping error messages for better readability and consistent styling in RTL and standard templates.
+
+Version 2.1.0 - Thursday, 7th November 2024
+- New: Instant Checkout & Thank You Layouts for distraction free and conversion focused checkout experience.
+- New: Introduced Bricks Builder integration to easily design and build CartFlows steps.
+- New: Added support for Dynamic Content Tags in CartFlows steps using Bricks Builder.
+- New: SureTriggers Integration for adding workflows for each steps if required.
+- New: Introduced native support for Pinterest Pixel to track activities on CartFlows Optin, Landing, Checkout, and Thank You pages.
+- New: Introduced native support for Snapchat Pixel to track activities on CartFlows Optin, Landing, Checkout, and Thank You pages.
+- Improvement: Enhanced user experience by moving the Shipping Methods section below the checkout fields.
+- Improvement: Enhanced slide-in content display consistency across different funnel steps and tabs.
+- Fix: Resolved the issue of knowledge base articles not being found when searching with lowercase terms.
+
+Version 2.0.12 - Tuesday, 8th October 2024
+- New: Introduced native support for Google Ads to track activities on CartFlows Optin, Landing, Checkout, and Thank You pages.
+- Improvement: Users are now automatically redirected to the default editor if the selected builder plugin is missing.
+- Fix: Addressed an issue where the radio button field wasn't appearing in Optin Forms.
+- Fix: Fixed the loading issue with search functionality and pagination on the CartFlows funnel page (backend).
+
+Version 2.0.11 - Monday, 16th September 2024
+- New: Introduced native support for TikTok Pixel to track activities on CartFlows Optin, Landing, Checkout, and Thank You pages.
+- Improvement: Enhanced the checkout fields UI to resolve spacing inconsistencies.
+- Fix: Addressed an issue where outdated templates occasionally appeared for supported page builders.
+
+Version 2.0.10 - Tuesday, 27th August 2024
+- New: Added a setting in the backend to modify the "no shipping" message displayed during checkout.
+- New: Introducing recommended plugins page, that suggests useful plugins to enhance your experience.
+- Fix: Addressed a bug where WooCommerce coupons restricted to specific emails were causing an invalid email error during checkout.
+
+Version 2.0.9 - Thursday, 11th July 2024
+- Fix: The redirect from product page was showing 404 page if the selected flow is deleted or trashed.
+- Fix: Fixed the character encoding issue while importing the ready-made flow and step templates.
+- Fix: Resolved the conflict on checkout fields with CartFlows and FluentCRM plugin.
+
+Version 2.0.8 - Thursday, 16th May 2024
+- Fix: A blank question mark was getting added in the URL of next-step button.
+- Security Fix: Hardened the security of the plugin suggested by Wordfence.
+
+Version 2.0.7 - Tuesday, 23nd April 2024
+- Fix: Unable to display the 100% discount applied on product tab for Checkout page and Order Bump backend setting.
+- Fix: Added the missing coupon option in order bump product tab.
+- Fix: Option added enable/disable toggle for subtitle option for next-step button block of Gutenberg of landing page.
+- Fix: Resolved the deprecated filter sanitize string notice for PHP 8.2 version.
+
+Version 2.0.6 - Thursday, 28th March 2024
+- Improvement: Improved the CSS for 404 page for the admin interface.
+- Fix: Fixed the selection issue with set default product option on the checkout page.
+
+Version 2.0.5 - Monday, 11th March 2024
+- Improvement: Added the product names on the hover of the product tag in the dynamic conditions dropdown option
+- Fix: DIVI flow was not getting imported via JSON file.
+- Fix: In permalink, the Default option was not getting displayed as selected.
+- Fix: The edit flow button's position in edit page for block editor was not aligned properly.
+- Fix: Flow's list was not getting displayed if all of the flows are moved to trashed.
+- Fix: Flow's bulk actions were not working in some cases.
+- Fix: Step's slug was not showing the updated slug value.
+
+Version 2.0.4 - Thursday, 15th February 2024
+- Fix: Flows exported via bulk functionality was not getting importing properly
+- Fix: Fixed the clone, delete ajax calls were returning 400 error in some case.
+
+Version 2.0.3 - Thursday, 25th January 2024
+- Improvement: Modified the location of Change Template button for store checkout steps. It is now available in the individual step's setting panel.
+- Fix: Fixed province field issue not showing selected value with certain countries for Google address autocomplete.
+- Fix: The URL parameters was not getting updated if the same parameters are present in the URL.
+- Fix: Google autocomplete address settings was not getting saved properly on multi-site setup.
+- Fix: Default value for email field was not getting populated after logged-in from the Checkout page using the Modern Checkout Layout.
+- Fix: Long label text was getting displayed for custom fields in the backend settings.
+- Fix: Minor UI improvement in dynamic offers for dropdown select field display.
+- Fix: Fixed the `null` parameter deprecation warning for strpos function.
+- Fix: Resolved typography inconsistency between input's text and it's placeholder for checkout fields.
+- Fix: The step setting's slide-out popup was getting closed when another popup OR alert window is opened.
+
+Version 2.0.2 - Monday, 4th December 2023
+- Security Fix: Hardened the security of the plugin suggested by PatchStack.
+- Fix: Unable to add the product on the upsell/downsell step after they are cloned.
+- Fix: Responsive issue for width of first and last name fields.
+- Fix: Flow template from exported JSON file was not getting imported.
+- Fix: Dynamic Conditions Rules of checkout step were not getting re-ordered.
+- Fix: Radio button for product options selection was not working when set to single selection.
+
 Version 2.0.1 - Friday, 10th November 2023
 - New: Introduced the option to enable the Global Color Pallet of CartFlows for individual flows.
 - New: Introduced the option to edit the order bump title.

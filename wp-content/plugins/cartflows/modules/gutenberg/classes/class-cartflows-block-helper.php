@@ -69,6 +69,7 @@ if ( ! class_exists( 'Cartflows_Block_Helper' ) ) {
 					'border-color'     => $attr['btnBorderHColor'],
 				),
 				' .wpcf__next-step-button-link .wpcf__next-step-button-content-wrap .wpcf__next-step-button-title-wrap' => array(
+					'font-family'    => $attr['titletextFontFamily'],
 					'text-transform' => $attr['titletextTransform'],
 					'letter-spacing' => Cartflows_Gb_Helper::get_css_value( $attr['titleletterSpacing'], 'px' ),
 				),
@@ -112,15 +113,13 @@ if ( ! class_exists( 'Cartflows_Block_Helper' ) ) {
 				if ( $attr['gradientValue'] ) {
 					$selectors[' .wpcf__next-step-button-link']['background-image'] = $attr['gradientValue'];
 
-				} else {
-					if ( 'linear' === $attr['gradientType'] ) {
+				} elseif ( 'linear' === $attr['gradientType'] ) {
 
 						$selectors[' .wpcf__next-step-button-link']['background-image'] = 'linear-gradient(' . $attr['gradientAngle'] . 'deg, ' . $attr['gradientColor1'] . ' ' . $attr['gradientLocation1'] . '%, ' . $attr['gradientColor2'] . ' ' . $attr['gradientLocation2'] . '%)';
 
-					} else {
+				} else {
 
-						$selectors[' .wpcf__next-step-button-link']['background-image'] = 'radial-gradient( at ' . $attr['gradientPosition'] . ', ' . $attr['gradientColor1'] . ' ' . $attr['gradientLocation1'] . '%, ' . $attr['gradientColor2'] . ' ' . $attr['gradientLocation2'] . '%)';
-					}
+					$selectors[' .wpcf__next-step-button-link']['background-image'] = 'radial-gradient( at ' . $attr['gradientPosition'] . ', ' . $attr['gradientColor1'] . ' ' . $attr['gradientLocation1'] . '%, ' . $attr['gradientColor2'] . ' ' . $attr['gradientLocation2'] . '%)';
 				}
 			}
 
@@ -205,8 +204,8 @@ if ( ! class_exists( 'Cartflows_Block_Helper' ) ) {
 
 			$order_overview            = ( $attr['orderOverview'] ) ? 'block' : 'none';
 			$order_details             = ( $attr['orderDetails'] ) ? 'block' : 'none';
-			$billing_address           = ( $attr['billingAddress'] ) ? 'block' : 'none';
-			$shipping_address          = ( $attr['shippingAddress'] ) ? 'block' : 'none';
+			$billing_address           = ( $attr['billingAddress'] ) ? 'block' : 'none !important';
+			$shipping_address          = ( $attr['shippingAddress'] ) ? 'block' : 'none !important';
 			$shipping_address_position = ( $attr['billingAddress'] ) ? 'right' : 'left';
 			$customer_details          = ( $attr['billingAddress'] || $attr['shippingAddress'] ) ? 'block' : 'none';
 
@@ -225,12 +224,16 @@ if ( ! class_exists( 'Cartflows_Block_Helper' ) ) {
 					'display' => $shipping_address,
 					'float'   => $shipping_address_position,
 				),
+				' .wpcf__order-detail-form .wcf-thankyou-wrap .woocommerce-order.wcf-modern-tq-layout .woocommerce-customer-details .woocommerce-column--shipping-address'       => array(
+					'vertical-align' => 'top',
+					'float'          => 'unset',
+				),
 				// Spacing.
 				' .wpcf__order-detail-form .wcf-thankyou-wrap .woocommerce-order p.woocommerce-thankyou-order-received'       => array(
 					'margin-bottom' => Cartflows_Gb_Helper::get_css_value( $attr['headingBottomSpacing'], 'px' ),
 				),
 				' .wpcf__order-detail-form .woocommerce-order ul.order_details, .wpcf__order-detail-form .woocommerce-order .woocommerce-customer-details, .wpcf__order-detail-form .woocommerce-order .woocommerce-order-details, .wpcf__order-detail-form .woocommerce-order .woocommerce-order-downloads, .wpcf__order-detail-form .woocommerce-order .woocommerce-bacs-bank-details, .wpcf__order-detail-form .woocommerce-order-details.mollie-instructions'       => array(
-					'margin-bottom' => Cartflows_Gb_Helper::get_css_value( $attr['sectionSpacing'], 'px' ),
+					'margin-bottom' => Cartflows_Gb_Helper::get_css_value( $attr['sectionSpacing'], 'px' ) . ' !important',
 				),
 				// Heading.
 				' .wpcf__order-detail-form .wcf-thankyou-wrap .woocommerce-order .woocommerce-thankyou-order-received'       => array(
@@ -244,14 +247,13 @@ if ( ! class_exists( 'Cartflows_Block_Helper' ) ) {
 				' .wpcf__order-detail-form .wcf-thankyou-wrap .woocommerce-order, .wpcf__order-detail-form .woocommerce-order-downloads table.shop_table'       => array(
 					'color' => $attr['sectionContentColor'],
 				),
-				' .wpcf__order-detail-form .wcf-thankyou-wrap .woocommerce-order .woocommerce-order-overview.woocommerce-thankyou-order-details.order_details, .wpcf__order-detail-form .wcf-thankyou-wrap .woocommerce-order .woocommerce-order-details, .wpcf__order-detail-form .wcf-thankyou-wrap .woocommerce-order .woocommerce-customer-details, .wpcf__order-detail-form .woocommerce-order-downloads'       => array(
+				' .wpcf__order-detail-form .wcf-thankyou-wrap .woocommerce-order:not(.wcf-modern-tq-layout) .woocommerce-order-overview.woocommerce-thankyou-order-details.order_details, .wpcf__order-detail-form .wcf-thankyou-wrap .woocommerce-order .woocommerce-order-details, .wpcf__order-detail-form .wcf-thankyou-wrap .woocommerce-order .woocommerce-customer-details, .wpcf__order-detail-form .woocommerce-order-downloads'       => array(
 					'background-color' => $attr['sectionBackgroundColor'],
 				),
 
 				// Order Overview.
 				' .wpcf__order-detail-form .wcf-thankyou-wrap .woocommerce-order .woocommerce-order-overview.woocommerce-thankyou-order-details.order_details'       => array(
-					'color'            => $attr['orderOverviewTextColor'],
-					'background-color' => $attr['orderOverviewBackgroundColor'],
+					'color' => $attr['orderOverviewTextColor'],
 				),
 				' .wpcf__order-detail-form .wcf-thankyou-wrap .woocommerce-order ul.woocommerce-order-overview.woocommerce-thankyou-order-details.order_details li'       => array(
 					'color' => $attr['orderOverviewTextColor'],
@@ -290,7 +292,7 @@ if ( ! class_exists( 'Cartflows_Block_Helper' ) ) {
 
 			);
 
-				$selectors[' .wpcf__order-detail-form .wcf-thankyou-wrap .woocommerce-order .woocommerce-order-overview.woocommerce-thankyou-order-details.order_details, .wpcf__order-detail-form .wcf-thankyou-wrap .woocommerce-order .woocommerce-order-details, .wpcf__order-detail-form .wcf-thankyou-wrap .woocommerce-order .woocommerce-customer-details, .wpcf__order-detail-form .woocommerce-order-downloads'] = array(
+				$selectors[' .wpcf__order-detail-form .wcf-thankyou-wrap .woocommerce-order:not(.wcf-modern-tq-layout) .woocommerce-order-overview.woocommerce-thankyou-order-details.order_details, .wpcf__order-detail-form .wcf-thankyou-wrap .woocommerce-order .woocommerce-order-details, .wpcf__order-detail-form .wcf-thankyou-wrap .woocommerce-order .woocommerce-customer-details, .wpcf__order-detail-form .woocommerce-order-downloads'] = array(
 					'opacity'          => ( isset( $attr['backgroundOpacity'] ) && '' !== $attr['backgroundOpacity'] ) ? $attr['backgroundOpacity'] / 100 : '',
 					'background-color' => $attr['backgroundColor'],
 				);
@@ -314,15 +316,13 @@ if ( ! class_exists( 'Cartflows_Block_Helper' ) ) {
 					if ( $attr['gradientValue'] ) {
 						$selectors[' .wpcf__order-detail-form .wcf-thankyou-wrap .woocommerce-order .woocommerce-order-overview.woocommerce-thankyou-order-details.order_details, .wpcf__order-detail-form .wcf-thankyou-wrap .woocommerce-order .woocommerce-order-details, .wpcf__order-detail-form .wcf-thankyou-wrap .woocommerce-order .woocommerce-customer-details, .wpcf__order-detail-form .woocommerce-order-downloads']['background-image'] = $attr['gradientValue'];
 
-					} else {
-						if ( 'linear' === $attr['gradientType'] ) {
+					} elseif ( 'linear' === $attr['gradientType'] ) {
 
 							$selectors[' .wpcf__order-detail-form .wcf-thankyou-wrap .woocommerce-order .woocommerce-order-overview.woocommerce-thankyou-order-details.order_details, .wpcf__order-detail-form .wcf-thankyou-wrap .woocommerce-order .woocommerce-order-details, .wpcf__order-detail-form .wcf-thankyou-wrap .woocommerce-order .woocommerce-customer-details, .wpcf__order-detail-form .woocommerce-order-downloads']['background-image'] = 'linear-gradient(' . $attr['gradientAngle'] . 'deg, ' . $attr['gradientColor1'] . ' ' . $attr['gradientLocation1'] . '%, ' . $attr['gradientColor2'] . ' ' . $attr['gradientLocation2'] . '%)';
 
-						} else {
+					} else {
 
-							$selectors[' .wpcf__order-detail-form .wcf-thankyou-wrap .woocommerce-order .woocommerce-order-overview.woocommerce-thankyou-order-details.order_details, .wpcf__order-detail-form .wcf-thankyou-wrap .woocommerce-order .woocommerce-order-details, .wpcf__order-detail-form .wcf-thankyou-wrap .woocommerce-order .woocommerce-customer-details, .wpcf__order-detail-form .woocommerce-order-downloads']['background-image'] = 'radial-gradient( at ' . $attr['gradientPosition'] . ', ' . $attr['gradientColor1'] . ' ' . $attr['gradientLocation1'] . '%, ' . $attr['gradientColor2'] . ' ' . $attr['gradientLocation2'] . '%)';
-						}
+						$selectors[' .wpcf__order-detail-form .wcf-thankyou-wrap .woocommerce-order .woocommerce-order-overview.woocommerce-thankyou-order-details.order_details, .wpcf__order-detail-form .wcf-thankyou-wrap .woocommerce-order .woocommerce-order-details, .wpcf__order-detail-form .wcf-thankyou-wrap .woocommerce-order .woocommerce-customer-details, .wpcf__order-detail-form .woocommerce-order-downloads']['background-image'] = 'radial-gradient( at ' . $attr['gradientPosition'] . ', ' . $attr['gradientColor1'] . ' ' . $attr['gradientLocation1'] . '%, ' . $attr['gradientColor2'] . ' ' . $attr['gradientLocation2'] . '%)';
 					}
 				}
 				// Order review.
@@ -350,14 +350,12 @@ if ( ! class_exists( 'Cartflows_Block_Helper' ) ) {
 					if ( $attr['odgradientValue'] ) {
 						$selectors[' .wpcf__order-detail-form .wcf-thankyou-wrap .woocommerce-order .woocommerce-order-overview.woocommerce-thankyou-order-details.order_details']['background-image'] = $attr['odgradientValue'];
 
-					} else {
-						if ( 'linear' === $attr['gradientType'] ) {
+					} elseif ( 'linear' === $attr['gradientType'] ) {
 
 							$selectors[' .wpcf__order-detail-form .wcf-thankyou-wrap .woocommerce-order .woocommerce-order-overview.woocommerce-thankyou-order-details.order_details']['background-image'] = 'linear-gradient(' . $attr['gradientAngle'] . 'deg, ' . $attr['gradientColor1'] . ' ' . $attr['gradientLocation1'] . '%, ' . $attr['gradientColor2'] . ' ' . $attr['gradientLocation2'] . '%)';
-						} else {
+					} else {
 
-							$selectors[' .wpcf__order-detail-form .wcf-thankyou-wrap .woocommerce-order .woocommerce-order-overview.woocommerce-thankyou-order-details.order_details']['background-image'] = 'radial-gradient( at ' . $attr['gradientPosition'] . ', ' . $attr['gradientColor1'] . ' ' . $attr['gradientLocation1'] . '%, ' . $attr['gradientColor2'] . ' ' . $attr['gradientLocation2'] . '%)';
-						}
+						$selectors[' .wpcf__order-detail-form .wcf-thankyou-wrap .woocommerce-order .woocommerce-order-overview.woocommerce-thankyou-order-details.order_details']['background-image'] = 'radial-gradient( at ' . $attr['gradientPosition'] . ', ' . $attr['gradientColor1'] . ' ' . $attr['gradientLocation1'] . '%, ' . $attr['gradientColor2'] . ' ' . $attr['gradientLocation2'] . '%)';
 					}
 				}
 				// Downloads.
@@ -385,14 +383,12 @@ if ( ! class_exists( 'Cartflows_Block_Helper' ) ) {
 					if ( $attr['dgradientValue'] ) {
 						$selectors[' .wpcf__order-detail-form .wcf-thankyou-wrap .woocommerce-order .woocommerce-order-downloads']['background-image'] = $attr['dgradientValue'];
 
-					} else {
-						if ( 'linear' === $attr['gradientType'] ) {
+					} elseif ( 'linear' === $attr['gradientType'] ) {
 
 							$selectors[' .wpcf__order-detail-form .wcf-thankyou-wrap .woocommerce-order .woocommerce-order-downloads']['background-image'] = 'linear-gradient(' . $attr['gradientAngle'] . 'deg, ' . $attr['gradientColor1'] . ' ' . $attr['gradientLocation1'] . '%, ' . $attr['gradientColor2'] . ' ' . $attr['gradientLocation2'] . '%)';
-						} else {
+					} else {
 
-							$selectors[' .wpcf__order-detail-form .wcf-thankyou-wrap .woocommerce-order .woocommerce-order-downloads']['background-image'] = 'radial-gradient( at ' . $attr['gradientPosition'] . ', ' . $attr['gradientColor1'] . ' ' . $attr['gradientLocation1'] . '%, ' . $attr['gradientColor2'] . ' ' . $attr['gradientLocation2'] . '%)';
-						}
+						$selectors[' .wpcf__order-detail-form .wcf-thankyou-wrap .woocommerce-order .woocommerce-order-downloads']['background-image'] = 'radial-gradient( at ' . $attr['gradientPosition'] . ', ' . $attr['gradientColor1'] . ' ' . $attr['gradientLocation1'] . '%, ' . $attr['gradientColor2'] . ' ' . $attr['gradientLocation2'] . '%)';
 					}
 				}
 				// Order details.
@@ -420,14 +416,12 @@ if ( ! class_exists( 'Cartflows_Block_Helper' ) ) {
 					if ( $attr['odetailgradientValue'] ) {
 						$selectors[' .wpcf__order-detail-form .wcf-thankyou-wrap .woocommerce-order .woocommerce-order-details']['background-image'] = $attr['odetailgradientValue'];
 
-					} else {
-						if ( 'linear' === $attr['gradientType'] ) {
+					} elseif ( 'linear' === $attr['gradientType'] ) {
 
 							$selectors[' .wpcf__order-detail-form .wcf-thankyou-wrap .woocommerce-order .woocommerce-order-details']['background-image'] = 'linear-gradient(' . $attr['gradientAngle'] . 'deg, ' . $attr['gradientColor1'] . ' ' . $attr['gradientLocation1'] . '%, ' . $attr['gradientColor2'] . ' ' . $attr['gradientLocation2'] . '%)';
-						} else {
+					} else {
 
-							$selectors[' .wpcf__order-detail-form .wcf-thankyou-wrap .woocommerce-order .woocommerce-order-details']['background-image'] = 'radial-gradient( at ' . $attr['gradientPosition'] . ', ' . $attr['gradientColor1'] . ' ' . $attr['gradientLocation1'] . '%, ' . $attr['gradientColor2'] . ' ' . $attr['gradientLocation2'] . '%)';
-						}
+						$selectors[' .wpcf__order-detail-form .wcf-thankyou-wrap .woocommerce-order .woocommerce-order-details']['background-image'] = 'radial-gradient( at ' . $attr['gradientPosition'] . ', ' . $attr['gradientColor1'] . ' ' . $attr['gradientLocation1'] . '%, ' . $attr['gradientColor2'] . ' ' . $attr['gradientLocation2'] . '%)';
 					}
 				}
 				// Customer details.
@@ -455,14 +449,12 @@ if ( ! class_exists( 'Cartflows_Block_Helper' ) ) {
 					if ( $attr['cdetailgradientValue'] ) {
 						$selectors[' .wpcf__order-detail-form .wcf-thankyou-wrap .woocommerce-order .woocommerce-customer-details']['background-image'] = $attr['cdetailgradientValue'];
 
-					} else {
-						if ( 'linear' === $attr['gradientType'] ) {
+					} elseif ( 'linear' === $attr['gradientType'] ) {
 
 							$selectors[' .wpcf__order-detail-form .wcf-thankyou-wrap .woocommerce-order .woocommerce-customer-details']['background-image'] = 'linear-gradient(' . $attr['gradientAngle'] . 'deg, ' . $attr['gradientColor1'] . ' ' . $attr['gradientLocation1'] . '%, ' . $attr['gradientColor2'] . ' ' . $attr['gradientLocation2'] . '%)';
-						} else {
+					} else {
 
-							$selectors[' .wpcf__order-detail-form .wcf-thankyou-wrap .woocommerce-order .woocommerce-customer-details']['background-image'] = 'radial-gradient( at ' . $attr['gradientPosition'] . ', ' . $attr['gradientColor1'] . ' ' . $attr['gradientLocation1'] . '%, ' . $attr['gradientColor2'] . ' ' . $attr['gradientLocation2'] . '%)';
-						}
+						$selectors[' .wpcf__order-detail-form .wcf-thankyou-wrap .woocommerce-order .woocommerce-customer-details']['background-image'] = 'radial-gradient( at ' . $attr['gradientPosition'] . ', ' . $attr['gradientColor1'] . ' ' . $attr['gradientLocation1'] . '%, ' . $attr['gradientColor2'] . ' ' . $attr['gradientLocation2'] . '%)';
 					}
 				}
 				$combined_selectors = array(
@@ -501,6 +493,10 @@ if ( ! class_exists( 'Cartflows_Block_Helper' ) ) {
 			 */
 		public static function get_checkout_form_css( $attr, $id ) {
 
+			if ( wcf()->utils->is_step_post_type() && Cartflows_Helper::is_instant_layout_enabled() ) {
+				return;
+			}
+			
 			$defaults = Cartflows_Gb_Helper::$block_list['wcfb/checkout-form']['attributes'];
 
 			$attr = array_merge( $defaults, (array) $attr );
@@ -587,6 +583,12 @@ if ( ! class_exists( 'Cartflows_Block_Helper' ) ) {
 					'--wcf-payment-section-desc-text-color' => $attr['paymentdescriptionColor'],
 					'--wcf-payment-section-desc-bg-color' => $attr['informationbgColor'],
 					'--wcf-payment-section-bg-color'      => $attr['sectionbgColor'],
+				),
+				' .cartflows_step-template .select2-container--default .select2-results__option--highlighted[aria-selected], .cartflows_step-template .select2-container--default .select2-results__option--highlighted[data-selected]' => array(
+					'background-color' => $attr['globalbgColor'],
+				),
+				' .cartflows_step-template .select2-container--default .select2-results__option--highlighted[aria-selected] ' => array(
+					'box-shadow' => '0 0 2px',
 				),
 				' .wcf-embed-checkout-form .woocommerce .woocommerce-checkout input[type="checkbox"]:focus, .wcf-embed-checkout-form .woocommerce .woocommerce-checkout #order_review input[type="checkbox"]:focus, .wcf-embed-checkout-form .woocommerce .woocommerce-checkout .woocommerce-account-fields input[type="checkbox"]:focus, .wcf-embed-checkout-form.wcf-embed-checkout-form-modern-checkout .woocommerce .woocommerce-checkout input[type="checkbox"]:focus, .wcf-embed-checkout-form.wcf-embed-checkout-form-modern-checkout .woocommerce #order_review input[type="checkbox"]:focus ' => array(
 					'box-shadow' => '0 0 2px',
@@ -683,14 +685,12 @@ if ( ! class_exists( 'Cartflows_Block_Helper' ) ) {
 				if ( $attr['gradientValue'] ) {
 					$selectors[' .wcf-embed-checkout-form .woocommerce #order_review button, .wcf-embed-checkout-form .woocommerce #payment button, .wcf-embed-checkout-form .woocommerce #wcf-customer-login-section__login-button, .wcf-embed-checkout-form .woocommerce form.woocommerce-form-login .form-row button, .wcf-embed-checkout-form .woocommerce #order_review button.wcf-btn-small, .wcf-embed-checkout-form .wcf-custom-coupon-field button.wcf-submit-coupon, .wcf-embed-checkout-form .woocommerce-checkout form.woocommerce-form-login .button, .wcf-embed-checkout-form .woocommerce-checkout form.checkout_coupon .button, .wcf-embed-checkout-form form.checkout_coupon .button, .wcf-embed-checkout-form-two-step .woocommerce .wcf-embed-checkout-form-nav-btns a.wcf-next-button, .wcf-embed-checkout-form.wcf-embed-checkout-form-modern-checkout.wcf-modern-skin-multistep .woocommerce form .wcf-multistep-nav-btn-group .wcf-multistep-nav-next-btn']['background-image'] = $attr['gradientValue'];
 
-				} else {
-					if ( 'linear' === $attr['gradientType'] ) {
+				} elseif ( 'linear' === $attr['gradientType'] ) {
 
 						$selectors[' .wcf-embed-checkout-form .woocommerce #order_review button, .wcf-embed-checkout-form .woocommerce form.woocommerce-form-login .form-row button, .wcf-embed-checkout-form .woocommerce #order_review button.wcf-btn-small, .wcf-embed-checkout-form .wcf-custom-coupon-field button.wcf-submit-coupon, .wcf-embed-checkout-form .woocommerce-checkout form.woocommerce-form-login .button, .wcf-embed-checkout-form .woocommerce-checkout form.checkout_coupon .button, .wcf-embed-checkout-form form.checkout_coupon .button, .wcf-embed-checkout-form-two-step .woocommerce .wcf-embed-checkout-form-nav-btns a.wcf-next-button, .wcf-embed-checkout-form.wcf-embed-checkout-form-modern-checkout.wcf-modern-skin-multistep .woocommerce form .wcf-multistep-nav-btn-group .wcf-multistep-nav-next-btn']['background-image'] = 'linear-gradient(' . $attr['gradientAngle'] . 'deg, ' . $attr['gradientColor1'] . ' ' . $attr['gradientLocation1'] . '%, ' . $attr['gradientColor2'] . ' ' . $attr['gradientLocation2'] . '%)';
-					} else {
+				} else {
 
-						$selectors[' .wcf-embed-checkout-form .woocommerce #order_review button, .wcf-embed-checkout-form .woocommerce form.woocommerce-form-login .form-row button, .wcf-embed-checkout-form .woocommerce #order_review button.wcf-btn-small, .wcf-embed-checkout-form .wcf-custom-coupon-field button.wcf-submit-coupon, .wcf-embed-checkout-form .woocommerce-checkout form.woocommerce-form-login .button, .wcf-embed-checkout-form .woocommerce-checkout form.checkout_coupon .button, .wcf-embed-checkout-form form.checkout_coupon .button, .wcf-embed-checkout-form-two-step .woocommerce .wcf-embed-checkout-form-nav-btns a.wcf-next-button, .wcf-embed-checkout-form.wcf-embed-checkout-form-modern-checkout.wcf-modern-skin-multistep .woocommerce form .wcf-multistep-nav-btn-group .wcf-multistep-nav-next-btn']['background-image'] = 'radial-gradient( at ' . $attr['gradientPosition'] . ', ' . $attr['gradientColor1'] . ' ' . $attr['gradientLocation1'] . '%, ' . $attr['gradientColor2'] . ' ' . $attr['gradientLocation2'] . '%)';
-					}
+					$selectors[' .wcf-embed-checkout-form .woocommerce #order_review button, .wcf-embed-checkout-form .woocommerce form.woocommerce-form-login .form-row button, .wcf-embed-checkout-form .woocommerce #order_review button.wcf-btn-small, .wcf-embed-checkout-form .wcf-custom-coupon-field button.wcf-submit-coupon, .wcf-embed-checkout-form .woocommerce-checkout form.woocommerce-form-login .button, .wcf-embed-checkout-form .woocommerce-checkout form.checkout_coupon .button, .wcf-embed-checkout-form form.checkout_coupon .button, .wcf-embed-checkout-form-two-step .woocommerce .wcf-embed-checkout-form-nav-btns a.wcf-next-button, .wcf-embed-checkout-form.wcf-embed-checkout-form-modern-checkout.wcf-modern-skin-multistep .woocommerce form .wcf-multistep-nav-btn-group .wcf-multistep-nav-next-btn']['background-image'] = 'radial-gradient( at ' . $attr['gradientPosition'] . ', ' . $attr['gradientColor1'] . ' ' . $attr['gradientLocation1'] . '%, ' . $attr['gradientColor2'] . ' ' . $attr['gradientLocation2'] . '%)';
 				}
 			}
 
@@ -701,7 +701,7 @@ if ( ! class_exists( 'Cartflows_Block_Helper' ) ) {
 			);
 
 			$combined_selectors = Cartflows_Gb_Helper::get_typography_css( $attr, 'global', ' .wcf-embed-checkout-form .woocommerce', $combined_selectors );
-			$combined_selectors = Cartflows_Gb_Helper::get_typography_css( $attr, 'head', ' .wcf-embed-checkout-form .woocommerce h3, .wcf-embed-checkout-form .woocommerce-checkout #order_review_heading, .wcf-embed-checkout-form .woocommerce h3, .wcf-embed-checkout-form .woocommerce h3 span', $combined_selectors );
+			$combined_selectors = Cartflows_Gb_Helper::get_typography_css( $attr, 'head', ' .wcf-embed-checkout-form .woocommerce h3, .wcf-embed-checkout-form .woocommerce-checkout #order_review_heading, .wcf-embed-checkout-form .woocommerce h3, .wcf-embed-checkout-form .woocommerce h3 span, .wcf-embed-checkout-form.wcf-embed-checkout-form-modern-checkout .woocommerce form .woocommerce-billing-fields-custom #customer_information_heading', $combined_selectors );
 			$combined_selectors = Cartflows_Gb_Helper::get_typography_css( $attr, 'button', ' .wcf-embed-checkout-form .woocommerce #order_review button, .wcf-embed-checkout-form .woocommerce #payment button, .wcf-embed-checkout-form.wcf-embed-checkout-form-modern-checkout .woocommerce #payment button, .wcf-embed-checkout-form.wcf-embed-checkout-form-modern-checkout .woocommerce #order_review button.wcf-btn-small, .wcf-embed-checkout-form.wcf-embed-checkout-form-modern-checkout.wcf-modern-skin-multistep .woocommerce form .wcf-multistep-nav-btn-group .wcf-multistep-nav-next-btn', $combined_selectors );
 			$combined_selectors = Cartflows_Gb_Helper::get_typography_css( $attr, 'input', ' .wcf-embed-checkout-form .woocommerce form p.form-row label, .wcf-embed-checkout-form.wcf-embed-checkout-form-modern-checkout .woocommerce form .form-row input.input-text, .wcf-embed-checkout-form .woocommerce form .form-row input.input-text, .wcf-embed-checkout-form .woocommerce form .form-row textarea, .wcf-embed-checkout-form .woocommerce form .form-row select#billing_country, .wcf-embed-checkout-form .woocommerce form .form-row select#billing_state,  .wcf-embed-checkout-form .woocommerce form .form-row select#shipping_country, .wcf-embed-checkout-form .woocommerce form .form-row select#shipping_state, span#select2-billing_country-container, .wcf-embed-checkout-form .select2-container--default .select2-selection--single .select2-selection__rendered, .wcf-embed-checkout-form.wcf-embed-checkout-form-modern-checkout .select2-container--default .select2-selection--single .select2-selection__rendered, .wcf-embed-checkout-form #order_review .wcf-custom-coupon-field input[type="text"], .wcf-embed-checkout-form .woocommerce form .form-row input.input-text, .wcf-embed-checkout-form .woocommerce form .form-row textarea, .wcf-embed-checkout-form .select2-container--default .select2-selection--single, .wcf-embed-checkout-form .woocommerce form .form-row select, .wcf-embed-checkout-form .woocommerce form .form-row select, .wcf-embed-checkout-form ::placeholder, .wcf-embed-checkout-form ::-webkit-input-placeholder, .wcf-embed-checkout-form .woocommerce #payment [type="radio"]:checked + label, .wcf-embed-checkout-form .woocommerce #payment [type="radio"]:not(:checked) + label, .wcf-embed-checkout-form.wcf-field-modern-label .woocommerce #customer_details .form-row:not( .wcf-anim-hidden-label ) label:not( .woocommerce-form__label-for-checkbox, .checkbox, .input-radio)', $combined_selectors );
 
@@ -943,6 +943,5 @@ if ( ! class_exists( 'Cartflows_Block_Helper' ) ) {
 			}
 			return wp_parse_args( $gen_border_css, $current_css );
 		}
-
 	}
 }

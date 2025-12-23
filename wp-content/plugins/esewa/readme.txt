@@ -1,9 +1,9 @@
 === eSewa - Nepal First Payment Gateway ===
-Tags: eSewa, payment, wordpress, woocommerce
+Tags: eSewa, payment, woocommerce
 Requires at least: 5.0
-Tested up to: 5.5
+Tested up to: 6.6.1
 Requires PHP: 7.0
-Stable tag: 0.1
+Stable tag: 2.3
 License: GPLv3 or later
 License URI: https://www.gnu.org/licenses/gpl-3.0.en.html
 
@@ -56,7 +56,7 @@ To select Nepalese rupee in woocommerce
 Plugin Settings:
 1) Enable the plugin (enabled by default)
 2) Change description if needed (default description: “Pay via eSewa. Payment enabled through eSewa account securely.”)
-3) Add your Live Merchant/Service code for live purpose or Test Merchant/Service Code for sandbox (testing purpose)
+3) Add your Live Merchant/Service code and Secret Key for live purpose or Test Merchant/Service Code for sandbox (testing purpose)
 4) You can change sandbox url as well
 5) Add Invoice Prefix (default: WC-). If users are using same account for multiple stores than this prefix should be unique in all as eSewa does not allow orders with the same prefix numbers
 6) Click on update once done
@@ -72,7 +72,7 @@ Plugin Settings:
 
 WordPress Version 5.0 or newer
 WooCommerce Version3.6 or newer
-Merchant code which is provided by eSewa
+Merchant code and Secret Key which is provided by eSewa
 
 = Which currency is accepted by the plugin =
 
@@ -86,9 +86,15 @@ ONLY  Nepalese rupee(Rs)
 
 == Changelog ==
 
-= 0.2 =
-Release Date: NOvember 4, 2020
+= 2.3 =
+Release Date: October 15, 2024
 
+General Bug fixed
+  
 Enhancement:
 
-* Payment status changed for virtual products.
+* Updated version for web API,
+* UI improvement,
+* Direct Debit feature(Pay directly from your linked bank account),
+* Apply Promocode,
+* Security Enhanced

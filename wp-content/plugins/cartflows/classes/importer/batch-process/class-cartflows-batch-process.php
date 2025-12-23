@@ -85,6 +85,15 @@ if ( ! class_exists( 'CartFlows_Batch_Process' ) ) :
 		public $last_export_checksums;
 
 		/**
+		 * Set the
+		 *
+		 * @since 2.0.8
+		 * @var bool True/False flag to get the status of import process.
+		 * @access public
+		 */
+		public static $is_wcf_template_import;
+
+		/**
 		 * Initiator
 		 *
 		 * @since 1.0.0
@@ -137,7 +146,7 @@ if ( ! class_exists( 'CartFlows_Batch_Process' ) ) :
 			}
 
 			// Divi.
-			if ( ( 'divi' === $default_page_builder ) && ( class_exists( 'ET_Builder_Plugin' ) || Cartflows_Compatibility::get_instance()->is_divi_enabled() ) ) {
+			if ( ( 'other' === $default_page_builder ) && ( class_exists( 'ET_Builder_Plugin' ) || Cartflows_Compatibility::get_instance()->is_divi_enabled() ) ) {
 				require_once CARTFLOWS_DIR . 'classes/importer/batch-process/class-cartflows-importer-divi.php';
 				require_once CARTFLOWS_DIR . 'classes/importer/batch-process/class-cartflows-importer-divi-batch.php';
 				self::$batch_instance_divi = new Cartflows_Importer_Divi_Batch();
@@ -157,7 +166,7 @@ if ( ! class_exists( 'CartFlows_Batch_Process' ) ) :
 			// Start image importing after site import complete.
 			add_action( 'cartflows_after_template_import', array( $this, 'start_batch_process' ) );
 			add_action( 'cartflows_import_complete', array( $this, 'complete_batch_import' ) );
-			add_filter( 'upload_mimes', array( $this, 'custom_upload_mimes' ) ); //phpcs:ignore WordPressVIPMinimum.Hooks.RestrictedHooks.upload_mimes
+			add_filter( 'upload_mimes', array( $this, 'wcf_custom_upload_mimes' ) ); //phpcs:ignore WordPressVIPMinimum.Hooks.RestrictedHooks.upload_mimes
 			add_filter( 'wp_prepare_attachment_for_js', array( $this, 'add_svg_image_support' ), 10, 3 );
 			add_action( 'cartflows_before_elementor_import_single_template', array( $this, 'enable_unfiltered_upload_elementor' ) );
 			add_action( 'admin_head', array( $this, 'start_importer' ) );
@@ -213,7 +222,7 @@ if ( ! class_exists( 'CartFlows_Batch_Process' ) ) :
 					return;
 				}
 
-				if ( 'cartflows_page_cartflows_settings' === $current_screen->id ) {
+				if ( 'toplevel_page_cartflows' === $current_screen->id || 'cartflows_page_cartflows_settings' === $current_screen->id ) {
 
 					// Process import.
 					$this->process_batch();
@@ -244,8 +253,15 @@ if ( ! class_exists( 'CartFlows_Batch_Process' ) ) :
 		 *
 		 * @param array $mimes Already supported mime types.
 		 */
-		public function custom_upload_mimes( $mimes ) {
-
+		public function wcf_custom_upload_mimes( $mimes ) {
+			// Return if the current user don't have the access to upload the files.
+			if ( ! current_user_can( 'cartflows_manage_flows_steps' ) && ! current_user_can( 'unfiltered_upload' ) ) {
+				return $mimes;
+			}
+			// Only add the SVG support if and only if the CartFlows import is complete OR in progress.
+			if ( false === get_transient( 'cartflows_is_wcf_template_import' ) ) {
+				return $mimes;
+			}
 			// Allow SVG files.
 			$mimes['svg']  = 'image/svg+xml';
 			$mimes['svgz'] = 'image/svg+xml';
@@ -657,6 +673,22 @@ if ( ! class_exists( 'CartFlows_Batch_Process' ) ) :
 
 			add_filter( 'elementor/files/allow_unfiltered_upload', '__return_true' );
 		}
+
+		/**
+		 * Set the flat for import process is in progress or not.
+		 * This flag will be used to add a support of extra files for uploading to the website directory while importing the ready-made templates.
+		 *
+		 * @param bool $bool The default state is false.
+		 * @return void
+		 */
+		public static function set_is_wcf_template_import( $bool = false ) {
+			if ( $bool ) {
+				set_transient( 'cartflows_is_wcf_template_import', $bool, HOUR_IN_SECONDS );
+			} else {
+				delete_transient( 'cartflows_is_wcf_template_import' ); // Delete the option if $bool is false.
+			}
+		}
+	
 	}
 
 	/**

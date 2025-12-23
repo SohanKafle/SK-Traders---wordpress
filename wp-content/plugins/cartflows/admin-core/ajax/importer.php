@@ -60,6 +60,7 @@ class Importer extends AjaxBase {
 			'import_step',
 
 			'activate_plugin',
+			'activate_theme',
 
 			'sync_library',
 			'request_count',
@@ -77,6 +78,7 @@ class Importer extends AjaxBase {
 		$this->init_ajax_events( $ajax_events );
 
 		add_action( 'admin_footer', array( $this, 'json_importer_popup_wrapper' ) );
+		add_action( 'wp_ajax_cartflows_install_plugin', 'wp_ajax_install_plugin' );
 	}
 
 	/**
@@ -105,7 +107,7 @@ class Importer extends AjaxBase {
 
 			$response_data = array(
 				'message' => __( 'Funnel exported successfully', 'cartflows' ),
-				'flows'   => $flows,
+				'flows'   => wp_json_encode( $flows ),
 				'export'  => true,
 			);
 
@@ -144,7 +146,9 @@ class Importer extends AjaxBase {
 		}
 
 		// $_POST['flow_data'] is the JSON, There is nothing to sanitize JSON as it is data format not data type.
-		$flow_data = ( isset( $_POST['flow_data'] ) ) ? json_decode( stripslashes( $_POST['flow_data'] ), true ) : array(); //phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+		$flow_data            = ( isset( $_POST['flow_data'] ) ) ? json_decode( stripslashes( $_POST['flow_data'] ), true ) : array(); //phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+		$check_store_checkout = isset( $_POST['check_store_checkout'] ) ? sanitize_text_field( wp_unslash( $_POST['check_store_checkout'] ) ) : 'no'; //phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+		$force_import         = isset( $_POST['force_import'] ) ? sanitize_text_field( wp_unslash( $_POST['force_import'] ) ) : 'no'; //phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
 
 		$response_data = array(
 			'message'      => 'Error occured. Funnel not imported.',
@@ -152,8 +156,30 @@ class Importer extends AjaxBase {
 			'redirect_url' => admin_url( 'admin.php?page=' . CARTFLOWS_SLUG ),
 		);
 
+		// Check if this is a Store Checkout flow and if one already exists.
+		if ( 'yes' === $check_store_checkout && 'yes' !== $force_import ) {
+			$existing_store_checkout = \Cartflows_Helper::get_global_setting( '_cartflows_store_checkout' );
+			
+			if ( $existing_store_checkout ) {
+				// Send confirmation prompt to the user.
+				wp_send_json_success(
+					array(
+						'requires_confirmation' => true,
+						'message'               => __( 'A Store Checkout funnel already exists. Importing this funnel will replace the current Store Checkout funnel.', 'cartflows' ),
+						'flow_data'             => $flow_data,
+					)
+				);
+			}
+		}
+
 		if ( is_array( $flow_data ) ) {
+			// Set the flag as true to check for the import process is started for the CartFlows. So as to import/upload the required files.
+			\CartFlows_Batch_Process::set_is_wcf_template_import( true );
+
 			$imported_flow = \CartFlows_Importer::get_instance()->import_from_json_data( $flow_data );
+
+			// Set the flag as false once the template import is complete.
+			\CartFlows_Batch_Process::set_is_wcf_template_import( false );
 
 			$response_data['message']      = 'Funnel Imported successfully';
 			$response_data['redirect_url'] = admin_url( 'admin.php?page=' . CARTFLOWS_SLUG . '&path=flows' );
@@ -453,10 +479,59 @@ class Importer extends AjaxBase {
 			);
 		}
 
+
+		if ( class_exists( '\BSF_UTM_Analytics' ) && is_callable( '\BSF_UTM_Analytics::update_referer' ) ) {
+			$plugin_slug = pathinfo( $plugin_init, PATHINFO_FILENAME ); // Retrives the plugin slug from the init.
+			\BSF_UTM_Analytics::update_referer( 'cartflows', $plugin_slug );
+		}
+
 		wp_send_json_success(
 			array(
 				'success' => true,
 				'message' => 'Plugin activated successfully.',
+			)
+		);
+	}
+
+	/**
+	 * Activate theme
+	 *
+	 * @since 2.0.12
+	 * @return void
+	 */
+	public function activate_theme() {
+
+		// Verify Nonce.
+		$response_data = array( 'message' => $this->get_error_msg( 'permission' ) );
+
+		if ( ! current_user_can( 'cartflows_manage_flows_steps' ) ) {
+			wp_send_json_error( $response_data );
+		}
+
+		/**
+		 * Nonce verification
+		 */
+		if ( ! check_ajax_referer( 'cartflows_activate_theme', 'security', false ) ) {
+			$response_data = array( 'message' => $this->get_error_msg( 'nonce' ) );
+			wp_send_json_error( $response_data );
+		}
+
+		// Check the theme slug is available or not.
+		$theme_slug = ( isset( $_POST['theme_slug'] ) ) ? sanitize_text_field( $_POST['theme_slug'] ) : '';
+
+		// If the theme slug is not available then bail.
+		if ( empty( $theme_slug ) ) {
+			$response_data = array( 'message' => $this->get_error_msg( 'parameter' ) );
+			wp_send_json_error( $response_data );
+		}
+
+		// Pass the theme slug and switch the theme and activate it.
+		switch_theme( $theme_slug );
+
+		wp_send_json_success(
+			array(
+				'success' => true,
+				'message' => __( 'Theme Activated', 'cartflows' ),
 			)
 		);
 	}
@@ -530,11 +605,11 @@ class Importer extends AjaxBase {
 						'type'  => 'landing',
 					),
 					'order-form'         => array(
-						'title' => __( 'Checkout (Woo)', 'cartflows' ),
+						'title' => __( 'Checkout', 'cartflows' ),
 						'type'  => 'checkout',
 					),
 					'order-confirmation' => array(
-						'title' => __( 'Thank You (Woo)', 'cartflows' ),
+						'title' => __( 'Thank You', 'cartflows' ),
 						'type'  => 'thankyou',
 					),
 				);
@@ -593,6 +668,13 @@ class Importer extends AjaxBase {
 		}
 
 		update_post_meta( $flow_id, 'wcf-steps', $flow_steps );
+
+		// Enable the Instant Layout for the flow for all page builders if the funnel is created from scratch.
+		update_post_meta( $flow_id, 'instant-layout-style', 'yes' );
+		
+		// Track funnel creation method for analytics.
+		$creation_method = isset( $_POST['creation_method'] ) ? sanitize_text_field( wp_unslash( $_POST['creation_method'] ) ) : 'scratch';
+		AdminHelper::track_funnel_creation_method( $creation_method );
 
 		/**
 		 * Redirect to the new flow edit screen
@@ -656,9 +738,9 @@ class Importer extends AjaxBase {
 			$btn = '';
 			if ( 'not-installed' === $cf_pro_status ) {
 				/* translators: %1$s: link html start, %2$s: link html end*/
-				$btn = sprintf( __( 'CartFlows Pro Required! %1$sUpgrade to CartFlows Pro%2$s', 'cartflows' ), '<a target="_blank" href="https://cartflows.com/">', '</a>' );
+				$btn = sprintf( __( 'CartFlows Pro Required! %1$sUpgrade to CartFlows Pro%2$s', 'cartflows' ), '<a target="_blank" href="https://cartflows.com/?utm_source=dashboard&utm_medium=free-cartflows&utm_campaign=go-pro">', '</a>' );
 				/* translators: %1$s: link html start, %2$s: link html end*/
-				$cta = sprintf( __( 'To import the premium flow %1$supgrade to CartFlows Pro%2$s.', 'cartflows' ), '<a target="_blank" href="https://cartflows.com/">', '</a>' );
+				$cta = sprintf( __( 'To import the premium flow %1$supgrade to CartFlows Pro%2$s.', 'cartflows' ), '<a target="_blank" href="https://cartflows.com/?utm_source=dashboard&utm_medium=free-cartflows&utm_campaign=go-pro">', '</a>' );
 			} elseif ( 'inactive' === $cf_pro_status ) {
 				/* translators: %1$s: link html start, %2$s: link html end*/
 				$btn = sprintf( __( 'Activate the CartFlows Pro to import the flow! %1$sActivate CartFlows Pro%2$s', 'cartflows' ), '<a target="_blank" href="' . admin_url( 'plugins.php?plugin_status=search&paged=1&s=CartFlows+Pro' ) . '">', '</a>' );
@@ -716,12 +798,24 @@ class Importer extends AjaxBase {
 			update_option( '_cartflows_common', $common_settings );
 		}
 
+		// Import the Global Colors Data if exists.
+		$this->import_funnel_gcp_vars_data( $response, $new_flow_id );
+
 		wcf()->logger->import_log( '✓ Flow Created! Flow ID: ' . $new_flow_id . ' - Remote Flow ID - ' . $flow['ID'] );
 
 		/**
 		 * All Import Steps
 		 */
 		$steps = isset( $flow['steps'] ) ? $flow['steps'] : array();
+
+		// Return of no steps are found in the imported flow.
+		if ( empty( $steps ) ) {
+			$response_data = array( 'message' => __( 'Steps not found.', 'cartflows' ) );
+			wp_send_json_error( $response_data );
+		}
+
+		// Set the flag as true to check for the import process is started for the CartFlows. So as to import/upload the required files.
+		\CartFlows_Batch_Process::set_is_wcf_template_import( true );
 
 		foreach ( $steps as $key => $step ) {
 
@@ -754,6 +848,20 @@ class Importer extends AjaxBase {
 			'redirect_url' => admin_url( 'post.php?action=edit&post=' . $new_flow_id ),
 			'new_flow_id'  => $new_flow_id,
 		);
+
+		// Set the flag as false once the template import is complete.
+		\CartFlows_Batch_Process::set_is_wcf_template_import( false );
+
+		// Check if the user has imported their first flow.
+		$first_flow_imported = get_option( 'wcf_first_flow_imported', false );
+
+		if ( ! $first_flow_imported ) {
+			update_option( 'wcf_first_flow_imported', true );
+		}
+		
+		// Track funnel creation method for analytics.
+		$creation_method = isset( $_POST['creation_method'] ) ? sanitize_text_field( wp_unslash( $_POST['creation_method'] ) ) : 'ready_made_template';
+		AdminHelper::track_funnel_creation_method( $creation_method );
 
 		wcf()->logger->import_log( 'COMPLETE! Importing Flow' );
 
@@ -808,7 +916,7 @@ class Importer extends AjaxBase {
 
 		if ( is_wp_error( $response['data'] ) ) {
 			/* translators: %1$s: html tag, %2$s: link html start %3$s: link html end */
-			$btn = sprintf( __( 'Request timeout error. Please check if the firewall or any security plugin is blocking the outgoing HTTP/HTTPS requests to templates.cartflows.com or not. %1$1sTo resolve this issue, please check this %2$2sarticle%3$3s.', 'cartflows' ), '<br><br>', '<a target="_blank" href="https://cartflows.com/docs/request-timeout-error-while-importing-the-flow-step-templates/?utm_source=dashboard&utm_medium=free-cartflows&utm_campaign=docs">', '</a>' );
+			$btn = sprintf( __( 'Request timeout error. Please check if the firewall or any security plugin is blocking the outgoing HTTP/HTTPS requests to templates.cartflows.com or not. %1$sTo resolve this issue, please check this %2$sarticle%3$s.', 'cartflows' ), '<br><br>', '<a target="_blank" href="https://cartflows.com/docs/request-timeout-error-while-importing-the-flow-step-templates/?utm_source=dashboard&utm_medium=free-cartflows&utm_campaign=docs">', '</a>' );
 
 			wp_send_json_error(
 				array(
@@ -830,7 +938,7 @@ class Importer extends AjaxBase {
 			$cta = '';
 			if ( 'not-installed' === $cf_pro_status ) {
 				/* translators: %1$s: link html start, %2$s: link html end*/
-				$cta = sprintf( __( '%1$sUpgrade to CartFlows Pro.%2$s', 'cartflows' ), '<a target="_blanks" class="wcf-button wcf-primary-button" href="https://cartflows.com/">', '</a>' );
+				$cta = sprintf( __( '%1$sUpgrade to CartFlows Pro.%2$s', 'cartflows' ), '<a target="_blanks" class="wcf-button wcf-primary-button" href="https://cartflows.com/?utm_source=dashboard&utm_medium=free-cartflows&utm_campaign=go-pro">', '</a>' );
 				$msg = __( 'To import the premium step, please upgrade to CartFlows Pro', 'cartflows' );
 			} elseif ( 'inactive' === $cf_pro_status ) {
 				/* translators: %1$s: link html start, %2$s: link html end*/
@@ -852,6 +960,10 @@ class Importer extends AjaxBase {
 		}
 
 		$step['title'] = isset( $_POST['step_name'] ) && ! empty( $_POST['step_name'] ) ? sanitize_text_field( wp_unslash( $_POST['step_name'] ) ) : $step['title'];
+
+		// Set the flag as true to check for the import process is started for the CartFlows. So as to import/upload the required files.
+		\CartFlows_Batch_Process::set_is_wcf_template_import( true );
+
 		// Create steps.
 		$this->import_single_step(
 			array(
@@ -880,6 +992,9 @@ class Importer extends AjaxBase {
 		$response_data = array(
 			'message' => __( 'Successfully imported the Step!', 'cartflows' ),
 		);
+
+		// Set the flag as false once the template import is complete.
+		\CartFlows_Batch_Process::set_is_wcf_template_import( false );
 
 		wcf()->logger->import_log( 'COMPLETE! Importing Step' );
 
@@ -925,7 +1040,7 @@ class Importer extends AjaxBase {
 		$response = \CartFlows_API::get_instance()->get_flow( $remote_flow_id );
 		if ( is_wp_error( $response['data'] ) ) {
 			/* translators: %1$s: html tag, %2$s: link html start %3$s: link html end */
-			$btn = sprintf( __( 'Request timeout error. Please check if the firewall or any security plugin is blocking the outgoing HTTP/HTTPS requests to templates.cartflows.com or not. %1$1sTo resolve this issue, please check this %2$2sarticle%3$3s.', 'cartflows' ), '<br><br>', '<a target="_blank" href="https://cartflows.com/docs/request-timeout-error-while-importing-the-flow-step-templates/?utm_source=dashboard&utm_medium=free-cartflows&utm_campaign=docs">', '</a>' );
+			$btn = sprintf( __( 'Request timeout error. Please check if the firewall or any security plugin is blocking the outgoing HTTP/HTTPS requests to templates.cartflows.com or not. %1$sTo resolve this issue, please check this %2$s article%3$s.', 'cartflows' ), '<br><br>', '<a target="_blank" href="https://cartflows.com/docs/request-timeout-error-while-importing-the-flow-step-templates/?utm_source=dashboard&utm_medium=free-cartflows&utm_campaign=docs">', '</a>' );
 
 			wp_send_json_error(
 				array(
@@ -946,7 +1061,7 @@ class Importer extends AjaxBase {
 			$cta = '';
 			if ( 'not-installed' === $cf_pro_status ) {
 				/* translators: %1$s: link html start, %2$s: link html end*/
-				$cta = sprintf( __( 'Upgrade to %1$sCartFlows Pro.%2$s', 'cartflows' ), '<a target="_blanks" href="https://cartflows.com/">', '</a>' );
+				$cta = sprintf( __( 'Upgrade to %1$sCartFlows Pro.%2$s', 'cartflows' ), '<a target="_blanks" href="https://cartflows.com/?utm_source=dashboard&utm_medium=free-cartflows&utm_campaign=go-pro">', '</a>' );
 			} elseif ( 'inactive' === $cf_pro_status ) {
 				/* translators: %1$s: link html start, %2$s: link html end*/
 				$cta = sprintf( __( '%1$sActivate CartFlows Pro%2$s', 'cartflows' ), '<a target="_blank" href="' . admin_url( 'plugins.php?plugin_status=search&paged=1&s=CartFlows+Pro' ) . '">', '</a>' );
@@ -1125,7 +1240,7 @@ class Importer extends AjaxBase {
 			wp_send_json_error(
 				array(
 					'error_code' => $error_code,
-					'message'    => $error_msge->message,
+					'message'    => ! empty( $error_msge->message ) ? $error_msge->message : '',
 					'data'       => $response['data'],
 					'success'    => $response['success'],
 				)
@@ -1453,5 +1568,46 @@ class Importer extends AjaxBase {
 				}
 			}
 		}
+	}
+
+	/**
+	 * Imports the Global Colors and Patterns (GCP) variables data for a given flow.
+	 *
+	 * This function updates the post meta for a flow with the GCP variables data received in the response.
+	 * It logs the import process and updates the post meta with the GCP data.
+	 *
+	 * @param array $response The response data containing the GCP variables.
+	 * @param int   $flow_id The ID of the flow for which the GCP data is being imported.
+	 *
+	 * @return void
+	 */
+	public function import_funnel_gcp_vars_data( $response, $flow_id ) {
+
+		wcf()->logger->import_log( 'Start: ' . __CLASS__ . ' :: ' . __FUNCTION__ );
+
+		wcf()->logger->import_log( 'Newly Imported Flow ID: ' . $flow_id . PHP_EOL . ' Response ' . print_r( $response, true ) ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_print_r
+
+		if ( isset( $response['data']['flow_gcp_meta'] ) && ! empty( $response['data']['flow_gcp_meta'] ) && is_object( $response['data']['flow_gcp_meta'] ) ) {
+
+			wcf()->logger->import_log( 'Before Importing:' . print_r( $response['data']['flow_gcp_meta'], true ) ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_print_r
+
+			$gcp_data = (object) array_map( 'sanitize_text_field', (array) $response['data']['flow_gcp_meta'] );
+
+			wcf()->logger->import_log( 'After Importing: ' . print_r( $gcp_data, true ) ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_print_r
+
+			$gcp_meta_keys = array(
+				'wcf-enable-gcp-styling'  => 'yes',
+				'wcf-gcp-primary-color'   => ! empty( $gcp_data->gcp_primary_color ) ? $gcp_data->gcp_primary_color : '',
+				'wcf-gcp-secondary-color' => ! empty( $gcp_data->gcp_secondary_color ) ? $gcp_data->gcp_secondary_color : '',
+				'wcf-gcp-text-color'      => ! empty( $gcp_data->gcp_text_color ) ? $gcp_data->gcp_text_color : '',
+				'wcf-gcp-accent-color'    => ! empty( $gcp_data->gcp_accent_color ) ? $gcp_data->gcp_accent_color : '',
+			);
+
+			foreach ( $gcp_meta_keys as $key => $value ) {
+				update_post_meta( $flow_id, $key, $value );
+			}
+		}
+
+		wcf()->logger->import_log( 'End: ' . __CLASS__ . ' :: ' . __FUNCTION__ );
 	}
 }

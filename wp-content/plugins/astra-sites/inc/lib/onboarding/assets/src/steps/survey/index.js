@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Tooltip } from '@brainstormforce/starter-templates-components';
-import { __ } from '@wordpress/i18n';
+import Tooltip from '../../components/tooltip/tooltip';
+import { __, sprintf } from '@wordpress/i18n';
 import { PreviousStepLink, DefaultStep } from '../../components/index';
 import ICONS from '../../../icons';
 import { useStateValue } from '../../store/store';
@@ -8,7 +8,9 @@ import { checkRequiredPlugins } from '../../steps/import-site/import-utils';
 import SurveyForm from './survey';
 import AdvancedSettings from './advanced-settings';
 import './style.scss';
-const { phpVersion, analytics } = starterTemplates;
+import { ArrowLeftIcon } from '@heroicons/react/24/outline';
+
+const { phpVersion, analytics, firstImportStatus } = starterTemplates;
 
 const Survey = () => {
 	const storedState = useStateValue();
@@ -17,10 +19,14 @@ const Survey = () => {
 			currentIndex,
 			builder,
 			requiredPlugins,
+			notInstalledList,
+			notActivatedList,
 			analyticsFlag,
 			shownRequirementOnce,
 			pluginInstallationAttempts,
 			fileSystemPermissions,
+			formDetails,
+			allowResetSite,
 		},
 		dispatch,
 	] = storedState;
@@ -28,7 +34,7 @@ const Survey = () => {
 	const notInstalled = requiredPlugins?.required_plugins?.notinstalled;
 	const notActivated = requiredPlugins?.required_plugins?.inactive;
 	const allPuginList = [];
-	if ( notInstalled.length > 0 ) {
+	if ( notInstalled?.length > 0 ) {
 		notInstalled.map( ( plugin ) => {
 			return allPuginList.push( {
 				plugin,
@@ -37,7 +43,7 @@ const Survey = () => {
 		} );
 	}
 
-	if ( notActivated.length > 0 ) {
+	if ( notActivated?.length > 0 ) {
 		notActivated.map( ( plugin ) => {
 			return allPuginList.push( {
 				plugin,
@@ -45,7 +51,27 @@ const Survey = () => {
 			} );
 		} );
 	}
+	const terms = (
+		<a
+			className="st-link"
+			href="https://store.brainstormforce.com/terms-and-conditions/"
+			target="_blank"
+			rel="noreferrer"
+		>
+			Terms
+		</a>
+	);
 
+	const privacyPolicy = (
+		<a
+			className="st-link"
+			href="https://store.brainstormforce.com/privacy-policy/"
+			target="_blank"
+			rel="noreferrer"
+		>
+			Privacy Policy
+		</a>
+	);
 	const manualPluginInstallation = () => {
 		return (
 			<form className="install-plugins-form" onSubmit={ recheckPlugins }>
@@ -99,7 +125,7 @@ const Survey = () => {
 
 	const [ skipPlugins, setSkipPlugins ] = useState( isThirtPartyPlugins );
 
-	const compatibilities = astraSitesVars.compatibilities;
+	const compatibilities = astraSitesVars?.compatibilities;
 	const requirementsErrors = compatibilities.errors;
 	let requirementWarning = compatibilities.warnings;
 
@@ -119,7 +145,7 @@ const Survey = () => {
 		output.push( '</ul>' );
 
 		const tooltipString =
-			astraSitesVars.compatibilities_data[ 'update-available' ];
+			astraSitesVars?.compatibilities_data[ 'update-available' ];
 		tooltipString.tooltip = tooltipString.tooltip.replace(
 			'##LIST##',
 			output.join( '' )
@@ -140,28 +166,38 @@ const Survey = () => {
 			Object.keys( requirementWarning ).length > 0;
 	}
 
+	// Apply multisite-specific requirement flag logic
+	if ( starterTemplates?.isMultisite ) {
+		// For multisite: use the multisite-aware checking
+		const shouldSkipRequirements = starterTemplates?.canActivatePlugins
+			? notInstalled?.length <= 0 &&
+			  starterTemplates?.themeStatus !== 'not-installed' // No Plugins/Themes are available to install
+			: allPuginList?.length <= 0 &&
+			  starterTemplates?.themeStatus === 'installed-and-active'; // No Plugins/Themes are available to install or activate
+
+		if ( shouldSkipRequirements ) {
+			requirementsFlag = false;
+		}
+	}
+
 	const [ showRequirementCheck, setShowRequirementCheck ] =
 		useState( requirementsFlag );
 
-	const [ formDetails, setFormDetails ] = useState( {
-		first_name: '',
-		email: '',
-		wp_user_type: '',
-		build_website_for: '',
-		opt_in: false,
-	} );
-
 	const updateFormDetails = ( field, value ) => {
-		setFormDetails( ( prevState ) => ( {
-			...prevState,
-			[ field ]: value,
-		} ) );
+		dispatch( {
+			type: 'set',
+			formDetails: {
+				...formDetails,
+				[ field ]: value,
+			},
+		} );
 	};
 
 	const setStartFlag = () => {
 		const content = new FormData();
-		content.append( 'action', 'astra-sites-set-start-flag' );
-		content.append( '_ajax_nonce', astraSitesVars._ajax_nonce );
+		content.append( 'action', 'astra-sites-set_start_flag' );
+		content.append( '_ajax_nonce', astraSitesVars?._ajax_nonce );
+		content.append( 'template_type', 'classic' );
 
 		fetch( ajaxurl, {
 			method: 'post',
@@ -169,75 +205,104 @@ const Survey = () => {
 		} );
 	};
 
+	const hasAgreedFirstTime = allowResetSite || firstImportStatus;
+
 	const handleSurveyFormSubmit = ( e ) => {
 		e.preventDefault();
 
-		setStartFlag();
+		if ( hasAgreedFirstTime ) {
+			setStartFlag();
 
-		setTimeout( () => {
-			dispatch( {
-				type: 'set',
-				currentIndex: currentIndex + 1,
-			} );
-		}, 500 );
-
-		if ( analytics !== 'yes' ) {
-			// Send data to analytics.
-			const answer = analyticsFlag ? 'yes' : 'no';
-			const optinAnswer = new FormData();
-			optinAnswer.append( 'action', 'astra-sites-update-analytics' );
-			optinAnswer.append( '_ajax_nonce', astraSitesVars._ajax_nonce );
-			optinAnswer.append( 'data', answer );
-
-			fetch( ajaxurl, {
-				method: 'post',
-				body: optinAnswer,
-			} )
-				.then( ( response ) => response.json() )
-				.then( ( response ) => {
-					if ( response.success ) {
-						starterTemplates.analytics = answer;
-					}
+			setTimeout( () => {
+				dispatch( {
+					type: 'set',
+					currentIndex: currentIndex + 1,
 				} );
-		}
+			}, 500 );
 
-		if ( astraSitesVars.subscribed === 'yes' ) {
-			dispatch( {
-				type: 'set',
-				user_subscribed: true,
-			} );
-			return;
-		}
+			if ( analytics !== 'yes' ) {
+				// Send data to analytics.
+				const answer = analyticsFlag ? 'yes' : 'no';
+				const optinAnswer = new FormData();
+				optinAnswer.append( 'action', 'astra-sites-update-analytics' );
+				optinAnswer.append(
+					'_ajax_nonce',
+					astraSitesVars?._ajax_nonce
+				);
+				optinAnswer.append( 'data', answer );
 
-		if ( ! formDetails.opt_in ) {
-			return;
-		}
+				fetch( ajaxurl, {
+					method: 'post',
+					body: optinAnswer,
+				} )
+					.then( ( response ) => response.json() )
+					.then( ( response ) => {
+						if ( response.success ) {
+							starterTemplates.analytics = answer;
+						}
+					} );
+			}
 
-		const subscriptionFields = {
-			EMAIL: formDetails.email,
-			FIRSTNAME: formDetails.first_name,
-			PAGE_BUILDER: builder,
-			WP_USER_TYPE: formDetails.wp_user_type,
-			BUILD_WEBSITE_FOR: formDetails.build_website_for,
-			OPT_IN: formDetails.opt_in,
-		};
-
-		const content = new FormData();
-		content.append( 'action', 'astra-sites-update-subscription' );
-		content.append( '_ajax_nonce', astraSitesVars._ajax_nonce );
-		content.append( 'data', JSON.stringify( subscriptionFields ) );
-
-		fetch( ajaxurl, {
-			method: 'post',
-			body: content,
-		} )
-			.then( ( response ) => response.json() )
-			.then( () => {
+			if ( astraSitesVars?.subscribed === 'yes' ) {
 				dispatch( {
 					type: 'set',
 					user_subscribed: true,
 				} );
-			} );
+				return;
+			}
+
+			if ( ! formDetails.opt_in && ! formDetails.email ) {
+				return;
+			}
+
+			const templatePlugins = requiredPlugins.required_plugins;
+
+			const pluginLists = [
+				templatePlugins?.active,
+				templatePlugins?.inactive,
+				templatePlugins?.notinstalled,
+				notInstalledList,
+				notActivatedList,
+			];
+
+			const uniqueFeatures = Array.from(
+				new Set(
+					pluginLists
+						.flatMap( ( list ) =>
+							Array.isArray( list ) ? list : []
+						)
+						.map( ( plugin ) => plugin?.slug )
+						.filter( Boolean )
+				)
+			);
+
+			const subscriptionFields = {
+				EMAIL: formDetails.email,
+				FIRSTNAME: formDetails.first_name,
+				PAGE_BUILDER: builder,
+				WP_USER_TYPE: formDetails.wp_user_type,
+				BUILD_WEBSITE_FOR: formDetails.build_website_for,
+				OPT_IN: formDetails.opt_in,
+				FEATURES: uniqueFeatures,
+			};
+
+			const content = new FormData();
+			content.append( 'action', 'astra-sites-update-subscription' );
+			content.append( '_ajax_nonce', astraSitesVars?._ajax_nonce );
+			content.append( 'data', JSON.stringify( subscriptionFields ) );
+
+			fetch( ajaxurl, {
+				method: 'post',
+				body: content,
+			} )
+				.then( ( response ) => response.json() )
+				.then( () => {
+					dispatch( {
+						type: 'set',
+						user_subscribed: true,
+					} );
+				} );
+		}
 	};
 
 	const handlePluginFormSubmit = ( e ) => {
@@ -250,21 +315,50 @@ const Survey = () => {
 		checkRequiredPlugins( storedState );
 	};
 
+	const agrText = sprintf(
+		// translators: %1$s is a terms link, %2$s is a privacy policy link
+		__( 'By continuing, you agree to our %1$s and %2$s.', 'astra-sites' ),
+		'_terms_',
+		'_privacy_'
+	);
+	const [ beforeTerms, afterTerms ] = agrText.split( '_terms_' );
+	const [ beforePrivacy, afterPrivacy ] = afterTerms.split( '_privacy_' );
+
 	const surveyForm = () => {
 		return (
 			<form className="survey-form" onSubmit={ handleSurveyFormSubmit }>
-				<h1>{ __( 'Okay, just one last step…', 'astra-sites' ) }</h1>
-				{ astraSitesVars.subscribed !== 'yes' && (
-					<SurveyForm updateFormDetails={ updateFormDetails } />
+				{ astraSitesVars?.subscribed !== 'yes' && (
+					<SurveyForm
+						formDetails={ formDetails }
+						updateFormDetails={ updateFormDetails }
+					/>
 				) }
-				{ <AdvancedSettings /> }
+				<AdvancedSettings />
 				<button
 					type="submit"
 					className="submit-survey-btn button-text d-flex-center-align"
+					style={
+						! hasAgreedFirstTime
+							? {
+									backgroundColor: '#E5E7EB',
+									cursor: 'not-allowed',
+									color: '#9CA3AF',
+							  }
+							: null
+					}
 				>
 					{ __( 'Submit & Build My Website', 'astra-sites' ) }
-					{ ICONS.arrowRight }
+					{ ! hasAgreedFirstTime
+						? ICONS.arrowRightDisabled
+						: ICONS.arrowRight }
 				</button>
+				<p className="!text-zip-app-inactive-icon subscription-agreement-text text-center mt-4">
+					{ beforeTerms }
+					{ terms }
+					{ beforePrivacy }
+					{ privacyPolicy }
+					{ afterPrivacy }
+				</p>
 			</form>
 		);
 	};
@@ -325,7 +419,9 @@ const Survey = () => {
 	const hardRequirement = () => {
 		return (
 			<div className="requirement-check-wrap">
-				<h1>{ __( "We're Almost There!", 'astra-sites' ) }</h1>
+				<h1 className="text-3xl font-bold text-zip-app-heading max-md:!text-3xl max-sm:!text-2xl">
+					{ __( "We're Almost There!", 'astra-sites' ) }
+				</h1>
 
 				<p>
 					{ __(
@@ -356,9 +452,110 @@ const Survey = () => {
 	};
 
 	const optionalRequirement = () => {
+		// Cache frequently accessed properties for better performance
+		const isMultisite = starterTemplates?.isMultisite;
+		const canActivatePlugins = starterTemplates?.canActivatePlugins;
+		const canInstallPlugins = starterTemplates?.canInstallPlugins;
+		const themeStatus = starterTemplates?.themeStatus;
+
+		// Helper function to determine if theme is missing based on user permissions
+		const checkThemeMissing = () => {
+			return canActivatePlugins
+				? themeStatus === 'not-installed'
+				: themeStatus !== 'installed-and-active';
+		};
+
+		// Helper function to check if plugins are missing
+		const checkPluginsMissing = () => {
+			if ( canInstallPlugins ) {
+				return false;
+			}
+			return canActivatePlugins
+				? ( notInstalled?.length || 0 ) > 0
+				: ( allPuginList?.length || 0 ) > 0;
+		};
+
+		// Determine multisite scenario with missing components
+		let isMultisiteWithMissingPluginOrTheme = false;
+		let isThemeMissing = false;
+
+		if ( isMultisite ) {
+			isThemeMissing = checkThemeMissing();
+			const hasPluginsMissing = checkPluginsMissing();
+			isMultisiteWithMissingPluginOrTheme =
+				isThemeMissing || hasPluginsMissing;
+		}
+
+		// Determine the appropriate requirement list based on user permissions
+		const requireList = canActivatePlugins ? notInstalled : allPuginList;
+
+		// Render multisite-specific requirement screen
+		if ( isMultisiteWithMissingPluginOrTheme ) {
+			return (
+				<div className="requirement-check-wrap">
+					<h2 className="text-3xl font-bold text-zip-app-heading max-md:!text-3xl max-sm:!text-2xl pb-4">
+						{ __(
+							'Missing Required Plugins or Theme',
+							'astra-sites'
+						) }
+					</h2>
+					<p className="!mb-4">
+						{ __(
+							'In a multisite environment, you need to have all required plugins and themes already installed and activated by your network administrator to import this template.',
+							'astra-sites'
+						) }
+					</p>
+					{ isThemeMissing && (
+						<>
+							<h5>{ __( 'Missing Theme:', 'astra-sites' ) }</h5>
+							<ul className="requirement-check-list !list-disc">
+								<li>{ 'Astra' }</li>
+							</ul>
+						</>
+					) }
+					{ requireList?.length > 0 && (
+						<>
+							<h5>{ __( 'Missing Plugins:', 'astra-sites' ) }</h5>
+							<ul className="requirement-check-list">
+								{ requireList.map( ( value, index ) => (
+									<li key={ index }>
+										<div className="requirement-list-item">
+											{ canActivatePlugins
+												? value.name
+												: value.plugin.name }
+										</div>
+									</li>
+								) ) }
+							</ul>
+						</>
+					) }
+					<p>
+						{ __(
+							'Please contact your network administrator to install and activate these plugins.',
+							'astra-sites'
+						) }
+					</p>
+					{ starterTemplates?.canInstallPlugins && (
+						<button
+							className="submit-survey-btn button-text d-flex-center-align"
+							onClick={ handleRequirementCheck }
+						>
+							<span className="leading-[15px]">
+								{ __( 'Continue Anyway', 'astra-sites' ) }
+							</span>
+							{ ICONS.arrowRight }
+						</button>
+					) }
+				</div>
+			);
+		}
+
+		// Original requirement screen for non-multisite scenarios
 		return (
 			<div className="requirement-check-wrap">
-				<h1>{ __( "We're Almost There!", 'astra-sites' ) }</h1>
+				<h1 className="text-3xl font-bold text-zip-app-heading max-md:!text-3xl max-sm:!text-2xl !text-center">
+					{ __( "We're Almost There!", 'astra-sites' ) }
+				</h1>
 
 				<p>
 					{ __(
@@ -376,6 +573,7 @@ const Survey = () => {
 										<div className="requirement-list-item">
 											{ value.title }
 											<Tooltip
+												interactive={ true }
 												content={
 													<span
 														dangerouslySetInnerHTML={ {
@@ -399,6 +597,7 @@ const Survey = () => {
 										<div className="requirement-list-item">
 											{ value.title }
 											<Tooltip
+												interactive={ true }
 												content={
 													<span
 														dangerouslySetInnerHTML={ {
@@ -424,7 +623,9 @@ const Survey = () => {
 							: false
 					}
 				>
-					{ __( 'Skip & Continue', 'astra-sites' ) }
+					<span className="leading-[15px]">
+						{ __( 'Skip & Continue', 'astra-sites' ) }
+					</span>
 					{ ICONS.arrowRight }
 				</button>
 			</div>
@@ -536,12 +737,21 @@ const Survey = () => {
 	return (
 		<DefaultStep
 			content={
-				<div className="survey-container"> { defaultStepContent } </div>
-			}
-			actions={
 				<>
-					<PreviousStepLink before>
-						{ __( 'Back', 'astra-sites' ) }
+					<div className="my-4">
+						<h1 className="mb-4 text-3xl font-bold text-zip-app-heading max-md:!text-3xl max-sm:!text-2xl">
+							{ __( 'Okay, just one last step…', 'astra-sites' ) }
+						</h1>
+					</div>
+					<div className="survey-container">
+						{ ' ' }
+						{ defaultStepContent }{ ' ' }
+					</div>
+					<PreviousStepLink>
+						<div className="flex text-center justify-center items-center gap-2">
+							<ArrowLeftIcon height={ 12.5 } strokeWidth={ 2 } />
+							{ __( 'Back', 'astra-sites' ) }
+						</div>
 					</PreviousStepLink>
 				</>
 			}

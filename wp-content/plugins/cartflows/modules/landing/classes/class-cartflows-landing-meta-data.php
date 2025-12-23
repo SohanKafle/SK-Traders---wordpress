@@ -109,18 +109,9 @@ class Cartflows_Landing_Meta_Data extends Cartflows_Step_Meta_Base {
 					'fields'   => array(
 						'slug'                      => array(
 							'type'          => 'text',
-							'name'          => 'post_name',
+							'name'          => 'step_post_name',
 							'label'         => __( 'Step Slug', 'cartflows' ),
-							'value'         => get_post_field( 'post_name', $step_id ),
-							'display_align' => 'vertical',
-						),
-						'step-note'                 => array(
-							'type'          => 'textarea',
-							'name'          => 'wcf-step-note',
-							'label'         => __( 'Step Note', 'cartflows' ),
-							'value'         => get_post_meta( $step_id, 'wcf-step-note', true ),
-							'rows'          => 2,
-							'cols'          => 38,
+							'value'         => get_post_field( 'post_name' ),
 							'display_align' => 'vertical',
 						),
 						'wcf-landing-custom-script' => array(
@@ -129,12 +120,24 @@ class Cartflows_Landing_Meta_Data extends Cartflows_Step_Meta_Base {
 							'name'          => 'wcf-custom-script',
 							'value'         => $options['wcf-custom-script'],
 							'display_align' => 'vertical',
-							'tooltip'       => __( 'Enter custom JS/CSS. Wrap your custom CSS in style tag.', 'cartflows' ),
+							'tooltip'       => __( 'Add your own custom code here. If you\'re adding CSS, make sure to wrap it inside &lt;style&gt; tags.', 'cartflows' ),
 						),
 					),
 				),
 			),
 		);
+
+		if ( wcf_show_deprecated_step_notes() ) {
+			$settings['settings']['general']['fields']['step-note'] = array(
+				'type'          => 'textarea',
+				'name'          => 'wcf-step-note',
+				'label'         => __( 'Step Note', 'cartflows' ),
+				'value'         => get_post_meta( $step_id, 'wcf-step-note', true ),
+				'rows'          => 2,
+				'cols'          => 38,
+				'display_align' => 'vertical',
+			);
+		}
 
 		return $settings;
 	}

@@ -89,10 +89,40 @@ class Cartflows_Helper {
 	 */
 	private static $facebook = null;
 
+	/**
+	 * Facebook pixel global data
+	 *
+	 * @var tiktok
+	 */
+	private static $tiktok = null;
 
 	/**
-	 * Returns an option from the database for
-	 * the admin settings page.
+	 * Pinterest tag global data
+	 *
+	 * @var tiktok
+	 */
+	private static $pinterest = null;
+
+	/**
+	 * Google Ads settings
+	 *
+	 * @since 2.1.0
+	 * @var array|null
+	 */
+	private static $google_ads_settings = null;
+
+	/**
+	 * Snapchat pixel global data
+	 *
+	 * @since 2.1.0
+	 * @var array|null
+	 */
+	private static $snapchat = null;
+
+	/**
+	 * Returns an option from the database for the admin settings page.
+	 *
+	 * Note: Note: Use this function to access any properties to front-end of the website.
 	 *
 	 * @param  string  $key     The option key.
 	 * @param  mixed   $default Option default value if option is not available.
@@ -113,6 +143,8 @@ class Cartflows_Helper {
 
 	/**
 	 * Updates an option from the admin settings page.
+	 *
+	 * Note: Use this function to access any properties to front-end of the website.
 	 *
 	 * @param string $key       The option key.
 	 * @param mixed  $value     The value to update.
@@ -730,6 +762,143 @@ class Cartflows_Helper {
 		return self::$facebook;
 	}
 
+	/**
+	 * Get tiktok pixel settings.
+	 *
+	 * @return tiktok tiktok settings array.
+	 */
+	public static function get_tiktok_settings() {
+
+		if ( null === self::$tiktok ) {
+
+			$tiktok_default = array(
+				'tiktok_pixel_id'                => '',
+				'enable_tiktok_begin_checkout'   => 'disable',
+				'enable_tiktok_add_to_cart'      => 'disable',
+				'enable_tiktok_view_content'     => 'disable',
+				'enable_tiktok_add_payment_info' => 'disable',
+				'enable_tiktok_purchase_event'   => 'disable',
+				'enable_tiktok_optin_lead'       => 'disable',
+				'tiktok_pixel_tracking'          => 'disable',
+				'tiktok_pixel_tracking_for_site' => 'disable',
+			);
+
+			$tiktok = self::get_admin_settings_option( '_cartflows_tiktok', false, false );
+
+			$tiktok = wp_parse_args( $tiktok, $tiktok_default );
+
+			self::$tiktok = apply_filters( 'cartflows_tiktok_settings_default', $tiktok );
+
+		}
+
+		return self::$tiktok;
+	}
+
+	/**
+	 * Get pinterest tag settings.
+	 *
+	 * @return pinterest pinterest settings array.
+	 */
+	public static function get_pinterest_settings() {
+
+		if ( null === self::$pinterest ) {
+
+			$pinterest_default = array(
+				'pinterest_tag_id'                  => '',
+				'enable_pinterest_consent'          => 'disable',
+				'enable_pinterest_begin_checkout'   => 'disable',
+				'enable_pinterest_add_to_cart'      => 'disable',
+				'enable_pinterest_add_payment_info' => 'disable',
+				'enable_pinterest_purchase_event'   => 'disable',
+				'enable_pinterest_signup'           => 'disable',
+				'enable_pinterest_optin_lead'       => 'disable',
+				'pinterest_tag_tracking'            => 'disable',
+				'pinterest_tag_tracking_for_site'   => 'disable',
+			);
+
+			$pinterest = self::get_admin_settings_option( '_cartflows_pinterest', false, false );
+
+			$pinterest = wp_parse_args( $pinterest, $pinterest_default );
+
+			self::$pinterest = apply_filters( 'cartflows_pinterest_settings_default', $pinterest );
+
+		}
+
+		return self::$pinterest;
+	}
+
+	/**
+	 * Get debug settings data.
+	 *
+	 * @since 2.1.0
+	 * @return array $google_ads_settings The Google Ads settings array.
+	 */
+	public static function get_google_ads_settings() {
+
+		if ( null === self::$google_ads_settings ) {
+
+
+			$google_ads_settings_default = apply_filters(
+				'cartflows_google_ads_settings_default',
+				array(
+					'google_ads_id'                      => '',
+					'google_ads_label'                   => '',
+					'enable_google_ads_begin_checkout'   => 'disable',
+					'enable_google_ads_add_to_cart'      => 'disable',
+					'enable_google_ads_view_content'     => 'disable',
+					'enable_google_ads_add_payment_info' => 'disable',
+					'enable_google_ads_purchase_event'   => 'disable',
+					'enable_google_ads_optin_lead'       => 'disable',
+					'google_ads_tracking'                => 'disable',
+					'google_ads_for_site'                => 'disable',
+				)
+			);
+
+			$google_ads_settings_data = self::get_admin_settings_option( '_cartflows_google_ads', false, true );
+
+			$google_ads_settings_data = wp_parse_args( $google_ads_settings_data, $google_ads_settings_default );
+
+			if ( ! did_action( 'wp' ) ) {
+				return $google_ads_settings_data;
+			} else {
+				self::$google_ads_settings = $google_ads_settings_data;
+			}
+		}
+
+		return self::$google_ads_settings;
+	}
+
+	/**
+	 * Get snapchat pixel settings.
+	 *
+	 * @return snapchat snapchat settings array.
+	 */
+	public static function get_snapchat_settings() {
+
+		if ( null === self::$snapchat ) {
+
+			$snapchat_default = array(
+				'snapchat_pixel_id'               => '',
+				'enable_snapchat_begin_checkout'  => 'disable',
+				'enable_snapchat_add_to_cart'     => 'disable',
+				'enable_snapchat_view_content'    => 'disable',
+				'enable_snapchat_purchase_event'  => 'disable',
+				'enable_snapchat_optin_lead'      => 'disable',
+				'enable_snapchat_subscribe_event' => 'disable',
+				'snapchat_pixel_tracking'         => 'disable',
+				'snapchat_pixel_for_site'         => 'disable',
+			);
+
+			$snapchat = self::get_admin_settings_option( '_cartflows_snapchat', false, false );
+
+			$snapchat = wp_parse_args( $snapchat, $snapchat_default );
+
+			self::$snapchat = apply_filters( 'cartflows_snapchat_settings_default', $snapchat );
+
+		}
+
+		return self::$snapchat;
+	}
 
 	/**
 	 * Prepare response data for facebook.
@@ -751,7 +920,7 @@ class Cartflows_Helper {
 		// @Since 1.6.15 It will only trigger offer purchase event.
 		$fb_settings = self::get_facebook_settings();
 		if ( 'enable' === $fb_settings['facebook_pixel_tracking'] ) {
-			setcookie( 'wcf_order_details', wp_json_encode( self::prepare_purchase_data_fb_response( $order_id, $offer_data ) ), strtotime( '+1 year' ), '/' ); //phpcs:ignore WordPressVIPMinimum.Functions.RestrictedFunctions.cookies_setcookie
+			setcookie( 'wcf_order_details', wp_json_encode( self::prepare_purchase_data_fb_response( $order_id, $offer_data ) ), strtotime( '+1 year' ), '/', COOKIE_DOMAIN, CARTFLOWS_HTTPS, true ); //phpcs:ignore WordPressVIPMinimum.Functions.RestrictedFunctions.cookies_setcookie
 		}
 
 	}
@@ -990,6 +1159,7 @@ class Cartflows_Helper {
 			'gutenberg'      => 'Spectra',
 			'beaver-builder' => 'Beaver Builder',
 			'divi'           => 'Divi',
+			'bricks-builder' => 'Bricks',
 		);
 
 		if ( isset( $pb_data[ $page_builder ] ) ) {
@@ -1371,10 +1541,19 @@ class Cartflows_Helper {
 
 		switch ( $page_builder ) {
 			case 'beaver-builder':
-				$page_builder_edit = strpos( $view_step, '?' ) ? $view_step . '&fl_builder' : $view_step . '?fl_builder';
+				if ( is_plugin_active( 'beaver-builder-lite-version/fl-builder.php' ) ) {
+					$page_builder_edit = strpos( $view_step, '?' ) ? $view_step . '&fl_builder' : $view_step . '?fl_builder';
+				}
 				break;
 			case 'elementor':
-				$page_builder_edit = admin_url( 'post.php?post=' . $step_id . '&action=elementor' );
+				if ( is_plugin_active( 'elementor/elementor.php' ) ) {
+					$page_builder_edit = admin_url( 'post.php?post=' . $step_id . '&action=elementor' );
+				}
+				break;
+			case 'bricks-builder':
+				if ( Cartflows_Compatibility::is_bricks_enabled() ) {
+					$page_builder_edit = strpos( $view_step, '?' ) ? $view_step . '&bricks=run' : $view_step . '?bricks=run';
+				}
 				break;
 		}
 
@@ -1384,7 +1563,7 @@ class Cartflows_Helper {
 	/**
 	 * Get CartFlows Global Color Pallet CSS_Vars data.
 	 *
-	 * @since x.x.x.
+	 * @since 2.0.0.
 	 * @return array Array of GCP vars slugs and label,
 	 */
 	public static function get_gcp_vars() {
@@ -1402,7 +1581,7 @@ class Cartflows_Helper {
 	 * @param int $flow_id The current flow ID.
 	 * @return array $gcp_vars Array of generated CSS.
 	 *
-	 * @since x.x.x
+	 * @since 2.0.0
 	 */
 	public static function generate_gcp_css_style( $flow_id = 0 ) {
 
@@ -1432,23 +1611,32 @@ class Cartflows_Helper {
 	/**
 	 * Generate the array of CSS vars to add in the Gutenberg color pallet.
 	 *
-	 * @param int $flow_id The current Flow ID.
+	 * @param int    $flow_id The current Flow ID.
+	 * @param string $builder The current page builder.
 	 * @return array $new_color_palette Prepared array of CSS vars.
 	 *
-	 * @since x.x.x
+	 * @since 2.0.0
 	 */
-	public static function generate_css_var_array( $flow_id = 0 ) {
+	public static function generate_css_var_array( $flow_id = 0, $builder = 'gutenberg' ) {
 
 		if ( empty( $flow_id ) ) {
 			$flow_id = wcf()->utils->get_flow_id();
 		}
-
+		$new_color_palette = array();
 		// Default Color Pallet used as a separator.
-		$new_color_palette[] = array(
-			'name'  => 'CartFlows Separator',
-			'slug'  => 'wcf-gcp-separator',
-			'color' => '#ff0000',
-		);
+		if ( 'gutenberg' === $builder ) {
+			$new_color_palette[] = array(
+				'name'  => 'CartFlows Separator',
+				'slug'  => 'wcf-gcp-separator',
+				'color' => '#ff0000',
+			);
+		} elseif ( 'elementor' === $builder ) {
+			$new_color_palette['wcfgcpseparator'] = array(
+				'id'    => 'wcfgcpseparator',
+				'title' => 'CartFlows Separator',
+				'value' => '#ff0000',
+			);
+		}
 
 		$cf_gcp_data = self::get_gcp_vars();
 
@@ -1462,11 +1650,20 @@ class Cartflows_Helper {
 			}
 
 			// Add CartFlows Global Color Pallets CSS vars options.
-			$new_color_palette[] = array(
-				'name'  => $label,
-				'slug'  => $slug,
-				'color' => 'var( --' . $slug . ')',
-			);
+			if ( 'gutenberg' === $builder ) {
+				$new_color_palette[] = array(
+					'name'  => $label,
+					'slug'  => $slug,
+					'color' => $color_value,
+				);
+			} elseif ( 'elementor' === $builder ) {
+				$slug                       = str_replace( '-', '', $slug );
+				$new_color_palette[ $slug ] = array(
+					'id'    => $slug,
+					'title' => $label,
+					'value' => $color_value,
+				);
+			}
 		}
 
 		return $new_color_palette;
@@ -1486,5 +1683,193 @@ class Cartflows_Helper {
 
 		return 'yes' === wcf()->options->get_flow_meta_value( $flow_id, 'wcf-enable-gcp-styling', 'no' );
 	}
-}
 
+	/**
+	 * Function to check to show the products tab in the store checkout or not.
+	 *
+	 * @return bool
+	 * @since 2.0.4
+	 */
+	public static function display_product_tab_in_store_checkout() {
+		return apply_filters( 'cartflows_show_store_checkout_product_tab', false );
+	}
+
+	/**
+	 * Function get the CartFlows upgrade to PRO link.
+	 *
+	 * @param string $page      The page name which needs to be displayed.
+	 * @param string $custom_url The Another URL if wish to send.
+	 * @return string $url The modified URL.
+	 */
+	public static function get_upgrade_to_pro_link( $page = 'pricing', $custom_url = '' ) {
+
+		$base_url = CARTFLOWS_DOMAIN_URL . $page . '/';
+		$url      = empty( $custom_url ) ? $base_url : esc_url( $custom_url );
+
+		$partner_id = get_option( 'cartflows_partner_url_param', '' );
+		$partner_id = is_string( $partner_id ) ? sanitize_text_field( $partner_id ) : '';
+
+		if ( ! empty( $partner_id ) ) {
+			return add_query_arg( array( 'cf' => $partner_id ), $url );
+		}
+
+		// Modify the utm_source parameter using the UTM ready link function to include tracking information.
+		if ( class_exists( '\BSF_UTM_Analytics' ) && is_callable( '\BSF_UTM_Analytics::get_utm_ready_link' ) ) {
+			$url = \BSF_UTM_Analytics::get_utm_ready_link( $url, 'cartflows' );
+		}
+
+		return esc_url( $url );
+	}
+
+	/**
+	 * Get current page's template
+	 *
+	 * @param int $post_id The current page id.
+	 * @return string
+	 *
+	 * @since 2.1.0
+	 */
+	public static function get_current_page_template( $post_id = 0 ) {
+
+		if ( empty( $post_id ) ) {
+			$post_id = _get_wcf_step_id();
+		}
+
+		return apply_filters( 'cartflows_page_template', get_post_meta( $post_id, '_wp_page_template', true ) );
+
+	}
+
+	/**
+	 * Check the Instant layout is enabled or not.
+	 *
+	 * @param int $flow_id Current flow id.
+	 * @return boolean Returns true if instant layout is enabled, false otherwise.
+	 */
+	public static function is_instant_layout_enabled( $flow_id = 0 ) {
+
+		// Get the flow ID if not set.
+		if ( empty( $flow_id ) ) {
+			$flow_id = wcf()->utils->get_flow_id();
+		}
+
+		// Return false if flow ID is not set.
+		if ( empty( $flow_id ) ) {
+			return false;
+		}
+
+		// Return false if wcf()->options is not set.
+		if ( ! isset( wcf()->options ) || ! is_object( wcf()->options ) || ! is_callable( array( wcf()->options, 'get_flow_meta_value' ) ) ) {
+			return false;
+		}
+
+		// Return true or false based on the instant layout style.
+		return 'yes' === wcf()->options->get_flow_meta_value( $flow_id, 'instant-layout-style', 'no' );
+	}
+
+	/**
+	 * Get Rollback versions.
+	 *
+	 * @since 2.1.6
+	 * @return array
+	 * @access public
+	 */
+	public static function get_rollback_versions() {
+
+		$rollback_versions = get_transient( 'cartflows_rollback_versions_' . CARTFLOWS_VER );
+
+		if ( empty( $rollback_versions ) ) {
+
+			$max_versions = 10;
+
+			require_once ABSPATH . 'wp-admin/includes/plugin-install.php';
+
+			$plugin_information = plugins_api(
+				'plugin_information',
+				array(
+					'slug' => 'cartflows',
+				)
+			);
+
+			if ( empty( $plugin_information->versions ) || ! is_array( $plugin_information->versions ) ) {
+				return array();
+			}
+
+			krsort( $plugin_information->versions );
+
+			$rollback_versions = array();
+
+			foreach ( $plugin_information->versions as $version => $download_link ) {
+
+				$lowercase_version = strtolower( $version );
+
+				$is_valid_rollback_version = ! preg_match( '/(trunk|beta|rc|dev)/i', $lowercase_version );
+
+				if ( ! $is_valid_rollback_version ) {
+					continue;
+				}
+
+				if ( version_compare( $version, CARTFLOWS_VER, '>=' ) ) {
+					continue;
+				}
+
+				$rollback_versions[] = $version;
+			}
+
+			usort( $rollback_versions, array( __CLASS__, 'sort_rollback_versions' ) );
+
+			$rollback_versions = array_slice( $rollback_versions, 0, $max_versions, true );
+
+			set_transient( 'cartflows_rollback_versions_' . CARTFLOWS_VER, $rollback_versions, WEEK_IN_SECONDS );
+		}
+
+		return (array) $rollback_versions;
+	}
+	/**
+	 * Sort Rollback versions.
+	 *
+	 * @since 2.1.6
+	 * @param string $prev Previous Version.
+	 * @param string $next Next Version.
+	 *
+	 * @return int
+	 */
+	public static function sort_rollback_versions( $prev, $next ) {
+
+		if ( version_compare( $prev, $next, '==' ) ) {
+			return 0;
+		}
+
+		if ( version_compare( $prev, $next, '>' ) ) {
+			return -1;
+		}
+
+		return 1;
+	}
+
+	/**
+	 * Get Rollback versions.
+	 *
+	 * @since 2.1.6
+	 * @return array
+	 * @access public
+	 */
+	public static function get_rollback_versions_options() {
+
+		$rollback_versions = self::get_rollback_versions();
+
+		$rollback_versions_options = array();
+
+		foreach ( $rollback_versions as $version ) {
+
+			$version = array(
+				'label' => $version,
+				'value' => $version,
+
+			);
+
+			$rollback_versions_options[] = $version;
+		}
+
+		return $rollback_versions_options;
+	}
+}

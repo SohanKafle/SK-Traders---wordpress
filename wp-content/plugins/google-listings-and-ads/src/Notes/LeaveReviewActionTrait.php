@@ -23,12 +23,12 @@ trait LeaveReviewActionTrait {
 	 */
 	protected function add_leave_review_note_action( NoteEntry $note ) {
 		$wp_link = 'https://wordpress.org/support/plugin/google-listings-and-ads/reviews/#new-post';
-		$wc_link = 'https://woo.com/products/google-listings-and-ads/#reviews';
+		$wc_link = 'https://woocommerce.com/products/google-listings-and-ads/#reviews';
 
 		$note->add_action(
 			'leave-review',
 			__( 'Leave a review', 'google-listings-and-ads' ),
-			rand( 0, 1 ) ? $wp_link : $wc_link
+			wp_rand( 0, 1 ) ? $wp_link : $wc_link
 		);
 	}
 }

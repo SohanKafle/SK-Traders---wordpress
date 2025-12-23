@@ -75,7 +75,7 @@ class Cartflows_Checkout_Meta_Data extends Cartflows_Step_Meta_Base {
 	public function remove_store_checkout_product( $settings, $step_id ) {
 		$flow_id = absint( get_post_meta( $step_id, 'wcf-flow-id', true ) );
 
-		if ( absint( \Cartflows_Helper::get_global_setting( '_cartflows_store_checkout' ) ) === $flow_id && ! apply_filters( 'cartflows_show_store_checkout_product_tab', false ) ) {
+		if ( absint( Cartflows_Helper::get_global_setting( '_cartflows_store_checkout' ) ) === $flow_id && ! Cartflows_Helper::display_product_tab_in_store_checkout() ) {
 			unset( $settings['tabs']['products'] );
 		}
 
@@ -210,10 +210,20 @@ class Cartflows_Checkout_Meta_Data extends Cartflows_Step_Meta_Base {
 		$settings = array(
 			'settings' => array(
 				'shortcode'            => array(
-					'title'    => __( 'Shortcode', 'cartflows' ),
-					'slug'     => 'shortcodes',
-					'priority' => 10,
-					'fields'   => array(
+					'title'      => __( 'Shortcode', 'cartflows' ),
+					'slug'       => 'shortcodes',
+					'priority'   => 10,
+					'conditions' => array(
+						'relation' => 'and',
+						'fields'   => array(
+							array(
+								'name'     => 'instant-layout-style',
+								'operator' => '!==',
+								'value'    => 'yes',
+							),
+						),
+					),
+					'fields'     => array(
 						'checkout-shortcode' => array(
 							'type'          => 'text',
 							'name'          => 'checkout-shortcode',
@@ -230,7 +240,7 @@ class Cartflows_Checkout_Meta_Data extends Cartflows_Step_Meta_Base {
 					'slug'     => 'checkout_design',
 					'priority' => 20,
 					'fields'   => array(
-						'checkout-skin'       => array(
+						'checkout-skin'                => array(
 							'type'          => 'select',
 							'label'         => __( 'Checkout Skin', 'cartflows' ),
 							'name'          => 'wcf-checkout-layout',
@@ -264,19 +274,79 @@ class Cartflows_Checkout_Meta_Data extends Cartflows_Step_Meta_Base {
 							),
 							'display_align' => 'vertical',
 							'pro_options'   => $layout_pro_option,
+							'conditions'    => array(
+								'relation' => 'and',
+								'fields'   => array(
+									array(
+										'name'     => 'instant-layout-style',
+										'operator' => '!==',
+										'value'    => 'yes',
+									),
+								),
+							),
 						),
-						'primary-color'       => array(
+						'primary-color'                => array(
 							'type'  => 'color-picker',
 							'name'  => 'wcf-primary-color',
 							'label' => __( 'Primary Color', 'cartflows' ),
 							'value' => $options['wcf-primary-color'],
 						),
-						'heading-font-family' => array(
+						'heading-font-family'          => array(
 							'type'          => 'font-family',
 							'label'         => esc_html__( 'Font Family', 'cartflows' ),
 							'name'          => 'wcf-base-font-family',
 							'value'         => $options['wcf-base-font-family'],
 							'display_align' => 'vertical',
+						),
+
+						'wcf-instant-checkout-section' => array(
+							'type'       => 'heading',
+							'label'      => __( 'Instant Checkout', 'cartflows' ),
+							'conditions' => array(
+								'relation' => 'and',
+								'fields'   => array(
+									array(
+										'name'     => 'instant-layout-style',
+										'operator' => '===',
+										'value'    => 'yes',
+									),
+								),
+							),
+						),
+
+						'wcf-instant-checkout-left-side-bg-color' => array(
+							'type'       => 'color-picker',
+							'label'      => __( 'Left Column Background Color', 'cartflows' ),
+							'name'       => 'wcf-instant-checkout-left-side-bg-color',
+							'value'      => $options['wcf-instant-checkout-left-side-bg-color'],
+							'tooltip'    => __( 'Pick a background color for the left side of your Checkout page.', 'cartflows' ),
+							'conditions' => array(
+								'relation' => 'and',
+								'fields'   => array(
+									array(
+										'name'     => 'instant-layout-style',
+										'operator' => '===',
+										'value'    => 'yes',
+									),
+								),
+							),
+						),
+						'wcf-instant-checkout-right-side-bg-color' => array(
+							'type'       => 'color-picker',
+							'label'      => __( 'Right Column Background Color', 'cartflows' ),
+							'name'       => 'wcf-instant-checkout-right-side-bg-color',
+							'value'      => $options['wcf-instant-checkout-right-side-bg-color'],
+							'tooltip'    => __( 'Pick a background color for the right side of your Checkout page.', 'cartflows' ),
+							'conditions' => array(
+								'relation' => 'and',
+								'fields'   => array(
+									array(
+										'name'     => 'instant-layout-style',
+										'operator' => '===',
+										'value'    => 'yes',
+									),
+								),
+							),
 						),
 					),
 				),
@@ -286,6 +356,7 @@ class Cartflows_Checkout_Meta_Data extends Cartflows_Step_Meta_Base {
 					'slug'     => 'checkout_texts_buttons',
 					'priority' => 30,
 					'fields'   => array(
+
 						'advanced-options'          => array(
 							'type'         => 'toggle',
 							'label'        => __( 'Enable Advance Options', 'cartflows' ),
@@ -294,6 +365,20 @@ class Cartflows_Checkout_Meta_Data extends Cartflows_Step_Meta_Base {
 							'is_fullwidth' => true,
 						),
 
+						'heading-font-section'      => array(
+							'type'       => 'heading',
+							'label'      => __( 'Heading Font', 'cartflows' ),
+							'conditions' => array(
+								'relation' => 'and',
+								'fields'   => array(
+									array(
+										'name'     => 'wcf-advance-options-fields',
+										'operator' => '===',
+										'value'    => 'yes',
+									),
+								),
+							),
+						),
 						'heading-font-color'        => array(
 							'type'       => 'color-picker',
 							'label'      => __( 'Heading Text Color', 'cartflows' ),
@@ -329,6 +414,21 @@ class Cartflows_Checkout_Meta_Data extends Cartflows_Step_Meta_Base {
 								),
 							),
 							'display_align'     => 'vertical',
+						),
+
+						'input-field-section'       => array(
+							'type'       => 'heading',
+							'label'      => __( 'Input Fields', 'cartflows' ),
+							'conditions' => array(
+								'relation' => 'and',
+								'fields'   => array(
+									array(
+										'name'     => 'wcf-advance-options-fields',
+										'operator' => '===',
+										'value'    => 'yes',
+									),
+								),
+							),
 						),
 
 						'input-field-style'         => array(
@@ -504,6 +604,21 @@ class Cartflows_Checkout_Meta_Data extends Cartflows_Step_Meta_Base {
 							'value'      => $options['wcf-field-label-color'],
 							'conditions' => array(
 								'fields' => array(
+									array(
+										'name'     => 'wcf-advance-options-fields',
+										'operator' => '===',
+										'value'    => 'yes',
+									),
+								),
+							),
+						),
+
+						'button-field-section'      => array(
+							'type'       => 'heading',
+							'label'      => __( 'Button Fields', 'cartflows' ),
+							'conditions' => array(
+								'relation' => 'and',
+								'fields'   => array(
 									array(
 										'name'     => 'wcf-advance-options-fields',
 										'operator' => '===',
@@ -723,9 +838,8 @@ class Cartflows_Checkout_Meta_Data extends Cartflows_Step_Meta_Base {
 									),
 								),
 							),
-							'tooltip'    => __( 'Apply the background color to the payment description box', 'cartflows' ),
+							'tooltip'    => __( 'Change the background color of the payment description box to match your style.', 'cartflows' ),
 						),
-
 					),
 				),
 			),
@@ -808,7 +922,7 @@ class Cartflows_Checkout_Meta_Data extends Cartflows_Step_Meta_Base {
 				'multiple'    => false,
 				'allow_clear' => true,
 				/* translators: %1$1s: link html start, %2$12: link html end*/
-				'desc'        => sprintf( __( 'For more information about the CartFlows coupon please %1$1s Click here.%2$2s', 'cartflows' ), '<a href="https://cartflows.com/docs/enable-coupons-on-cartflows-page/" class="!text-gray-600" target="_blank">', '</a>' ),
+				'desc'        => sprintf( __( 'For more information about the CartFlows coupon please %1$1s Click here.%2$2s', 'cartflows' ), '<a href="https://cartflows.com/docs/enable-coupons-on-cartflows-page/?utm_source=dashboard&utm_medium=free-cartflows&utm_campaign=docs" class="!text-gray-600" target="_blank">', '</a>' ),
 			),
 
 		);
@@ -897,24 +1011,15 @@ class Cartflows_Checkout_Meta_Data extends Cartflows_Step_Meta_Base {
 				'general'  => array(
 					'title'    => __( 'General', 'cartflows' ),
 					'slug'     => 'general',
-					'priority' => 10,
+					'priority' => 20,
 					'fields'   => array(
 						'slug'                       => array(
 							'type'          => 'text',
-							'name'          => 'post_name',
+							'name'          => 'step_post_name',
 							'label'         => __( 'Step Slug', 'cartflows' ),
-							'value'         => get_post_field( 'post_name', $step_id ),
+							'value'         => get_post_field( 'post_name' ),
 							'display_align' => 'vertical',
-							'tooltip'       => __( 'Current step\'s slug. Be careful while changing the slug. It will change the URL of the current step.', 'cartflows' ),
-						),
-						'step-note'                  => array(
-							'type'          => 'textarea',
-							'name'          => 'wcf-step-note',
-							'label'         => __( 'Step Note', 'cartflows' ),
-							'value'         => get_post_meta( $step_id, 'wcf-step-note', true ),
-							'rows'          => 2,
-							'cols'          => 38,
-							'display_align' => 'vertical',
+							'tooltip'       => __( 'This is the name (slug) of the current step. Changing it will update the URL for this step, so be cautious!', 'cartflows' ),
 						),
 						'wcf-checkout-custom-script' => array(
 							'type'          => 'textarea',
@@ -922,36 +1027,47 @@ class Cartflows_Checkout_Meta_Data extends Cartflows_Step_Meta_Base {
 							'name'          => 'wcf-custom-script',
 							'value'         => $options['wcf-custom-script'],
 							'display_align' => 'vertical',
-							'tooltip'       => __( 'Enter custom JS/CSS. Wrap your custom CSS in style tag.', 'cartflows' ),
+							'tooltip'       => __( 'Add your own custom code here. If you\'re adding CSS, make sure to wrap it inside &lt;style&gt; tags.', 'cartflows' ),
 						),
 					),
 				),
 				'advanced' => array(
 					'title'    => esc_html__( 'Advanced', 'cartflows' ),
 					'slug'     => 'advanced',
-					'priority' => 20,
+					'priority' => 10,
 					'fields'   => array(
 						'wcf-show-prod-img-order-review' => array(
 							'type'         => 'toggle',
 							'label'        => __( 'Display product images', 'cartflows' ),
 							'name'         => 'wcf-order-review-show-product-images',
 							'value'        => $options['wcf-order-review-show-product-images'],
-							'tooltip'      => __( 'Enabling this option will display the product\'s images in the order review section.', 'cartflows' ),
+							'tooltip'      => __( 'Turn this ON to show your product images in the order review section.', 'cartflows' ),
 							'is_fullwidth' => true,
 						),
-
 						'wcf-edit-cart'                  => array(
 							'type'         => 'toggle',
 							'label'        => __( 'Enable cart editing on checkout', 'cartflows' ),
 							'name'         => 'wcf-remove-product-field',
 							'value'        => $options['wcf-remove-product-field'],
-							'tooltip'      => __( 'Users will able to remove products from the checkout page.', 'cartflows' ),
+							'tooltip'      => __( 'Users can easily remove products from the checkout page if they decide not to purchase them.', 'cartflows' ),
 							'is_fullwidth' => true,
 						),
 					),
 				),
 			),
 		);
+
+		if ( wcf_show_deprecated_step_notes() ) {
+			$settings['settings']['general']['fields']['step-note'] = array(
+				'type'          => 'textarea',
+				'name'          => 'wcf-step-note',
+				'label'         => __( 'Step Note', 'cartflows' ),
+				'value'         => get_post_meta( $step_id, 'wcf-step-note', true ),
+				'rows'          => 2,
+				'cols'          => 38,
+				'display_align' => 'vertical',
+			);
+		}
 
 		return apply_filters( 'cartflows_admin_checkout_settings_fields', $settings );
 	}
@@ -1032,13 +1148,13 @@ class Cartflows_Checkout_Meta_Data extends Cartflows_Step_Meta_Base {
 				'title'    => __( 'Form Settings', 'cartflows' ),
 				'priority' => 10,
 				'fields'   => array(
-					'enable-coupon-field'       => array(
+					'enable-coupon-field'            => array(
 						'type'         => 'toggle',
 						'label'        => __( 'Enable Coupon Field', 'cartflows' ),
 						'name'         => 'wcf-show-coupon-field',
 						'is_fullwidth' => true,
 					),
-					'collapse-coupon-field'     => array(
+					'collapse-coupon-field'          => array(
 						'type'         => 'toggle',
 						'label'        => __( 'Collapsible Coupon Field', 'cartflows' ),
 						'name'         => 'wcf-optimize-coupon-field',
@@ -1054,13 +1170,13 @@ class Cartflows_Checkout_Meta_Data extends Cartflows_Step_Meta_Base {
 							),
 						),
 					),
-					'enable-additional-field'   => array(
+					'enable-additional-field'        => array(
 						'type'         => 'toggle',
 						'label'        => __( 'Enable Additional Field', 'cartflows' ),
 						'name'         => 'wcf-checkout-additional-fields',
 						'is_fullwidth' => true,
 					),
-					'collapse-additional-field' => array(
+					'collapse-additional-field'      => array(
 						'type'         => 'toggle',
 						'label'        => __( 'Collapsible Additional Field', 'cartflows' ),
 						'name'         => 'wcf-optimize-order-note-field',
@@ -1076,20 +1192,66 @@ class Cartflows_Checkout_Meta_Data extends Cartflows_Step_Meta_Base {
 							),
 						),
 					),
-					'shipping-field'            => array(
+					'shipping-field'                 => array(
 						'type'         => 'toggle',
 						'label'        => __( 'Enable Ship To Different Address', 'cartflows' ),
 						'name'         => 'wcf-shipto-diff-addr-fields',
 						'is_fullwidth' => true,
 					),
 
-					'wcf-google-autoaddress'    => array(
+					'wcf-google-autoaddress'         => array(
 						'type'         => 'toggle',
 						'label'        => __( 'Enable Google Address Autocomplete', 'cartflows' ),
 						'name'         => 'wcf-google-autoaddress',
 						/* translators: %1$s: link html start, %2$s: link html end*/
 						'desc'         => __( 'Before enabling this option, make sure that you have added API key in Google Address Autocomplete Settings.', 'cartflows' ),
 						'is_fullwidth' => true,
+					),
+					'wcf-no-shipping-method-message-toggle' => array(
+						'type'         => 'toggle',
+						'label'        => __( 'Enable Custom Shipping Message', 'cartflows' ),
+						'name'         => 'wcf-custom-no-shipping-method-message-toggle',
+						'value'        => $options['wcf-custom-no-shipping-method-message-toggle'],
+						'is_fullwidth' => true,
+						'tooltip'      => __( 'Turn this on to show a custom message when no shipping options are available at checkout.', 'cartflows' ),
+					),
+					'wcf-no-shipping-method-message' => array(
+						'type'          => 'textarea',
+						'label'         => __( 'Shipping Message', 'cartflows' ),
+						'name'          => 'wcf-no-shipping-method-message',
+						'value'         => $options['wcf-no-shipping-method-message'],
+						'placeholder'   => __( 'There are no shipping options available. Please ensure that your address has been entered correctly, or contact us if you need any help.', 'cartflows' ),
+						'tooltip'       => __( 'This message will be displayed when no shipping method is available.', 'cartflows' ),
+						'rows'          => 2,
+						'cols'          => 38,
+						'display_align' => 'vertical',
+						'conditions'    => array(
+							'fields' => array(
+								array(
+									'name'     => 'wcf-custom-no-shipping-method-message-toggle',
+									'operator' => '===',
+									'value'    => 'yes',
+								),
+							),
+						),
+					),
+					'order-review-summary-position'  => array(
+						'type'          => 'select',
+						'name'          => 'wcf-order-review-summary-position',
+						'label'         => __( 'Order Summary Position', 'cartflows' ),
+						'display_align' => 'vertical',
+						'value'         => $options['wcf-order-review-summary-position'],
+						'tooltip'       => __( 'Choose this option to adjust where the order summary appears on mobile devices.', 'cartflows' ),
+						'options'       => array(
+							array(
+								'value' => 'top',
+								'label' => __( 'Top', 'cartflows' ),
+							),
+							array(
+								'value' => 'bottom',
+								'label' => __( 'Bottom', 'cartflows' ),
+							),
+						),
 					),
 				),
 			),
@@ -1132,7 +1294,7 @@ class Cartflows_Checkout_Meta_Data extends Cartflows_Step_Meta_Base {
 						'label'         => __( 'Customer Information', 'cartflows' ),
 						'name'          => 'wcf-checkout-customer-info-text',
 						'placeholder'   => __( 'Customer information', 'cartflows' ),
-						'tooltip'       => __( 'This heading will be displayed only on modern checkout style.', 'cartflows' ),
+						'tooltip'       => __( 'This heading will only appear when you use the Modern Checkout style.', 'cartflows' ),
 						'display_align' => 'vertical',
 					),
 					'wcf-payment-text'           => array(
@@ -1140,7 +1302,7 @@ class Cartflows_Checkout_Meta_Data extends Cartflows_Step_Meta_Base {
 						'label'         => __( 'Payment', 'cartflows' ),
 						'name'          => 'wcf-checkout-payment-text',
 						'placeholder'   => __( 'Payment', 'cartflows' ),
-						'tooltip'       => __( 'This heading will be displayed only on modern checkout style.', 'cartflows' ),
+						'tooltip'       => __( 'This heading will only appear when you use the Modern Checkout style.', 'cartflows' ),
 						'display_align' => 'vertical',
 					),
 					'wcf-enable-validation-text' => array(
@@ -1148,7 +1310,7 @@ class Cartflows_Checkout_Meta_Data extends Cartflows_Step_Meta_Base {
 						'label'        => __( 'Enable Field validation error message', 'cartflows' ),
 						'name'         => 'wcf-enable-checkout-field-validation-text',
 						'value'        => $options['wcf-enable-checkout-field-validation-text'],
-						'tooltip'      => __( 'This is the error message appended to the field name to form a error message.', 'cartflows' ),
+						'tooltip'      => __( 'This message will appear next to the field name to show an error if something goes wrong.', 'cartflows' ),
 						'is_fullwidth' => true,
 					),
 					'wcf-field-validation-text'  => array(
@@ -1181,7 +1343,7 @@ class Cartflows_Checkout_Meta_Data extends Cartflows_Step_Meta_Base {
 						'name'          => 'wcf-checkout-place-order-button-text',
 						'value'         => $options['wcf-checkout-place-order-button-text'],
 						'placeholder'   => __( 'Place Order', 'cartflows' ),
-						'tooltip'       => __( 'It will change the default Place Order Button text on checkout page.', 'cartflows' ),
+						'tooltip'       => __( 'Customizes the text on the \'Place Order\' button during checkout, allowing you to make it more relevant to your customers.', 'cartflows' ),
 						'display_align' => 'vertical',
 					),
 					'wcf-place-order-button-icon'   => array(
@@ -1189,7 +1351,7 @@ class Cartflows_Checkout_Meta_Data extends Cartflows_Step_Meta_Base {
 						'label'        => __( 'Enable Lock Icon', 'cartflows' ),
 						'name'         => 'wcf-checkout-place-order-button-lock',
 						'value'        => $options['wcf-checkout-place-order-button-lock'],
-						'tooltip'      => __( 'This will show the lock icon on the place order button on checkout page.', 'cartflows' ),
+						'tooltip'      => __( 'Enabling this will add a lock icon to the \'Place Order\' button on the checkout page, indicating secure payment processing.', 'cartflows' ),
 						'is_fullwidth' => true,
 					),
 
@@ -1198,7 +1360,7 @@ class Cartflows_Checkout_Meta_Data extends Cartflows_Step_Meta_Base {
 						'label'        => __( 'Enable Price Display', 'cartflows' ),
 						'name'         => 'wcf-checkout-place-order-button-price-display',
 						'value'        => $options['wcf-checkout-place-order-button-price-display'],
-						'tooltip'      => __( 'This will show the cart total from the place order button.', 'cartflows' ),
+						'tooltip'      => __( 'This will display the total amount in the cart when you click the \'Place Order\' button.', 'cartflows' ),
 						'is_fullwidth' => true,
 					),
 				),
@@ -1348,7 +1510,7 @@ class Cartflows_Checkout_Meta_Data extends Cartflows_Step_Meta_Base {
 			'show_in_email'     => ( isset( $field_data['show_in_email'] ) && wc_string_to_bool( $field_data['show_in_email'] ) ) ? 'yes' : 'no',
 			'required'          => ( isset( $field_data['required'] ) && wc_string_to_bool( $field_data['required'] ) ) ? 'yes' : 'no',
 			'optimized'         => ( isset( $field_data['optimized'] ) && wc_string_to_bool( $field_data['optimized'] ) ) ? 'yes' : 'no',
-			'options'           => ( isset( $field_data['options'] ) && ! empty( $field_data['options'] ) ) ? implode( '|', $field_data['options'] ) : '',
+			'options'           => ( isset( $field_data['options'] ) && ! empty( $field_data['options'] ) && is_array( $field_data['options'] ) ) ? implode( '|', $field_data['options'] ) : '',
 		);
 
 		return $field_args;

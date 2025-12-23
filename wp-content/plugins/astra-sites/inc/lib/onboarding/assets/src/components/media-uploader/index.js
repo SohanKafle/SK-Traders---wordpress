@@ -80,10 +80,13 @@ const MediaUploader = () => {
 	};
 
 	useEffect( () => {
-		if ( !! astraSitesVars.isRTLEnabled ) {
+		if ( !! astraSitesVars?.isRTLEnabled ) {
 			const rangeControl = document.querySelector(
 				'.components-range-control__wrapper'
 			);
+			if ( rangeControl === null ) {
+				return;
+			}
 
 			// Range control slider styling for RTL.
 			const currentValue = rangeControl.children[ 3 ].style.left;
@@ -187,7 +190,7 @@ const MediaUploader = () => {
 					) }
 					<div className="astra-sites-ai-logo-wrap">
 						<div className="label">
-							{ __( 'Logo Width', 'astra-sitess' ) }
+							{ __( 'Logo Width', 'astra-sites' ) }
 						</div>
 						<div
 							className={ `control-reset ${

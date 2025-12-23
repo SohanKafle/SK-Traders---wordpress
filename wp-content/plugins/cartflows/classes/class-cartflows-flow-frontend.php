@@ -44,7 +44,10 @@ class Cartflows_Flow_Frontend {
 		add_action( 'admin_bar_menu', array( $this, 'add_edit_flow_menu' ), 999 );
 		add_action( 'admin_bar_menu', array( $this, 'update_edit_step_menu_link' ), 999 );
 		add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_gcp_color_vars' ), 23 );
+		
 	}
+
+	
 
 	/**
 	 * Add a new admin bar menu to navigate to edit the flow.
@@ -82,18 +85,32 @@ class Cartflows_Flow_Frontend {
 
 		if ( wcf()->utils->is_step_post_type() ) {
 			$flow_id = wcf()->utils->get_flow_id();
+
+			$default_strings = array(
+				'message'   => __( 'Test mode is currently enabled to help you preview your funnel. You can turn it off anytime from the funnel\'s settings in the admin dashboard.', 'cartflows' ),
+				'link_text' => __( 'Click here to disable it.', 'cartflows' ),
+			);
+
+			$test_mode_strings = array_merge( 
+				$default_strings, 
+				// Make sure that if empty strings are sent, then assign the default strings.
+				array_filter( 
+					apply_filters( 'cartflows_test_mode_strings', $default_strings ) 
+				) 
+			);
+
 			?>
 			<?php if ( $this->is_flow_testmode( $flow_id ) ) { ?>
-			<div class="wcf-preview-mode">
-				<span><?php esc_html_e( 'Test mode is active. It can be deactivated from the flow settings in the admin dashboard.', 'cartflows' ); ?></span>
-				<?php if ( current_user_can( 'cartflows_manage_flows_steps' ) ) { ?>
-					<?php
-						$path           = Cartflows_Helper::get_global_setting( '_cartflows_store_checkout' ) === $flow_id ? 'store-checkout' : 'flows';
-						$flow_edit_link = admin_url( 'admin.php?page=cartflows&path=' . $path . '&action=wcf-edit-flow&flow_id=' . $flow_id . '&tab=settings#sandbox' );
-					?>
-					<a href="<?php echo esc_url( $flow_edit_link ); ?>"><?php esc_html_e( 'Click here to disable it', 'cartflows' ); ?></a>
-				<?php } ?>
-			</div>
+				<div class="wcf-preview-mode">
+					<span><?php echo esc_html( $test_mode_strings['message'] ); ?></span>
+					<?php if ( current_user_can( 'cartflows_manage_flows_steps' ) ) { ?>
+						<?php
+							$path           = Cartflows_Helper::get_global_setting( '_cartflows_store_checkout' ) === $flow_id ? 'store-checkout' : 'flows';
+							$flow_edit_link = admin_url( 'admin.php?page=cartflows&path=' . $path . '&action=wcf-edit-flow&flow_id=' . $flow_id );
+						?>
+						<a href="<?php echo esc_url( $flow_edit_link ); ?>"><?php echo esc_html( $test_mode_strings['link_text'] ); ?></a>
+					<?php } ?>
+				</div>
 			<?php } ?>
 			<?php
 		}
@@ -246,7 +263,7 @@ class Cartflows_Flow_Frontend {
 	 * Update the CartFlows steps link as per the latest UI.
 	 *
 	 * @param WP_Admin_Bar $wp_admin_bar WP_Admin_Bar object.
-	 * @since x.x.x
+	 * @since 2.0.0
 	 */
 	public function update_edit_step_menu_link( $wp_admin_bar ) {
 
@@ -259,11 +276,13 @@ class Cartflows_Flow_Frontend {
 				$edit_node = $wp_admin_bar->get_node( 'edit' );
 
 				if ( $edit_node ) {
+					$post_id = $post->ID;
+					$flow_id = wcf()->utils->get_flow_id_from_step_id( $post_id );
 
 					// Show the edit node only if the page builder option is set to other and gutenberg, else remove/hide the node.
-					if ( in_array( Cartflows_Helper::get_common_setting( 'default_page_builder' ), array( 'other', 'gutenberg' ) ) ) {
+					if ( in_array( Cartflows_Helper::get_common_setting( 'default_page_builder' ), array( 'other', 'gutenberg' ) ) || Cartflows_Helper::is_instant_layout_enabled( intval( $flow_id ) ) ) {
 						$edit_node->title = esc_html__( 'Edit Design', 'cartflows' );
-						$edit_node->href  = Cartflows_Helper::get_page_builder_edit_link( $post->ID );
+						$edit_node->href  = $this->get_prepared_edit_step_url( $post->ID );
 						$wp_admin_bar->add_node( $edit_node );
 					} else {
 						$wp_admin_bar->remove_node( 'edit' );
@@ -279,7 +298,7 @@ class Cartflows_Flow_Frontend {
 	 * Note: Currently the GCP support is added for Elementor and Block Builder.
 	 *
 	 * @param string $css_dependency the CSS file handle as a dependency to add the inline css.
-	 * @since x.x.x
+	 * @since 2.0.0
 	 * @return void
 	 */
 	public function enqueue_gcp_color_vars( $css_dependency = '' ) {
@@ -307,6 +326,33 @@ class Cartflows_Flow_Frontend {
 			}
 		}
 	}
+
+	/**
+	 * Generates the edit URL for a step based on the page builder and Instant Checkout features.
+	 *
+	 * @since 2.1.0
+	 * @param int $step_id The ID of the step to generate the edit URL for.
+	 * @return string $edit_url The edit URL for the specified step.
+	 */
+	public function get_prepared_edit_step_url( $step_id ) {
+		// Default Edit Step URL.
+		$edit_url = Cartflows_Helper::get_page_builder_edit_link( $step_id );
+
+		// Get the current flow ID from the step.
+		$flow_id = (int) wcf()->utils->get_flow_id_from_step_id( $step_id );
+
+		// Update the edit URL if instant Checkout is enabled.
+		if ( Cartflows_Helper::is_instant_layout_enabled( (int) $flow_id ) ) {
+			$store_checkout      = Cartflows_Helper::get_global_setting( '_cartflows_store_checkout' );
+			$store_checkout_path = intval( $store_checkout ) === intval( $flow_id ) ? 'store-checkout' : 'flows';
+
+			$edit_url = admin_url( 'admin.php?page=' . CARTFLOWS_SLUG . '&path=' . $store_checkout_path . '&action=wcf-edit-flow&flow_id=' . $flow_id . '&step_id=' . $step_id . '&tab=design' );
+		}
+
+		// Return the updated edit URL.
+		return $edit_url;
+	}
+
 
 }
 

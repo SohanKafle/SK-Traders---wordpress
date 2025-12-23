@@ -6,8 +6,8 @@ import { useStateValue } from '../utils/StateProvider';
 import { RadioGroup } from '@headlessui/react';
 import { ColorPickerField } from '@WizardFields';
 import { sendPostMessage } from '@Utils/Helpers';
-import ReactHtmlParser from 'react-html-parser';
-import { XMarkIcon, ArrowRightIcon } from '@heroicons/react/24/outline';
+import parse from 'html-react-parser';
+import { ArrowRightIcon, ArrowLeftIcon } from '@heroicons/react/24/outline';
 
 import GlobalFlowItem from './components/GlobalFlowItem';
 import UploadSiteLogo from './components/UploadSiteLogo';
@@ -15,6 +15,9 @@ import NoFlowsFound from './components/NoFlowsFound';
 import GlobalFlowHeader from './components/GlobalFlowHeader';
 import GlobalFlowLibrarySkeleton from './skeletons/GlobalFlowLibrarySkeleton';
 import TemplateLoadingSkeleton from './skeletons/TemplateLoadingSkeleton';
+import InstantCheckoutImage from '@WizardImages/instant-checkout.png';
+
+import InstantCheckoutData from './data/InstantCheckoutData.json';
 
 function GlobalCheckout() {
 	const [ processing, setProcessing ] = useState( true );
@@ -32,10 +35,11 @@ function GlobalCheckout() {
 	const [ { action_button, selected_page_builder, site_logo }, dispatch ] =
 		useStateValue();
 
+	// Removing cartflows_wizard.default_page_builder to ensure the onboarding step displays templates only for the selected builder, not the default or previously chosen one.
+
 	const page_builder = selected_page_builder
 		? selected_page_builder
-		: cartflows_wizard.default_page_builder;
-
+		: 'gutenberg';
 	const [ previewUrl, setPreviewUrl ] = useState();
 
 	const [ importErrors, setImportErrors ] = useState( {
@@ -77,10 +81,39 @@ function GlobalCheckout() {
 		return false;
 	};
 
+	const updateStoreCheckoutFunnelList = (
+		InstantCheckoutJsonData,
+		pageBuilderName,
+		pageBuilderSlug
+	) => {
+		// Make a deep copy of the flow data to avoid mutation
+		const updatedInstantCheckoutData = JSON.parse(
+			JSON.stringify( InstantCheckoutJsonData )
+		);
+
+		// Update the placeholders with dynamic values
+		updatedInstantCheckoutData.page_builder = pageBuilderSlug;
+		updatedInstantCheckoutData.cartflows_flow_page_builder[ 0 ].name =
+			pageBuilderName;
+		updatedInstantCheckoutData.cartflows_flow_page_builder[ 0 ].slug =
+			pageBuilderSlug;
+		updatedInstantCheckoutData.featured_image_url = InstantCheckoutImage;
+		updatedInstantCheckoutData.thumbnail_image_url = InstantCheckoutImage;
+
+		return updatedInstantCheckoutData;
+	};
+
+	const showHideFooterImportButton = ( showHide ) => {
+		dispatch( {
+			status: 'SET_SHOW_FOOTER_IMPORT_BUTTON',
+			showButton: showHide,
+		} );
+	};
+
 	useEffect( () => {
 		// Set Foooter button text.
 		changeButtonText( {
-			button_text: __( 'Import & continue', 'cartflows' ),
+			button_text: __( 'Import & Continue', 'cartflows' ),
 			button_class: 'wcf-import-global-flow',
 		} );
 
@@ -104,22 +137,55 @@ function GlobalCheckout() {
 				if ( response?.data?.flows.length > 0 ) {
 					const all_flows = Object.values( response.data.flows );
 					const parsedFlows = [];
-
 					all_flows.map(
 						( flows ) => ( parsedFlows[ flows.ID ] = flows )
 					);
 					setFilteredFlows( parsedFlows );
-					setSelectedFlow( Object.keys( parsedFlows )[ 0 ] );
-					setSelectedFlowTitle(
-						parsedFlows[ Object.keys( parsedFlows )[ 0 ] ].title
-					);
+
+					setInstantCheckoutFunnel( parsedFlows );
+
 					setProcessing( false );
 				} else {
 					setProcessing( false );
-					setShowFlowNotFound( true );
+					setShowFlowNotFound( false );
+
+					// If there are no funnels found then still show the instant checkout funnels.
+					const parsedFlows = setInstantCheckoutFunnel( [], true );
+
+					setFilteredFlows( parsedFlows );
 				}
 			} );
 		}
+
+		const setInstantCheckoutFunnel = (
+			parsedFlows = [],
+			shouldReturn = false
+		) => {
+			/**
+			 * Add Instant Checkout Store Checkout Funnel Option to the existing.
+			 * To-Do: Remove this when a ready-made template is been introduced.
+			 *
+			 * @since 2.1.0
+			 */
+			parsedFlows[ 0 ] = updateStoreCheckoutFunnelList(
+				InstantCheckoutData,
+				page_builder.charAt( 0 ).toUpperCase() +
+					page_builder.slice( 1 ),
+				page_builder
+			);
+
+			setSelectedFlow( Object.keys( parsedFlows )[ 0 ] );
+			setSelectedFlowTitle(
+				parsedFlows[ Object.keys( parsedFlows )[ 0 ] ].title
+			);
+
+			// Setting the instant Checkout as default option to be selected so show the import store checkout button on the footer.
+			showHideFooterImportButton( true );
+
+			if ( shouldReturn ) {
+				return parsedFlows;
+			}
+		};
 
 		const importStoreCheckoutSuccessEvent = document.addEventListener(
 			'wcf-store-checkout-import-success',
@@ -128,6 +194,11 @@ function GlobalCheckout() {
 					button_text: __( 'Processing..', 'cartflows' ),
 				} );
 
+				dispatch( {
+					status: 'SET_STORE_CHECKOUT_IMPORTED',
+					storeCheckoutImported: true,
+				} );
+				console.log( 'Store Checkout Imported' );
 				// Redirect to next step once the import is success.
 				setTimeout( function () {
 					redirectNextStep();
@@ -182,6 +253,31 @@ function GlobalCheckout() {
 
 	const showOptionsSideBar = function ( e ) {
 		e.preventDefault();
+		let selected_flow_id = '';
+		let wrapper_element = '';
+		if ( ! ShowSideBar ) {
+			wrapper_element = e.target.closest( '.wcf-item' );
+
+			if ( wrapper_element ) {
+				selected_flow_id = wrapper_element.hasAttribute( 'data-key' )
+					? wrapper_element.getAttribute( 'data-key' )
+					: '';
+
+				setSelectedFlow( selected_flow_id );
+				showHideFooterImportButton( true );
+			}
+		} else {
+			setSelectedFlow( selectedStoreFlow );
+			showHideFooterImportButton( false );
+		}
+		/**
+		 * Don't open the preview panel if the selected funnel is Instant Checkout.
+		 * To-Do: Remove this compatibility when a ready-made Instant Checkout funnel is introduced.
+		 * Zero index/funnel ID is set for the Instant Checkout only.
+		 */
+		if ( '0' === selected_flow_id ) {
+			return;
+		}
 
 		/* Set show popup true/false */
 		if ( ShowSideBar ) {
@@ -191,16 +287,12 @@ function GlobalCheckout() {
 				search: `?page=cartflow-setup&step=store-checkout`,
 			} );
 		} else {
-			const wrapper_element = e.target.closest( '.wcf-item' );
-
 			if ( null === wrapper_element || 'undefined' === wrapper_element ) {
 				return;
 			}
 
-			const selected_flow_id = wrapper_element.hasAttribute( 'data-key' )
-					? wrapper_element.getAttribute( 'data-key' )
-					: '',
-				flow_title = filteredFlows[ selected_flow_id ].title;
+			const flow_title = filteredFlows[ selected_flow_id ].title;
+
 			setPreviewProcessing( true );
 			setShowSideBar( true );
 			setSelectedFlowTitle( flow_title );
@@ -294,10 +386,10 @@ function GlobalCheckout() {
 
 									<RadioGroup
 										value={ selectedStoreFlow }
-										onChange={ setSelectedFlow }
+										// onChange={ showOptionsSideBar }
 										onClick={ showOptionsSideBar }
 										className={
-											'wcf-store-flow-importer__list wcf-items-list wcf-flow-row grid grid-cols-4 gap-6 relative p-5'
+											'wcf-store-flow-importer__list wcf-items-list wcf-flow-row relative flex gap-6 flex-wrap justify-center'
 										}
 									>
 										{ filteredFlows.map( ( item ) => (
@@ -310,13 +402,13 @@ function GlobalCheckout() {
 													active,
 												} ) =>
 													classNames(
-														`wcf-item hover:translate-y-[-1px] rounded transition-all`,
+														`wcf-item hover:translate-y-[-1px] rounded transition-all flex-grow-0 flex-shrink-0 basis-[calc(33.33%-7rem)] relative`,
 														checked
 															? 'border-0'
 															: 'border-gray-300',
 														active
-															? 'ring-2 ring-orange-500'
-															: ''
+															? 'border-0'
+															: 'border-gray-300'
 													)
 												}
 											>
@@ -369,13 +461,29 @@ function GlobalCheckout() {
 				<div className="wcf-bg--overlay w-full h-full bg-white absolute before:block top-0 right-0 left-0 z-50">
 					<div className="wcf-sidebar bg-[#F7F7F9] shadow w-full">
 						<div className="wcf-sidebar--header">
-							<div className="wcf-template-name">
-								<p className="text-[#6B7280]">
-									{ __( 'Selected Template:', 'cartflows' ) }
-								</p>
-								<h3 className="font-semibold text-gray-600 text-base mb-1">
-									{ selectedStoreFlowTitle }
-								</h3>
+							<div className="wcf-template-info flex gap-3 items-center">
+								<button
+									type="button"
+									className="p-3 border border-slate-200 rounded hover:border-slate-500 text-gray-400 hover:text-gray-800 "
+									onClick={ showOptionsSideBar }
+								>
+									<ArrowLeftIcon
+										className="w-4 h-4 stroke-2"
+										aria-hidden="true"
+									/>
+								</button>
+
+								<div className="wcf-template-name">
+									<p className="text-[#6B7280]">
+										{ __(
+											'Selected Template:',
+											'cartflows'
+										) }
+									</p>
+									<h3 className="font-semibold text-gray-600 text-base">
+										{ selectedStoreFlowTitle }
+									</h3>
+								</div>
 							</div>
 							<div className="wcf-header-action--buttons flex gap-4">
 								<div className="wcf-design--options flex gap-6">
@@ -394,17 +502,6 @@ function GlobalCheckout() {
 										handleOnchange={ onPaletteChange }
 									/>
 								</div>
-
-								<button
-									type="button"
-									className="p-3 border border-slate-200 rounded hover:border-slate-500 text-gray-400 hover:text-gray-800 "
-									onClick={ showOptionsSideBar }
-								>
-									<XMarkIcon
-										className="w-4 h-4 stroke-2"
-										aria-hidden="true"
-									/>
-								</button>
 							</div>
 						</div>
 					</div>
@@ -443,14 +540,10 @@ function GlobalCheckout() {
 									{ hasError && (
 										<p className="wcf-import-error-wrapper flex bg-red-100 p-3 rounded items-center gap-5">
 											<h3 className="wcf-import-error--heading font-normal text-red-700 text-sm">
-												{ ReactHtmlParser(
-													errorMessage
-												) }
+												{ parse( errorMessage ) }
 											</h3>
 											<span className="wcf-import-error--message text-sm text-slate-800">
-												{ ReactHtmlParser(
-													callToAction
-												) }
+												{ parse( callToAction ) }
 											</span>
 										</p>
 									) }
@@ -467,7 +560,7 @@ function GlobalCheckout() {
 											</div>
 											<a
 												className={ `wcf-wizard--button px-5 py-2 text-sm hover:text-white` }
-												href="https://cartflows.com/"
+												href="https://cartflows.com/?utm_source=dashboard&utm_medium=free-cartflows&utm_campaign=go-pro"
 												target="_blank"
 												rel="noreferrer"
 											>

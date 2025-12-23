@@ -548,7 +548,7 @@ function _wcf_check_is_optin_by_id( $post_id ) {
  */
 function _wcf_supported_template( $page_template ) {
 
-	if ( in_array( $page_template, array( 'cartflows-default', 'cartflows-canvas' ), true ) ) {
+	if ( in_array( $page_template, array( 'cartflows-default', 'cartflows-canvas', 'instant-checkout' ), true ) ) {
 
 		return true;
 	}
@@ -675,4 +675,91 @@ function wcf_feature_notice( $title, $message, $classes ) {
 	$output         .= '</div>';
 
 	echo wp_kses_post( $output );
+}
+
+/**
+ * Get checkout layout type.
+ *
+ * @since 2.1.0
+ * @return string
+ */
+function wcf_get_checkout_layout() {
+
+	$checkout_id = _is_wcf_checkout_type();
+
+	if ( ! $checkout_id ) {
+		$checkout_id = isset( $_GET['wcf_checkout_id'] ) && ! empty( $_GET['wcf_checkout_id'] ) ? intval( wp_unslash( $_GET['wcf_checkout_id'] ) ) : 0; // phpcs:ignore WordPress.Security.NonceVerification
+	}
+
+	$checkout_layout = 'modern-checkout';
+
+	if ( ! empty( $checkout_id ) ) {
+		// Get checkout layout skin.
+		$checkout_layout = wcf()->options->get_checkout_meta_value( $checkout_id, 'wcf-checkout-layout' );
+	}
+
+	return $checkout_layout;
+}
+
+/** Check weather the OttoKit is installed and Connected.
+ *
+ * @return bool
+ */
+function _is_suretriggers_connected() {
+
+	// Check is the plugin installed.
+	if ( ! defined( 'SURE_TRIGGERS_VER' ) ) {
+		return false;
+	}
+
+	// If installed then check is it connected or not.
+	return apply_filters( 'suretriggers_is_user_connected', '' );
+}
+
+/**
+ * Check if the current theme is a block theme OR a FSE Theme.
+ *
+ * @since 2.1.1
+ * @return bool
+ */
+function wcf_is_current_theme_is_fse_theme() {
+
+	if ( function_exists( 'wp_is_block_theme' ) ) {
+		return boolval( wp_is_block_theme() );
+	}
+
+	return false;
+}
+
+/**
+ * Checks if deprecated step notes should be shown.
+ * 
+ * This function applies a filter to determine if deprecated step notes should be displayed.
+ * 
+ * @return bool Returns true if deprecated step notes should be shown, false otherwise.
+ */
+function wcf_show_deprecated_step_notes() {
+	return apply_filters( 'cartflows_show_deprecated_step_notes', false );
+}
+
+/**
+ * Checks if file modifications are disabled in WordPress.
+ *
+ * This function determines whether file modifications (such as updates and installations)
+ * are disabled by checking the DISALLOW_FILE_MODS constant.
+ *
+ * @since x.x.x
+ * @return bool True if file modifications are disabled, false otherwise.
+ */
+function wcf_file_mod_disabled() {
+	
+	$is_disabled = false;
+
+	$disallow_file_mods = defined( 'DISALLOW_FILE_MODS' ) ? DISALLOW_FILE_MODS : false;
+
+	if ( apply_filters( 'cartflows_file_mod_disabled', $disallow_file_mods ) ) {
+		$is_disabled = true;
+	}
+
+	return $is_disabled;
 }

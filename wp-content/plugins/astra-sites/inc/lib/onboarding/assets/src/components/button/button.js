@@ -12,6 +12,7 @@ const Button = ( {
 	mb1,
 	ml1,
 	disabled,
+	type,
 } ) => {
 	return (
 		<Wrap
@@ -20,10 +21,11 @@ const Button = ( {
 			large={ large }
 			mb1={ mb1 }
 			ml1={ ml1 }
-			after={ after }
-			before={ before }
+			$after={ after }
+			$before={ before }
 			onClick={ onClick }
 			disabled={ disabled }
+			type={ type }
 		>
 			{ before ? (
 				<svg

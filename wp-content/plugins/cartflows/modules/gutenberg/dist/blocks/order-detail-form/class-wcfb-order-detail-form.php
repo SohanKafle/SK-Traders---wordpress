@@ -102,6 +102,10 @@ if ( ! class_exists( 'WCFB_Order_Detail_Form' ) ) {
 						'sectionSpacing'                   => array(
 							'type' => 'number',
 						),
+						'layout'                      => array(
+							'type'    => 'string',
+							'default' => 'legacy-tq-layout',
+						),
 						// Heading.
 						'thanyouText'                      => array(
 							'type'    => 'string',
@@ -863,6 +867,7 @@ if ( ! class_exists( 'WCFB_Order_Detail_Form' ) ) {
 
 					),
 					'render_callback' => array( $this, 'render_html' ),
+					'editor_style'  => 'CF_block-cartflows-frontend-style',
 				)
 			);
 
@@ -930,6 +935,22 @@ if ( ! class_exists( 'WCFB_Order_Detail_Form' ) ) {
 					function( $text ) {
 
 						$text = self::$settings['thanyouText'];
+
+						return $text;
+					},
+					10,
+					1
+				);
+			}
+
+
+			if ( ! empty( self::$settings['layout'] ) ) {
+
+				add_filter(
+					'cartflows_thankyou_meta_wcf-tq-layout',
+					function( $text ) {
+
+						$text = self::$settings['layout'];
 
 						return $text;
 					},

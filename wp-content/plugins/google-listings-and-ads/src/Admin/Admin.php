@@ -9,8 +9,6 @@ use Automattic\WooCommerce\GoogleListingsAndAds\Assets\AdminScriptWithBuiltDepen
 use Automattic\WooCommerce\GoogleListingsAndAds\Assets\AdminStyleAsset;
 use Automattic\WooCommerce\GoogleListingsAndAds\Assets\Asset;
 use Automattic\WooCommerce\GoogleListingsAndAds\Assets\AssetsHandlerInterface;
-use Automattic\WooCommerce\GoogleListingsAndAds\Infrastructure\AdminConditional;
-use Automattic\WooCommerce\GoogleListingsAndAds\Infrastructure\Conditional;
 use Automattic\WooCommerce\GoogleListingsAndAds\Infrastructure\Registerable;
 use Automattic\WooCommerce\GoogleListingsAndAds\Infrastructure\Service;
 use Automattic\WooCommerce\GoogleListingsAndAds\Infrastructure\ViewFactory;
@@ -23,17 +21,17 @@ use Automattic\WooCommerce\GoogleListingsAndAds\Options\OptionsAwareInterface;
 use Automattic\WooCommerce\GoogleListingsAndAds\Options\OptionsAwareTrait;
 use Automattic\WooCommerce\GoogleListingsAndAds\Options\OptionsInterface;
 use Automattic\WooCommerce\Admin\PageController;
+use Automattic\WooCommerce\GoogleListingsAndAds\Assets\ScriptAsset;
 
 /**
  * Class Admin
  *
  * @package Automattic\WooCommerce\GoogleListingsAndAds\Pages
  */
-class Admin implements Service, Registerable, Conditional, OptionsAwareInterface {
+class Admin implements OptionsAwareInterface, Registerable, Service {
 
-	use AdminConditional;
-	use PluginHelper;
 	use OptionsAwareTrait;
+	use PluginHelper;
 
 	/**
 	 * @var AssetsHandlerInterface
@@ -131,6 +129,7 @@ class Admin implements Service, Registerable, Conditional, OptionsAwareInterface
 		) )->add_inline_script(
 			'glaData',
 			[
+				'slug'                     => $this->get_slug(),
 				'mcSetupComplete'          => $this->merchant_center->is_setup_complete(),
 				'mcSupportedCountry'       => $this->merchant_center->is_store_country_supported(),
 				'mcSupportedLanguage'      => $this->merchant_center->is_language_supported(),
@@ -140,6 +139,24 @@ class Admin implements Service, Registerable, Conditional, OptionsAwareInterface
 				'dateFormat'               => get_option( 'date_format' ),
 				'timeFormat'               => get_option( 'time_format' ),
 				'siteLogoUrl'              => wp_get_attachment_image_url( get_theme_mod( 'custom_logo' ), 'full' ),
+				'initialWpData'            => [
+					'version' => $this->get_version(),
+					'mcId'    => $this->options->get_merchant_id() ?: null,
+					'adsId'   => $this->options->get_ads_id() ?: null,
+				],
+				'dataViewsScriptUrl'       => add_query_arg(
+					[
+						'version' => (string) filemtime( "{$this->get_root_dir()}/js/build/wp-dataviews-shim.js" ),
+					],
+					(
+						new ScriptAsset(
+							'gla-data-views-shim',
+							'js/build/wp-dataviews-shim',
+							[],
+							(string) filemtime( "{$this->get_root_dir()}/js/build/wp-dataviews-shim.js" ),
+						)
+					)->get_uri(),
+				),
 			]
 		);
 
@@ -283,7 +300,7 @@ class Admin implements Service, Registerable, Conditional, OptionsAwareInterface
 			<p class="privacy-policy-tutorial">' . $policy_text . '</p>
 			<style>#privacy-settings-accordion-block-google-listings-ads .privacy-settings-accordion-actions { display: none }</style>';
 
-		wp_add_privacy_policy_content( 'Google Listings & Ads', wpautop( $content, false ) );
+		wp_add_privacy_policy_content( 'Google for WooCommerce', wpautop( $content, false ) );
 	}
 
 	/**

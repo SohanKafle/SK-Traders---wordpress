@@ -255,6 +255,9 @@
 						} );
 					} );
 
+				// Fix the dutch address order.
+				fixDutchAddressOrder();
+
 				cartflows_checkout_form = JSON.stringify( checkout_data );
 				localStorage.setItem(
 					'cartflows_checkout_form',
@@ -294,6 +297,34 @@
 			},
 		};
 
+		const fixDutchAddressOrder = function () {
+			const billing_country = $( '#billing_country' ).val();
+			const billing_address = $( '#billing_address_1' ).val();
+
+			if ( billing_country === 'NL' && billing_address ) {
+				const match_billing =
+					billing_address.match( /^(\d+\S*)\s+(.+)$/ );
+				if ( match_billing ) {
+					$( '#billing_address_1' ).val(
+						match_billing[ 2 ] + ' ' + match_billing[ 1 ]
+					);
+				}
+			}
+
+			const shipping_country = $( '#shipping_country' ).val();
+			const shipping_address = $( '#shipping_address_1' ).val();
+
+			if ( shipping_country === 'NL' && shipping_address ) {
+				const match_shipping =
+					shipping_address.match( /^(\d+\S*)\s+(.+)$/ );
+				if ( match_shipping ) {
+					$( '#shipping_address_1' ).val(
+						match_shipping[ 2 ] + ' ' + match_shipping[ 1 ]
+					);
+				}
+			}
+		};
+
 		wcf_form_data.get();
 
 		$(
@@ -330,10 +361,15 @@
 			}
 			coupon_field.removeClass( 'field-required' );
 
+			const billing_email = $(
+				'.wcf-embed-checkout-form #billing_email'
+			).val();
+
 			const data = {
 				coupon_code: coupon_value,
 				action: 'wcf_woo_apply_coupon',
 				security: cartflows.wcf_validate_coupon_nonce,
+				billing_email,
 			};
 
 			$.ajax( {
@@ -432,6 +468,20 @@
 								.find( '#ship-to-different-address-checkbox' )
 								.attr( 'checked', false );
 						}
+
+						// Handle order bump checkbox state when product is removed.
+						if (
+							typeof res_data.is_order_bump !== 'undefined' &&
+							res_data.is_order_bump &&
+							res_data.order_bump_id
+						) {
+							$(
+								'input[name="wcf-bump-order-cb-' +
+									res_data.order_bump_id +
+									'"]'
+							).prop( 'checked', false );
+						}
+
 						$( '#wcf-embed-checkout-form' )
 							.find( '.woocommerce-notices-wrapper' )
 							.first()
@@ -474,6 +524,19 @@
 						}
 					);
 				}
+			}
+		);
+	};
+
+	const wcf_instant_checkout_coupon_field = function () {
+		$( document.body ).on(
+			'click',
+			'.coupon-field .wcf-custom-coupon-field .wcf-optimized-coupon-field',
+			function ( e ) {
+				e.preventDefault();
+
+				$( '.wcf-custom-coupon-field' ).removeClass( 'wcf-hide-field' );
+				$( this ).remove();
 			}
 		);
 	};
@@ -677,79 +740,12 @@
 		);
 	};
 
-	const wcf_order_review_toggler = function () {
-		const mobile_order_review_section = $(
-				'.wcf-collapsed-order-review-section'
-			),
-			mobile_order_review_wrap = $(
-				'.wcf-cartflows-review-order-wrapper'
-			),
-			desktop_order_review_wrap = $( '.wcf-order-wrap' );
-
-		let timeout = false;
-		const resizeEvent =
-			'onorientationchange' in window ? 'orientationchange' : 'resize';
-
-		$( '.wcf-order-review-toggle' ).on(
-			'click',
-			function wcf_show_order_summary( e ) {
-				e.preventDefault();
-
-				if ( mobile_order_review_section.hasClass( 'wcf-show' ) ) {
-					mobile_order_review_wrap.slideUp( 400 );
-					mobile_order_review_section.removeClass( 'wcf-show' );
-					$( '.wcf-order-review-toggle-text' ).text(
-						cartflows.order_review_toggle_texts.toggle_show_text
-					);
-				} else {
-					mobile_order_review_wrap.slideDown( 400 );
-					mobile_order_review_section.addClass( 'wcf-show' );
-					$( '.wcf-order-review-toggle-text' ).text(
-						cartflows.order_review_toggle_texts.toggle_hide_text
-					);
-				}
-			}
-		);
-
-		$( window ).on( resizeEvent, function () {
-			clearTimeout( timeout );
-
-			timeout = setTimeout( function () {
-				const width = window.innerWidth || $( window ).width();
-
-				if ( width >= 769 ) {
-					mobile_order_review_wrap.css( { display: 'none' } );
-					mobile_order_review_wrap.removeClass( 'wcf-show' );
-					$( '.wcf-order-review-toggle' ).removeClass( 'wcf-show' );
-					$( '.wcf-order-review-toggle-text' ).text(
-						cartflows.order_review_toggle_texts.toggle_show_text
-					);
-				}
-			}, 200 );
-		} );
-
-		// Update checkout when shipping methods changes.
-		mobile_order_review_wrap.on(
-			'change',
-			'select.shipping_method, input[name^="shipping_method"]',
-			function () {
-				/**
-				 * Uncheck all shipping radio buttons of desktop. Those will be auto updated by update_checkout action.
-				 * While performing the update checkout, it searches for the selected shipping method in whole page.
-				 */
-				desktop_order_review_wrap
-					.find(
-						'input[name^="shipping_method"][type="radio"]:checked'
-					)
-					.each( function () {
-						$( this ).removeAttr( 'checked' );
-					} );
-
-				$( document.body ).trigger( 'update_checkout', {
-					update_shipping_method: true,
-				} );
-			}
-		);
+	const wcf_instant_checkout_relocate_notices = function () {
+		if ( $( 'body' ).hasClass( 'cartflows-instant-checkout' ) ) {
+			$( '.woocommerce-NoticeGroup' ).prependTo(
+				'.woocommerce-notices-wrapper'
+			);
+		}
 	};
 
 	$( function () {
@@ -764,6 +760,12 @@
 		wcf_checkout_coupons.init();
 
 		wcf_toggle_optimized_fields();
+		wcf_instant_checkout_coupon_field();
+
+		$( document.body ).on(
+			'checkout_error updated_checkout',
+			wcf_instant_checkout_relocate_notices
+		);
 
 		wcf_anim_field_style_two();
 
@@ -778,7 +780,5 @@
 		}
 
 		woocommerce_user_login();
-
-		wcf_order_review_toggler();
 	} );
 } )( jQuery );

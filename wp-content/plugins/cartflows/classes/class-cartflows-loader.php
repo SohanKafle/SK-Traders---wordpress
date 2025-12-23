@@ -125,8 +125,9 @@ if ( ! class_exists( 'Cartflows_Loader' ) ) {
 			require_once CARTFLOWS_DIR . '/libraries/action-scheduler/action-scheduler.php';
 
 			add_action( 'plugins_loaded', array( $this, 'load_plugin' ), 99 );
-			add_action( 'plugins_loaded', array( $this, 'load_cf_textdomain' ) );
+			add_action( 'init', array( $this, 'load_cf_textdomain' ) );
 
+			add_action( 'init', array( $this, 'deactivation_survey_data_handler' ) );
 		}
 
 		/**
@@ -140,12 +141,12 @@ if ( ! class_exists( 'Cartflows_Loader' ) ) {
 			define( 'CARTFLOWS_DIR', plugin_dir_path( CARTFLOWS_FILE ) );
 			define( 'CARTFLOWS_URL', plugins_url( '/', CARTFLOWS_FILE ) );
 
-			define( 'CARTFLOWS_VER', '2.0.1' );
+			define( 'CARTFLOWS_VER', '2.1.19' );
 			define( 'CARTFLOWS_SLUG', 'cartflows' );
 			define( 'CARTFLOWS_SETTINGS', 'cartflows_settings' );
 			define( 'CARTFLOWS_NAME', 'CartFlows' );
 
-			define( 'CARTFLOWS_REQ_CF_PRO_VER', '2.0.0' );
+			define( 'CARTFLOWS_REQ_CF_PRO_VER', '2.1.0' );
 
 			// For backward compatibility we are setting CARTFLOWS_LEGACY_ADMIN to false, so pro-loader for new UI will be load.
 			define( 'CARTFLOWS_LEGACY_ADMIN', false );
@@ -191,9 +192,13 @@ if ( ! class_exists( 'Cartflows_Loader' ) ) {
 
 			define( 'CARTFLOWS_ACTIVE_CHECKOUT', $cookie_prefix . 'wcf_active_checkout' );
 
+			define( 'CARTFLOWS_PINTEREST_CONSENT', $cookie_prefix . 'cartflows_pinterest_consent' );
+
 			if ( ! defined( 'CARTFLOWS_HTTPS' ) ) {
 				define( 'CARTFLOWS_HTTPS', is_ssl() ? true : false );
 			}
+
+			define( 'CARTFLOWS_NPS_WEBHOOK_URL', 'https://webhook.ottokit.com/ottokit/af2151cc-6fe3-40a4-a9d3-12859be4d602' );
 
 			$GLOBALS['wcf_step'] = null;
 		}
@@ -335,27 +340,15 @@ if ( ! class_exists( 'Cartflows_Loader' ) ) {
 			include_once CARTFLOWS_DIR . 'classes/class-cartflows-default-meta.php';
 
 			require_once CARTFLOWS_DIR . 'classes/class-cartflows-tracking.php';
+			require_once CARTFLOWS_DIR . 'classes/class-cartflows-rollback.php';
 
 			if ( is_admin() ) {
 				require_once CARTFLOWS_DIR . 'libraries/astra-notices/class-astra-notices.php';
 			}
 
 			if ( ! class_exists( 'BSF_Analytics_Loader' ) ) {
-				require_once CARTFLOWS_DIR . '/admin/bsf-analytics/class-bsf-analytics-loader.php';
+				require_once CARTFLOWS_DIR . 'libraries/bsf-analytics/class-bsf-analytics-loader.php';
 			}
-
-			$bsf_analytics = BSF_Analytics_Loader::get_instance();
-
-			$bsf_analytics->set_entity(
-				array(
-					'cf' => array(
-						'product_name'   => 'CartFlows',
-						'usage_doc_link' => 'https://my.cartflows.com/usage-tracking/',
-						'path'           => CARTFLOWS_DIR . 'admin/bsf-analytics',
-						'author'         => 'CartFlows Inc',
-					),
-				)
-			);
 
 			$this->utils   = Cartflows_Utils::get_instance();
 			$this->options = Cartflows_Default_Meta::get_instance();
@@ -364,6 +357,49 @@ if ( ! class_exists( 'Cartflows_Loader' ) ) {
 			if ( ! class_exists( 'Cartflows_Plugin_Update_Notifications' ) ) {
 				require_once CARTFLOWS_DIR . 'libraries/cartflows-plugin-update-notifications/class-cartflows-plugin-update-notifications.php';
 			}
+
+			// Load the NPS Survey library.
+			if ( ! class_exists( 'Cartflows_Nps_Survey' ) ) {
+				require_once CARTFLOWS_DIR . 'libraries/class-cartflows-nps-survey.php';
+			}
+		}
+
+		/**
+		 * Deactivation Survey Data Handler
+		 *
+		 * @since 2.1.17
+		 *
+		 * @return void
+		 */
+		public function deactivation_survey_data_handler() {
+			$bsf_analytics = BSF_Analytics_Loader::get_instance();
+
+			$bsf_analytics->set_entity(
+				array(
+					'cf' => array(
+						'hide_optin_checkbox' => true,
+						'product_name'        => 'CartFlows',
+						'usage_doc_link'      => 'https://my.cartflows.com/usage-tracking/',
+						'path'                => CARTFLOWS_DIR . 'libraries/bsf-analytics',
+						'author'              => 'CartFlows Inc',
+						'deactivation_survey' => apply_filters(
+							'cartflows_bsf_analytics_deactivation_survey_data',
+							array(
+								array(
+									'id'                => 'deactivation-survey-cartflows',
+									'popup_logo'        => CARTFLOWS_URL . 'admin-core/assets/images/cartflows-icon.svg',
+									'plugin_slug'       => 'cartflows',
+									'plugin_version'    => CARTFLOWS_VER,
+									'popup_title'       => __( 'Quick Feedback', 'cartflows' ),
+									'support_url'       => 'https://cartflows.com/contact/',
+									'popup_description' => __( 'If you have a moment, please share why you are deactivating CartFlows:', 'cartflows' ),
+									'show_on_screens'   => array( 'plugins' ),
+								),
+							)
+						),
+					),
+				)
+			);
 		}
 
 		/**
@@ -641,7 +677,6 @@ if ( ! class_exists( 'Cartflows_Loader' ) ) {
 		 * Deactivation Reset
 		 */
 		public function deactivation_reset() {
-
 		}
 
 		/**
@@ -664,7 +699,7 @@ if ( ! class_exists( 'Cartflows_Loader' ) ) {
  *
  * @return object
  */
-function wcf() {
+function wcf() { //phpcs:ignore Universal.Files.SeparateFunctionsFromOO.Mixed
 	return Cartflows_Loader::get_instance();
 }
 

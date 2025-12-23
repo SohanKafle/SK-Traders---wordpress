@@ -2,8 +2,14 @@ import React, { useEffect } from 'react';
 import { __ } from '@wordpress/i18n';
 import { DefaultStep, PreviousStepLink } from '../../components/index';
 import { useStateValue } from '../../store/store';
+import { trackOnboardingStep } from '../../utils/functions';
 import './style.scss';
-const { imageDir, isBrizyEnabled, isElementorDisabled } = starterTemplates;
+const {
+	imageDir,
+	isBeaverBuilderDisabled,
+	isBrizyEnabled,
+	isElementorDisabled,
+} = starterTemplates;
 
 const PageBuilder = () => {
 	const [ { currentIndex }, dispatch ] = useStateValue();
@@ -16,12 +22,15 @@ const PageBuilder = () => {
 			localStorage.removeItem( 'st-import-start' );
 			localStorage.removeItem( 'st-import-end' );
 		}
-	} );
+
+		// Track page builder step when component mounts
+		trackOnboardingStep( 'page-builder' );
+	}, [] );
 
 	const update = ( builder ) => {
 		const content = new FormData();
 		content.append( 'action', 'astra-sites-change-page-builder' );
-		content.append( '_ajax_nonce', astraSitesVars._ajax_nonce );
+		content.append( '_ajax_nonce', astraSitesVars?._ajax_nonce );
 		content.append( 'page_builder', builder );
 
 		fetch( ajaxurl, {
@@ -58,7 +67,7 @@ const PageBuilder = () => {
 	return (
 		<DefaultStep
 			content={
-				<div className="page-builder-screen-wrap middle-content">
+				<div className="page-builder-screen-wrap">
 					<h1>{ __( 'Select Page Builder', 'astra-sites' ) }</h1>
 					<p className="screen-description">
 						{ __(
@@ -66,7 +75,7 @@ const PageBuilder = () => {
 							'astra-sites'
 						) }
 					</p>
-					<div className="page-builder-wrap ist-fadeinUp">
+					<div className="flex items-center justify-center gap-4 max-sm:flex-col max-sm:gap-3">
 						<div
 							className="page-builder-item d-flex-center-align"
 							onClick={ () => {
@@ -83,7 +92,9 @@ const PageBuilder = () => {
 									alt={ __( 'Block Editor', 'astra-sites' ) }
 								/>
 							</div>
-							<h6>{ __( 'Block Editor', 'astra-sites' ) }</h6>
+							<h6 className="label-name">
+								{ __( 'Block Editor', 'astra-sites' ) }
+							</h6>
 						</div>
 						{ isElementorDisabled === '' && (
 							<div
@@ -102,30 +113,36 @@ const PageBuilder = () => {
 										alt={ __( 'Elementor', 'astra-sites' ) }
 									/>
 								</div>
-								<h6>{ __( 'Elementor', 'astra-sites' ) }</h6>
+								<h6 className="label-name">
+									{ __( 'Elementor', 'astra-sites' ) }
+								</h6>
 							</div>
 						) }
-						<div
-							className="page-builder-item d-flex-center-align"
-							onClick={ () => {
-								update( 'beaver-builder' );
-							} }
-							tabIndex="0"
-							onKeyDown={ ( event ) =>
-								handleKeyPress( event, 'beaver-builder' )
-							}
-						>
-							<div className="beaver-builder-image-wrap image-wrap">
-								<img
-									src={ `${ imageDir }beaver-builder.svg` }
-									alt={ __(
-										'Beaver Builder',
-										'astra-sites'
-									) }
-								/>
+						{ ! isBeaverBuilderDisabled && (
+							<div
+								className="page-builder-item d-flex-center-align"
+								onClick={ () => {
+									update( 'beaver-builder' );
+								} }
+								tabIndex="0"
+								onKeyDown={ ( event ) =>
+									handleKeyPress( event, 'beaver-builder' )
+								}
+							>
+								<div className="beaver-builder-image-wrap image-wrap">
+									<img
+										src={ `${ imageDir }beaver-builder.svg` }
+										alt={ __(
+											'Beaver Builder',
+											'astra-sites'
+										) }
+									/>
+								</div>
+								<h6 className="label-name">
+									{ __( 'Beaver Builder', 'astra-sites' ) }
+								</h6>
 							</div>
-							<h6>{ __( 'Beaver Builder', 'astra-sites' ) }</h6>
-						</div>
+						) }
 						{ isBrizyEnabled === '1' && (
 							<div
 								className="page-builder-item d-flex-center-align"
@@ -143,25 +160,46 @@ const PageBuilder = () => {
 										alt={ __( 'Brizy', 'astra-sites' ) }
 									/>
 								</div>
-								<h6>{ __( 'Brizy', 'astra-sites' ) }</h6>
+								<h6 className="label-name">
+									{ __( 'Brizy', 'astra-sites' ) }
+								</h6>
 							</div>
 						) }
 					</div>
+					<div className="mt-10 text-zip-body-text">
+						<PreviousStepLink
+							customizeStep={ true }
+							before
+							onClick={ () => {
+								dispatch( {
+									type: 'set',
+									currentIndex: 0,
+									builder: 'ai-builder',
+								} );
+							} }
+						>
+							{ __( 'Back', 'astra-sites' ) }
+						</PreviousStepLink>
+					</div>
 				</div>
 			}
-			actions={
-				<>
-					<PreviousStepLink
-						before
-						customizeStep={ true }
-						onClick={ () => {
-							window.location.href = starterTemplates.adminUrl;
-						} }
-					>
-						{ __( 'Back', 'astra-sites' ) }
-					</PreviousStepLink>
-				</>
-			}
+			// actions={
+			// 	<>
+			// 		<PreviousStepLink
+			// 			customizeStep={ true }
+			// 			before
+			// 			onClick={ () => {
+			// 				dispatch( {
+			// 					type: 'set',
+			// 					currentIndex: 0,
+			// 					builder: 'ai-builder',
+			// 				} );
+			// 			} }
+			// 		>
+			// 			{ __( 'Back', 'astra-sites' ) }
+			// 		</PreviousStepLink>
+			// 	</>
+			// }
 		/>
 	);
 };

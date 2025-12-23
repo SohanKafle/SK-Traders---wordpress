@@ -38,33 +38,50 @@ class Cartflows_Admin_Notices {
 
 	/**
 	 * Constructor
+	 *
+	 * @since 1.0.0
 	 */
 	public function __construct() {
-
-		add_action( 'admin_head', array( $this, 'show_admin_notices' ) );
-
+		// Add the notices script.
 		add_action( 'admin_enqueue_scripts', array( $this, 'notices_scripts' ) );
 
-		add_action( 'wp_ajax_cartflows_ignore_gutenberg_notice', array( $this, 'ignore_gb_notice' ) );
+		// Group the admin notices actions.
+		$this->register_admin_notices();
 
-		add_action( 'wp_ajax_cartflows_disable_weekly_report_email_notice', array( $this, 'disable_weekly_report_email_notice' ) );
-
-		add_filter( 'woo_ca_plugin_review_url', array( $this, 'update_review_link' ), 10, 1 );
+		// Group the ajax action callbacks.
+		$this->register_ajax_callbacks();
 	}
 
 	/**
-	 * Update review link for cart abandonment.
+	 * Registers admin notices for CartFlows.
 	 *
-	 * @param string $review_link review link.
+	 * Hooks the methods responsible for displaying admin and NPS notices
+	 * to appropriate WordPress admin actions.
 	 *
-	 * @return string URL.
+	 * @since 2.1.17
+	 * @return void
 	 */
-	public function update_review_link( $review_link ) {
+	public function register_admin_notices() {
+		add_action( 'admin_head', array( $this, 'show_admin_notices' ) );
 
-		return 'https://wordpress.org/support/plugin/cartflows/reviews/?filter=5#new-post';
+		add_action( 'admin_footer', array( $this, 'show_nps_notice' ), 999 );
 	}
 
-
+	/**
+	 * Registers AJAX callbacks for various CartFlows admin notices.
+	 *
+	 * This method hooks AJAX actions to their corresponding handler functions,
+	 * allowing notices (such as Gutenberg, weekly report email, and custom offer notices)
+	 * to be dismissed or acknowledged via AJAX requests in the WordPress admin area.
+	 *
+	 * @since 2.1.17
+	 * @return void
+	 */
+	public function register_ajax_callbacks() {
+		add_action( 'wp_ajax_cartflows_ignore_gutenberg_notice', array( $this, 'ignore_gb_notice' ) );
+		add_action( 'wp_ajax_cartflows_disable_weekly_report_email_notice', array( $this, 'disable_weekly_report_email_notice' ) );
+	}
+	
 	/**
 	 * Show the weekly email Notice
 	 *
@@ -90,7 +107,6 @@ class Cartflows_Admin_Notices {
 
 			echo wp_kses_post( $output );
 		}
-
 	}
 
 	/**
@@ -148,7 +164,6 @@ class Cartflows_Admin_Notices {
 		add_action( 'admin_notices', array( $this, 'show_weekly_report_email_settings_notice' ) );
 
 		$image_path = esc_url( CARTFLOWS_URL . 'assets/images/cartflows-logo-small.jpg' );
-
 		Astra_Notices::add_notice(
 			array(
 				'id'                   => 'cartflows-5-start-notice',
@@ -163,24 +178,29 @@ class Cartflows_Admin_Notices {
                             <div class="notice-heading">
                                 %2$s
                             </div>
-                            %3$s<br />
+                            <div class="notice-description">
+								%3$s
+							</div>
                             <div class="astra-review-notice-container">
                                 <a href="%4$s" class="astra-notice-close astra-review-notice button-primary" target="_blank">
-                                %5$s
+									<span class="dashicons dashicons-yes"></span>
+                                	%5$s
                                 </a>
-                            <span class="dashicons dashicons-calendar"></span>
-                                <a href="#" data-repeat-notice-after="%6$s" class="astra-notice-close astra-review-notice">
-                                %7$s
+
+								<a href="#" data-repeat-notice-after="%6$s" class="astra-notice-close astra-review-notice">
+									<span class="dashicons dashicons-calendar"></span>
+                                	%7$s
                                 </a>
-                            <span class="dashicons dashicons-smiley"></span>
+
                                 <a href="#" class="astra-notice-close astra-review-notice">
-                                %8$s
+								    <span class="dashicons dashicons-smiley"></span>
+                                	<u>%8$s</u>
                                 </a>
                             </div>
                         </div>',
 					$image_path,
 					__( 'Hi there! You recently used CartFlows to build a sales funnel &mdash; Thanks a ton!', 'cartflows' ),
-					__( 'It would be awesome if you give us a 5-star review and share your experience on WordPress. Your reviews pump us up and also help other WordPress users make a better decision when choosing CartFlows!', 'cartflows' ),
+					__( 'It would be awesome if you could leave us a 5-star review-it helps us grow and guide others in choosing CartFlows!', 'cartflows' ),
 					'https://wordpress.org/support/plugin/cartflows/reviews/?filter=5#new-post',
 					__( 'Ok, you deserve it', 'cartflows' ),
 					MONTH_IN_SECONDS,
@@ -189,6 +209,41 @@ class Cartflows_Admin_Notices {
 				),
 				'repeat-notice-after'  => MONTH_IN_SECONDS,
 				'display-notice-after' => ( 2 * WEEK_IN_SECONDS ), // Display notice after 2 weeks.
+			)
+		);
+	}
+
+	/**
+	 * Render CartFlows NPS Survey Notice.
+	 *
+	 * @since 2.1.6
+	 * @return void
+	 */
+	public function show_nps_notice() {
+
+		Nps_Survey::show_nps_notice(
+			'nps-survey-cartflows',
+			array(
+				'show_if'          => $this->should_display_nps_survey_notice(),
+				'dismiss_timespan' => 2 * WEEK_IN_SECONDS,
+				'display_after'    => 0,
+				'plugin_slug'      => 'cartflows',
+				'show_on_screens'  => array( 'edit-cartflows_flow', 'toplevel_page_cartflows' ),
+				'message'          => array(
+
+					// Step 1 i.e rating input.
+					'logo'                  => esc_url( CARTFLOWS_URL . 'admin-core/assets/images/cartflows-icon.svg' ),
+					'plugin_name'           => __( 'CartFlows', 'cartflows' ),
+					'nps_rating_message'    => __( 'How likely are you to recommend #pluginname to your friends or colleagues?', 'cartflows' ),
+
+					// Step 2A i.e. positive.
+					'feedback_content'      => __( 'Could you please do us a favor and give us a 5-star rating on WordPress? It would help others choose CartFlows with confidence. Thank you!', 'cartflows' ),
+					'plugin_rating_link'    => esc_url( 'https://wordpress.org/support/plugin/cartflows/reviews/?filter=5#new-post' ),
+
+					// Step 2B i.e. negative.
+					'plugin_rating_title'   => __( 'Thank you for your feedback', 'cartflows' ),
+					'plugin_rating_content' => __( 'We value your input. How can we improve your experience?', 'cartflows' ),
+				),
 			)
 		);
 	}
@@ -238,9 +293,11 @@ class Cartflows_Admin_Notices {
 	 * Check allowed screen for notices.
 	 *
 	 * @since 1.0.0
-	 * @return bool
+	 *
+	 * @param array $exclude_page_ids Optional. Array of screen IDs to exclude from displaying notices.
+	 * @return bool True if the notice should be displayed, false otherwise.
 	 */
-	public function allowed_screen_for_notices() {
+	public function allowed_screen_for_notices( $exclude_page_ids = array() ) {
 
 		$screen          = get_current_screen();
 		$screen_id       = $screen ? $screen->id : '';
@@ -250,11 +307,37 @@ class Cartflows_Admin_Notices {
 			'plugins',
 		);
 
+		// Exclude any page ids passed in $exclude_page_ids from $allowed_screens.
+		if ( ! empty( $exclude_page_ids ) && is_array( $exclude_page_ids ) ) {
+			$allowed_screens = array_diff( $allowed_screens, $exclude_page_ids );
+		}
+
 		if ( in_array( $screen_id, $allowed_screens, true ) ) {
 			return true;
 		}
 
 		return false;
+	}
+
+	/**
+	 * Check if the user has completed the onboarding, skipped the onboarding on ready step, and the store checkout is imported.
+	 *
+	 * @since 2.1.6
+	 * @return bool
+	 */
+	public function should_display_nps_survey_notice() {
+
+		$is_store_checkout_imported = (bool) get_option( '_cartflows_wizard_store_checkout_set', false );   // Must be true.
+		$onboarding_completed       = (bool) get_option( 'wcf_setup_complete', false );                     // Must be true.
+		$is_first_funnel_imported   = (bool) get_option( 'wcf_first_flow_imported', false );                // Must be true.
+		$total_funnels              = intval( wp_count_posts( CARTFLOWS_FLOW_POST_TYPE )->publish );        // Must be greater than or equal to 1.
+
+		/**
+		 * Show the notice in two conditions.
+		 * 1. If completed the onboarding steps/process of plugin and sets their first store checkout funnel successfully.
+		 * 2. If sets up the first funnel manually and makes it live.
+		 */
+		return ( true === $is_store_checkout_imported && true === $onboarding_completed ) || ( true === $is_first_funnel_imported && ! empty( $total_funnels ) && 1 >= $total_funnels ) || ( ! empty( $total_funnels ) && 1 >= $total_funnels );
 	}
 }
 

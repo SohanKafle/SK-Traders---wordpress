@@ -1,9 +1,14 @@
 import React, { useEffect, useLayoutEffect } from 'react';
 import ICONS from '../../../icons';
 import { useStateValue } from '../../store/store';
+import { getStepIndex } from '../../utils/functions';
+import SyncInProgressModal from '../sync-in-progress-modal';
 
 const DefaultStep = ( { preview, content, controls, actions, stepName } ) => {
-	const [ { showSidebar, currentIndex }, dispatch ] = useStateValue();
+	const [
+		{ bgSyncInProgress, showSidebar, currentIndex, sitesSyncing },
+		dispatch,
+	] = useStateValue();
 
 	const toggleSidebar = () => {
 		dispatch( {
@@ -33,7 +38,7 @@ const DefaultStep = ( { preview, content, controls, actions, stepName } ) => {
 		if (
 			!! scrollPosition &&
 			scrollPosition > 100 &&
-			currentIndex === 2 &&
+			currentIndex === getStepIndex( 'site-list' ) &&
 			contentArea.classList.length === 1
 		) {
 			contentArea.scrollTo( 0, scrollPosition );
@@ -55,26 +60,53 @@ const DefaultStep = ( { preview, content, controls, actions, stepName } ) => {
 				<div
 					className={ `step-content ${ stepName || '' }` }
 					style={ {
-						padding: currentIndex === 1 ? '5% 6% 6% 6%' : '',
+						padding:
+							currentIndex === getStepIndex( 'site-list' )
+								? '5% 6% 6% 6%'
+								: '',
 					} }
 				>
-					<div className="content-wrapper">
+					<div
+						className={ `content-wrapper pb-14 sm:pb-0
+					${
+						currentIndex === getStepIndex( 'customizer' )
+							? 'flex flex-col items-start h-full'
+							: ''
+					}
+					` }
+					>
 						{ content && content }
 						{ controls && (
-							/* eslint-disable-next-line jsx-a11y/tabindex-no-positive -- This is a used for keyboard navigation support. */
-							<div className="step-controls" tabIndex="1">
+							<div
+								className={ `step-controls
+							${
+								currentIndex === getStepIndex( 'customizer' )
+									? 'flex flex-col items-start h-full w-full'
+									: ''
+							}
+							` }
+								/* eslint-disable-next-line jsx-a11y/tabindex-no-positive -- This is a used for keyboard navigation support. */
+								tabIndex="1"
+							>
 								{ controls }
 							</div>
 						) }
 					</div>
+					<SyncInProgressModal
+						open={
+							( bgSyncInProgress || sitesSyncing ) &&
+							currentIndex === 2
+						}
+					/>
 				</div>
 
-				{ actions && (
-					/* eslint-disable-next-line jsx-a11y/tabindex-no-positive -- This is a used for keyboard navigation support. */
-					<div className="step-actions" tabIndex="1">
-						{ actions }
-					</div>
-				) }
+				{ actions &&
+					currentIndex !== getStepIndex( 'page-builder' ) && (
+						/* eslint-disable-next-line jsx-a11y/tabindex-no-positive -- This is a used for keyboard navigation support. */
+						<div className="step-actions" tabIndex="1">
+							{ actions }
+						</div>
+					) }
 			</div>
 
 			{ preview && (
