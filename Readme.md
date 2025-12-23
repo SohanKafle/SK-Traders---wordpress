@@ -1,4 +1,4 @@
-# WordPress › ReadMe
+# WordPress › SK Traders
 
 ![WordPress](wp-admin/images/wordpress-logo.png)
 
