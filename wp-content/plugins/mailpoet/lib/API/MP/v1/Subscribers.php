@@ -168,6 +168,52 @@ class Subscribers {
     return $this->subscribersResponseBuilder->build($subscriberEntity);
   }
 
+  public function updateSubscriber($subscriberIdOrEmail, array $data): array {
+    $this->checkSubscriberParam($subscriberIdOrEmail);
+
+    $subscriber = $this->findSubscriber($subscriberIdOrEmail);
+
+    [$defaultFields, $customFields] = $this->extractCustomFieldsFromFromSubscriberData($data);
+
+    $this->requiredCustomFieldsValidator->validate($customFields);
+
+    // filter out all incoming data that we don't want to change, like status ...
+    $defaultFields = array_intersect_key($defaultFields, array_flip(['email', 'first_name', 'last_name', 'subscribed_ip']));
+
+    if ($subscriber->getWpUserId() !== null) {
+      unset($defaultFields['email']);
+      unset($defaultFields['first_name']);
+      unset($defaultFields['last_name']);
+    };
+
+    if (empty($defaultFields['subscribed_ip'])) {
+      $defaultFields['subscribed_ip'] = Helpers::getIP();
+    }
+    $defaultFields['source'] = Source::API;
+
+    try {
+      $subscriberEntity = $this->subscriberSaveController->createOrUpdate($defaultFields, $subscriber);
+    } catch (\Exception $e) {
+      throw new APIException(
+      // translators: %s is an error message.
+        sprintf(__('Failed to update subscriber: %s', 'mailpoet'), $e->getMessage()),
+        APIException::FAILED_TO_SAVE_SUBSCRIBER
+      );
+    }
+
+    try {
+      $this->subscriberSaveController->updateCustomFields($customFields, $subscriberEntity);
+    } catch (\Exception $e) {
+      throw new APIException(
+      // translators: %s is an error message
+        sprintf(__('Failed to save subscriber custom fields: %s', 'mailpoet'), $e->getMessage()),
+        APIException::FAILED_TO_SAVE_SUBSCRIBER
+      );
+    }
+
+    return $this->subscribersResponseBuilder->build($subscriberEntity);
+  }
+
   /**
    * @throws APIException
    */
@@ -184,6 +230,11 @@ class Subscribers {
     $this->checkSubscriberAndListParams($subscriberId, $listIds);
     $subscriber = $this->findSubscriber($subscriberId);
     $foundSegments = $this->getAndValidateSegments($listIds, self::CONTEXT_SUBSCRIBE);
+
+    // restore trashed subscriber
+    if ($subscriber->getDeletedAt()) {
+      $subscriber->setDeletedAt(null);
+    }
 
     $this->subscribersSegmentRepository->subscribeToSegments($subscriber, $foundSegments);
 
@@ -205,6 +256,7 @@ class Subscribers {
       }
 
       // when global status changes to subscribed, fire subscribed hook for all subscribed segments
+      /** @var SubscriberEntity $subscriber - From some reason PHPStan evaluates $subscriber->getStatus() as mixed */
       if ($subscriber->getStatus() === SubscriberEntity::STATUS_SUBSCRIBED) {
         $subscriberSegments = $subscriber->getSubscriberSegments();
         foreach ($subscriberSegments as $subscriberSegment) {
@@ -219,7 +271,8 @@ class Subscribers {
     $foundSegmentsIds = array_map(
       function(SegmentEntity $segment) {
         return $segment->getId();
-      }, $foundSegments
+      },
+      $foundSegments
     );
     if ($scheduleWelcomeEmail && $subscriber->getStatus() === SubscriberEntity::STATUS_SUBSCRIBED) {
       $this->_scheduleWelcomeNotification($subscriber, $foundSegmentsIds);
@@ -231,7 +284,7 @@ class Subscribers {
     }
 
     if (!$skipSubscriberNotification && ($subscriber->getStatus() === SubscriberEntity::STATUS_SUBSCRIBED)) {
-      $this->newSubscriberNotificationMailer->send($subscriber, $this->segmentsRepository->findBy(['id' => $foundSegmentsIds]));
+      $this->newSubscriberNotificationMailer->send($subscriber, $this->segmentsRepository->findByIds($foundSegmentsIds));
     }
 
     $this->subscribersRepository->refresh($subscriber);
@@ -386,7 +439,7 @@ class Subscribers {
    */
   private function getAndValidateSegments(array $listIds, string $context): array {
     // throw exception when none of the segments exist
-    $foundSegments = $this->segmentsRepository->findBy(['id' => $listIds]);
+    $foundSegments = $this->segmentsRepository->findByIds($listIds);
     if (!$foundSegments) {
       $exception = _n('This list does not exist.', 'These lists do not exist.', count($listIds), 'mailpoet');
       throw new APIException($exception, APIException::LIST_NOT_EXISTS);

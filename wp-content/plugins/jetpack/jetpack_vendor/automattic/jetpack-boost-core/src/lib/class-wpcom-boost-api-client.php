@@ -9,6 +9,10 @@ namespace Automattic\Jetpack\Boost_Core\Lib;
 
 use Automattic\Jetpack\Boost_Core\Contracts\Boost_API_Client;
 
+if ( ! defined( 'ABSPATH' ) ) {
+	exit( 0 );
+}
+
 /**
  * A class that handles the Boost API client.
  *
@@ -20,14 +24,15 @@ class WPCOM_Boost_API_Client implements Boost_API_Client {
 	 * Submit a POST request to boost API and return response.
 	 *
 	 * @param string  $path - Request path.
-	 * @param mixed[] $payload - Request arguments.
+	 * @param mixed[] $payload - Request payload.
+	 * @param mixed[] $args - Request arguments.
 	 * @return mixed
 	 */
-	public function post( $path, $payload = array() ) {
+	public function post( $path, $payload = array(), $args = null ) {
 		return Utils::send_wpcom_request(
 			'POST',
 			$this->get_api_path( $path ),
-			null,
+			$args,
 			$payload
 		);
 	}
@@ -37,11 +42,14 @@ class WPCOM_Boost_API_Client implements Boost_API_Client {
 	 *
 	 * @param string  $path - Request path.
 	 * @param mixed[] $query - Query parameters.
+	 * @param mixed[] $args - Request arguments.
+	 * @return mixed
 	 */
-	public function get( $path, $query = array() ) {
+	public function get( $path, $query = array(), $args = null ) {
 		return Utils::send_wpcom_request(
 			'GET',
-			add_query_arg( $query, $this->get_api_path( $path ) )
+			add_query_arg( $query, $this->get_api_path( $path ) ),
+			$args
 		);
 	}
 

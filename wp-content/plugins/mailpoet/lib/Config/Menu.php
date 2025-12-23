@@ -10,7 +10,6 @@ use MailPoet\AdminPages\Pages\AutomationAnalytics;
 use MailPoet\AdminPages\Pages\AutomationEditor;
 use MailPoet\AdminPages\Pages\AutomationTemplates;
 use MailPoet\AdminPages\Pages\DynamicSegments;
-use MailPoet\AdminPages\Pages\EmailEditor as EmailEditorPage;
 use MailPoet\AdminPages\Pages\ExperimentalFeatures;
 use MailPoet\AdminPages\Pages\FormEditor;
 use MailPoet\AdminPages\Pages\Forms;
@@ -31,7 +30,7 @@ use MailPoet\AdminPages\Pages\WooCommerceSetup;
 use MailPoet\DI\ContainerWrapper;
 use MailPoet\EmailEditor\Integrations\MailPoet\EmailEditor;
 use MailPoet\Form\Util\CustomFonts;
-use MailPoet\Util\License\License;
+use MailPoet\Util\License\Features\CapabilitiesManager;
 use MailPoet\WP\Functions as WPFunctions;
 
 class Menu {
@@ -41,7 +40,6 @@ class Menu {
   const EMAILS_PAGE_SLUG = 'mailpoet-newsletters';
   const FORMS_PAGE_SLUG = 'mailpoet-forms';
   const EMAIL_EDITOR_PAGE_SLUG = 'mailpoet-newsletter-editor';
-  const EMAIL_EDITOR_V2_PAGE_SLUG = 'mailpoet-email-editor';
   const FORM_EDITOR_PAGE_SLUG = 'mailpoet-form-editor';
   const HOMEPAGE_PAGE_SLUG = 'mailpoet-homepage';
   const FORM_TEMPLATES_PAGE_SLUG = 'mailpoet-form-editor-template-selection';
@@ -87,13 +85,20 @@ class Menu {
   /** @var CustomFonts  */
   private $customFonts;
 
+  /** @var EmailEditor  */
+  private $emailEditor;
+
+  private CapabilitiesManager $capabilitiesManager;
+
   public function __construct(
     AccessControl $accessControl,
     WPFunctions $wp,
     ServicesChecker $servicesChecker,
     ContainerWrapper $container,
     Router $router,
-    CustomFonts $customFonts
+    CustomFonts $customFonts,
+    CapabilitiesManager $capabilitiesManager,
+    EmailEditor $emailEditor
   ) {
     $this->accessControl = $accessControl;
     $this->wp = $wp;
@@ -101,6 +106,8 @@ class Menu {
     $this->container = $container;
     $this->router = $router;
     $this->customFonts = $customFonts;
+    $this->capabilitiesManager = $capabilitiesManager;
+    $this->emailEditor = $emailEditor;
   }
 
   public function init() {
@@ -125,22 +132,6 @@ class Menu {
     $this->router->checkRedirects();
 
     $this->registerMailPoetMenu();
-
-    // @ToDo Remove Beta once Automation is no longer beta.
-    $this->wp->addAction('admin_head', function () {
-      echo '<style>
-#adminmenu .toplevel_page_mailpoet-homepage a[href="admin.php?page=mailpoet-automation"] {
-  white-space: nowrap;
-}
-.mailpoet-beta-badge {
-  text-transform: uppercase;
-  font-size: 9px;
-  position: relative;
-  top: -5px;
-  color: #ffab66;
-}
-</style>';
-    });
 
     if (!self::isOnMailPoetAdminPage()) {
       return;
@@ -270,19 +261,6 @@ class Menu {
       [
         $this,
         'newletterEditor',
-      ]
-    );
-
-    // newsletter editor
-    $this->wp->addSubmenuPage(
-      self::EMAILS_PAGE_SLUG,
-      $this->setPageTitle(__('Email', 'mailpoet')),
-      esc_html__('Email Editor', 'mailpoet'),
-      AccessControl::PERMISSION_MANAGE_EMAILS,
-      self::EMAIL_EDITOR_V2_PAGE_SLUG,
-      [
-        $this,
-        'emailEditor',
       ]
     );
 
@@ -465,7 +443,7 @@ class Menu {
       self::MAIN_PAGE_SLUG,
       $this->setPageTitle(__('Help', 'mailpoet')),
       esc_html__('Help', 'mailpoet'),
-      AccessControl::PERMISSION_ACCESS_PLUGIN_ADMIN,
+      AccessControl::PERMISSION_MANAGE_HELP,
       self::HELP_PAGE_SLUG,
       [
         $this,
@@ -474,20 +452,17 @@ class Menu {
     );
 
     // Upgrade page
-    // Only show this page in menu if the Premium plugin is not activated
-    if (!License::getLicense()) {
-      $this->wp->addSubmenuPage(
-        self::MAIN_PAGE_SLUG,
-        $this->setPageTitle(__('Upgrade', 'mailpoet')),
-        esc_html__('Upgrade', 'mailpoet'),
-        AccessControl::PERMISSION_ACCESS_PLUGIN_ADMIN,
-        self::UPGRADE_PAGE_SLUG,
-        [
-          $this,
-          'upgrade',
-        ]
-      );
-    }
+    $this->wp->addSubmenuPage(
+      $this->capabilitiesManager->showUpgradePage() ? self::MAIN_PAGE_SLUG : self::HELP_PAGE_SLUG,
+      $this->setPageTitle(__('Upgrade', 'mailpoet')),
+      esc_html__('Upgrade', 'mailpoet'),
+      AccessControl::PERMISSION_ACCESS_PLUGIN_ADMIN,
+      self::UPGRADE_PAGE_SLUG,
+      [
+        $this,
+        'upgrade',
+      ]
+    );
 
     // WooCommerce Setup
     $this->wp->addSubmenuPage(
@@ -524,21 +499,10 @@ class Menu {
   }
 
   private function registerAutomationMenu() {
-    $parentSlug = self::MAIN_PAGE_SLUG;
-    // Automations menu is hidden when the subscription is part of a bundle and AutomateWoo is active but pages can be accessed directly
-    $showAutomations = !($this->wp->isPluginActive('automatewoo/automatewoo.php') &&
-      $this->servicesChecker->isBundledSubscription());
-    if (
-      !$this->wp->applyFilters('mailpoet_show_automations', $showAutomations)
-    ) {
-      $parentSlug = self::NO_PARENT_PAGE_SLUG;
-    }
-
     $automationPage = $this->wp->addSubmenuPage(
-      $parentSlug,
+      self::MAIN_PAGE_SLUG,
       $this->setPageTitle(__('Automations', 'mailpoet')),
-      // @ToDo Remove Beta once Automation is no longer beta.
-      '<span>' . esc_html__('Automations', 'mailpoet') . '</span><span class="mailpoet-beta-badge">Beta</span>',
+      esc_html__('Automations', 'mailpoet'),
       AccessControl::PERMISSION_MANAGE_EMAILS,
       self::AUTOMATIONS_PAGE_SLUG,
       [$this, 'automation']
@@ -565,7 +529,6 @@ class Menu {
     );
 
     // Automation templates
-
     $this->wp->addSubmenuPage(
       self::AUTOMATIONS_PAGE_SLUG,
       $this->setPageTitle(__('Automation Templates', 'mailpoet')),
@@ -669,10 +632,6 @@ class Menu {
     $this->container->get(NewsletterEditor::class)->render();
   }
 
-  public function emailEditor() {
-    $this->container->get(EmailEditorPage::class)->render();
-  }
-
   public function import() {
     $this->container->get(SubscribersImport::class)->render();
   }
@@ -706,7 +665,8 @@ class Menu {
       return $parentFile;
     }
 
-    if ($this->checkIsGutenbergEmailEditorPage()) {
+    // In case we are on the email editor page, we want to highlight the Emails menu item
+    if ($this->emailEditor->isEditorPage(false)) {
       $plugin_page = self::EMAILS_PAGE_SLUG;
       $submenu_file = self::EMAILS_PAGE_SLUG;
       return self::EMAILS_PAGE_SLUG;
@@ -752,7 +712,7 @@ class Menu {
     );
   }
 
-  public static function isOnMailPoetAdminPage(array $exclude = null, $screenId = null) {
+  public static function isOnMailPoetAdminPage(?array $exclude = null, $screenId = null) {
     if (is_null($screenId)) {
       if (empty($_REQUEST['page'])) {
         return false;
@@ -803,9 +763,9 @@ class Menu {
     // Used for displaying admin notices only
   }
 
-  public function checkPremiumKey(ServicesChecker $checker = null) {
-    $showNotices = isset($_SERVER['SCRIPT_NAME'])
-      && stripos(sanitize_text_field(wp_unslash($_SERVER['SCRIPT_NAME'])), 'plugins.php') !== false;
+  public function checkPremiumKey(?ServicesChecker $checker = null) {
+    $showNotices = self::isOnMailPoetAdminPage() || (isset($_SERVER['SCRIPT_NAME'])
+      && stripos(sanitize_text_field(wp_unslash($_SERVER['SCRIPT_NAME'])), 'plugins.php') !== false);
     $checker = $checker ?: $this->servicesChecker;
     $this->premiumKeyValid = $checker->isPremiumKeyValid($showNotices);
   }
@@ -816,9 +776,5 @@ class Menu {
       return self::AUTOMATIONS_PAGE_SLUG;
     }
     return null;
-  }
-
-  private function checkIsGutenbergEmailEditorPage(): bool {
-    return $this->wp->getPostType() === EmailEditor::MAILPOET_EMAIL_POST_TYPE;
   }
 }

@@ -6,6 +6,12 @@
  * @since 9.1.0
  */
 
+use Automattic\Jetpack\Status\Host;
+
+if ( ! defined( 'ABSPATH' ) ) {
+	exit( 0 );
+}
+
 /**
  * Class WPCOM_REST_API_V2_Endpoint_Admin_Menu
  */
@@ -83,7 +89,17 @@ class WPCOM_REST_API_V2_Endpoint_Admin_Menu extends WP_REST_Controller {
 	 * @return WP_REST_Response|WP_Error Response object on success, or WP_Error object on failure.
 	 */
 	public function get_item( $request ) { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter, VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
-		require_once JETPACK__PLUGIN_DIR . '/modules/masterbar/admin-menu/load.php';
+
+		/*
+		 * Load the `Jetpack_Admin` class, since it's only loaded on admin requests (not on API requests), and this is where
+		 * many Jetpack menus are registered. We don't need to run this on WPCOM because we replicate an admin request there.
+		 *
+		 * @see https://github.com/Automattic/jetpack/blob/dcdeb8fe772215b514bbbd6c4ddb38f6446e7ea1/projects/plugins/jetpack/load-jetpack.php#L61-L64
+		 * @see https://github.com/Automattic/jetpack/blob/dcdeb8fe772215b514bbbd6c4ddb38f6446e7ea1/projects/plugins/wpcomsh/feature-plugins/masterbar.php#L29
+		 */
+		if ( ! ( new Host() )->is_wpcom_platform() ) {
+			require_once JETPACK__PLUGIN_DIR . 'class.jetpack-admin.php';
+		}
 
 		// All globals need to be declared for menu items to properly register.
 		global $admin_page_hooks, $menu, $menu_order, $submenu, $_wp_menu_nopriv, $_wp_submenu_nopriv; // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable
@@ -119,6 +135,12 @@ class WPCOM_REST_API_V2_Endpoint_Admin_Menu extends WP_REST_Controller {
 
 				// Add submenu items.
 				foreach ( $submenu_items as $submenu_item ) {
+					// As $submenu_item can be null or false due to combination of plugins/themes, its value
+					// must be checked before passing it to the prepare_submenu_item method. It may be related
+					// to the common usage of null as a "hidden" submenu item like was fixed in CRM in #29945.
+					if ( ! is_array( $submenu_item ) ) {
+						continue;
+					}
 					$submenu_item = $this->prepare_submenu_item( $submenu_item, $menu_item );
 					if ( ! empty( $submenu_item ) ) {
 						$item['children'][] = $submenu_item;
@@ -234,7 +256,7 @@ class WPCOM_REST_API_V2_Endpoint_Admin_Menu extends WP_REST_Controller {
 		}
 
 		// Exclude hidden menu items.
-		if ( false !== strpos( $menu_item[4], 'hide-if-js' ) ) {
+		if ( str_contains( $menu_item[4], 'hide-if-js' ) ) {
 			// Exclude submenu items as well.
 			if ( ! empty( $submenu[ $menu_item[2] ] ) ) {
 				// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
@@ -244,7 +266,7 @@ class WPCOM_REST_API_V2_Endpoint_Admin_Menu extends WP_REST_Controller {
 		}
 
 		// Handle menu separators.
-		if ( false !== strpos( $menu_item[4], 'wp-menu-separator' ) ) {
+		if ( str_contains( $menu_item[4], 'wp-menu-separator' ) ) {
 			return array(
 				'type' => 'separator',
 			);
@@ -291,7 +313,7 @@ class WPCOM_REST_API_V2_Endpoint_Admin_Menu extends WP_REST_Controller {
 		}
 
 		// Exclude hidden submenu items.
-		if ( isset( $submenu_item[4] ) && false !== strpos( $submenu_item[4], 'hide-if-js' ) ) {
+		if ( isset( $submenu_item[4] ) && str_contains( $submenu_item[4], 'hide-if-js' ) ) {
 			return array();
 		}
 
@@ -323,9 +345,9 @@ class WPCOM_REST_API_V2_Endpoint_Admin_Menu extends WP_REST_Controller {
 		if ( ! empty( $icon ) && 'none' !== $icon && 'div' !== $icon ) {
 			$img = esc_url( $icon );
 
-			if ( 0 === strpos( $icon, 'data:image/svg+xml' ) ) {
+			if ( str_starts_with( $icon, 'data:image/svg+xml' ) ) {
 				$img = $icon;
-			} elseif ( 0 === strpos( $icon, 'dashicons-' ) ) {
+			} elseif ( str_starts_with( $icon, 'dashicons-' ) ) {
 				$img = $this->prepare_dashicon( $icon );
 			}
 		}
@@ -343,7 +365,7 @@ class WPCOM_REST_API_V2_Endpoint_Admin_Menu extends WP_REST_Controller {
 	 */
 	private function prepare_dashicon( $icon ) {
 		if ( empty( $this->dashicon_set ) ) {
-			$this->dashicon_list = include JETPACK__PLUGIN_DIR . '/modules/masterbar/admin-menu/dashicon-set.php';
+			$this->dashicon_list = include JETPACK__PLUGIN_DIR . 'jetpack_vendor/automattic/jetpack-masterbar/src/admin-menu/dashicon-set.php';
 		}
 
 		if ( isset( $this->dashicon_list[ $icon ] ) && $this->dashicon_list[ $icon ] ) {
@@ -364,7 +386,7 @@ class WPCOM_REST_API_V2_Endpoint_Admin_Menu extends WP_REST_Controller {
 		// External URLS.
 		if ( preg_match( '/^https?:\/\//', $url ) ) {
 			// Allow URLs pointing to WordPress.com.
-			if ( 0 === strpos( $url, 'https://wordpress.com/' ) ) {
+			if ( str_starts_with( $url, 'https://wordpress.com/' ) ) {
 				// Calypso needs the domain removed so they're not interpreted as external links.
 				$url = str_replace( 'https://wordpress.com', '', $url );
 				// Replace special characters with their correct entities e.g. &amp; to &.
@@ -372,13 +394,13 @@ class WPCOM_REST_API_V2_Endpoint_Admin_Menu extends WP_REST_Controller {
 			}
 
 			// Allow URLs pointing to Jetpack.com.
-			if ( 0 === strpos( $url, 'https://jetpack.com/' ) ) {
+			if ( str_starts_with( $url, 'https://jetpack.com/' ) ) {
 				// Replace special characters with their correct entities e.g. &amp; to &.
 				return wp_specialchars_decode( esc_url_raw( $url ) );
 			}
 
 			// Disallow other external URLs.
-			if ( 0 !== strpos( $url, get_site_url() ) ) {
+			if ( ! str_starts_with( $url, get_site_url() ) ) {
 				return '';
 			}
 			// The URL matches that of the site, treat it as an internal URL.
@@ -428,10 +450,15 @@ class WPCOM_REST_API_V2_Endpoint_Admin_Menu extends WP_REST_Controller {
 	 * @return array
 	 */
 	private function parse_menu_item( $title ) {
+		// Handle non-string input
+		if ( ! is_string( $title ) ) {
+			return array();
+		}
+
 		$item = array();
 
 		if (
-			false !== strpos( $title, 'count-' )
+			str_contains( $title, 'count-' )
 			&& preg_match( '/<span class=".+\s?count-(\d*).+\s?<\/span><\/span>/', $title, $matches )
 		) {
 
@@ -446,7 +473,7 @@ class WPCOM_REST_API_V2_Endpoint_Admin_Menu extends WP_REST_Controller {
 		}
 
 		if (
-			false !== strpos( $title, 'inline-text' )
+			str_contains( $title, 'inline-text' )
 			&& preg_match( '/<span class="inline-text".+\s?>(.+)<\/span>/', $title, $matches )
 		) {
 
@@ -461,7 +488,7 @@ class WPCOM_REST_API_V2_Endpoint_Admin_Menu extends WP_REST_Controller {
 		}
 
 		if (
-			false !== strpos( $title, 'awaiting-mod' )
+			str_contains( $title, 'awaiting-mod' )
 			&& preg_match( '/<span class="awaiting-mod">(.+)<\/span>/', $title, $matches )
 		) {
 

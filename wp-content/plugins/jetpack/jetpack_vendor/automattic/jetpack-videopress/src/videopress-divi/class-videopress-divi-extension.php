@@ -7,6 +7,10 @@
 
 use Automattic\Jetpack\Assets;
 
+if ( ! defined( 'ABSPATH' ) ) {
+	exit( 0 );
+}
+
 /**
  * Divi extension.
  **/
@@ -54,6 +58,20 @@ class VideoPress_Divi_Extension extends DiviExtension {
 	 * @var VideoPress_Divi_Module
 	 */
 	private $videopress_divi_module;
+
+	/**
+	 * Plugin directory.
+	 *
+	 * @var string
+	 */
+	public $plugin_dir;
+
+	/**
+	 * Plugin directory URL.
+	 *
+	 * @var string
+	 */
+	public $plugin_dir_url;
 
 	/**
 	 * The constructor.

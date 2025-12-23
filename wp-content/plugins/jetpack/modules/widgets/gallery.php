@@ -10,6 +10,10 @@
 use Automattic\Jetpack\Assets;
 use Automattic\Jetpack\Image_CDN\Image_CDN_Core;
 
+if ( ! defined( 'ABSPATH' ) ) {
+	exit( 0 );
+}
+
 /**
  * Jetpack_Gallery_Widget main class.
  */
@@ -108,8 +112,7 @@ class Jetpack_Gallery_Widget extends WP_Widget {
 				// of logic in that method that shouldn't be duplicated.
 				$carousel = new Jetpack_Carousel();
 
-				// First parameter is $output, which comes from filters, and causes bypass of the asset enqueuing. Passing null is correct.
-				$carousel->enqueue_assets( null );
+				$carousel->enqueue_assets();
 			}
 		}
 
@@ -329,7 +332,11 @@ class Jetpack_Gallery_Widget extends WP_Widget {
 	/**
 	 * Outputs the widget settings form.
 	 *
+	 * @html-template-var array $instance
+	 * @html-template-var array<string,array<string|int,string|int>> $allowed_values
+	 *
 	 * @param array $instance Current settings.
+	 * @return string|void
 	 */
 	public function form( $instance ) {
 		$defaults       = $this->defaults();

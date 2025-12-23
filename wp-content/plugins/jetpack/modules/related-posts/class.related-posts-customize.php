@@ -4,13 +4,14 @@ use Automattic\Jetpack\Assets;
 
 // Exit if file is accessed directly.
 if ( ! defined( 'ABSPATH' ) ) {
-	exit;
+	exit( 0 );
 }
 
 /**
  * Class to include elements to modify Related Posts look in Customizer.
  *
  * @since 4.4.0
+ * @phan-constructor-used-for-side-effects
  */
 class Jetpack_Related_Posts_Customize {
 

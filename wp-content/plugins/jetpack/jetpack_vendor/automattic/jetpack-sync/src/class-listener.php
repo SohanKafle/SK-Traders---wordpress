@@ -216,6 +216,7 @@ class Listener {
 		 * If we add any items to the queue, we should try to ensure that our script
 		 * can't be killed before they are sent.
 		 */
+		// https://plugins.trac.wordpress.org/ticket/2041
 		if ( function_exists( 'ignore_user_abort' ) ) {
 			ignore_user_abort( true );
 		}
@@ -279,6 +280,15 @@ class Listener {
 			return;
 		}
 
+		// Skip enqueueing any Sync action when triggered by Jetpack CRM Woo Sync background job to avoid periodic noise.
+		if (
+			( function_exists( 'doing_action' ) && doing_action( 'jpcrm_woosync_sync' ) )
+			|| defined( 'jpcrm_woosync_running' )
+			|| defined( 'jpcrm_woosync_cron_running' )
+		) {
+			return;
+		}
+
 		/**
 		 * Add an action hook to execute when anything on the whitelist gets sent to the queue to sync.
 		 *
@@ -319,6 +329,7 @@ class Listener {
 		 * If we add any items to the queue, we should try to ensure that our script
 		 * can't be killed before they are sent.
 		 */
+		// https://plugins.trac.wordpress.org/ticket/2041
 		if ( function_exists( 'ignore_user_abort' ) ) {
 			ignore_user_abort( true );
 		}

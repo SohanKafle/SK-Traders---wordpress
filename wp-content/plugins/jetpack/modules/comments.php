@@ -1,7 +1,7 @@
 <?php
 /**
  * Module Name: Comments
- * Module Description: Let visitors use a WordPress.com or Facebook account to comment
+ * Module Description: Replace the default comment form with a modern, feature‑rich alternative.
  * First Introduced: 1.4
  * Sort Order: 20
  * Requires Connection: Yes
@@ -14,6 +14,10 @@
  */
 
 use Automattic\Jetpack\Assets;
+
+if ( ! defined( 'ABSPATH' ) ) {
+	exit( 0 );
+}
 
 Assets::add_resource_hint(
 	array(
@@ -31,6 +35,7 @@ Assets::add_resource_hint(
  * Add the main commenting system.
  */
 require __DIR__ . '/comments/comments.php';
+require __DIR__ . '/comments/subscription-modal-on-comment/class-jetpack-subscription-modal-on-comment.php';
 
 if ( is_admin() ) {
 	/**

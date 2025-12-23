@@ -9,7 +9,7 @@
  * Disable direct access and execution.
  */
 if ( ! defined( 'ABSPATH' ) ) {
-	exit;
+	exit( 0 );
 }
 
 require_once __DIR__ . '/class.jetpack-admin-page.php';
@@ -560,9 +560,9 @@ class Jetpack_About_Page extends Jetpack_Admin_Page {
 					'languages'        => 83,
 					'featured_plugins' => array(
 						'woocommerce',
-						'wp-super-cache',
+						'activitypub',
 						'wp-job-manager',
-						'co-authors-plus',
+						'wp-super-cache',
 					),
 				);
 			}

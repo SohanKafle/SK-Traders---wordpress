@@ -10,6 +10,9 @@ use MailPoet\Automation\Engine\Data\Step;
 use MailPoet\Automation\Engine\Hooks;
 use MailPoet\Automation\Engine\Storage\AutomationStorage;
 use MailPoet\Automation\Engine\WordPress;
+use MailPoet\Automation\Integrations\MailPoet\Templates\EmailFactory;
+use MailPoet\DI\ContainerWrapper;
+use MailPoet\Newsletter\NewsletterDeleteController;
 use MailPoet\Newsletter\NewslettersRepository;
 
 class AutomationEditorLoadingHooks {
@@ -23,14 +26,18 @@ class AutomationEditorLoadingHooks {
   /** @var NewslettersRepository  */
   private $newslettersRepository;
 
+  private NewsletterDeleteController $newsletterDeleteController;
+
   public function __construct(
     WordPress $wp,
     AutomationStorage $automationStorage,
-    NewslettersRepository $newslettersRepository
+    NewslettersRepository $newslettersRepository,
+    NewsletterDeleteController $newsletterDeleteController
   ) {
     $this->wp = $wp;
     $this->automationStorage = $automationStorage;
     $this->newslettersRepository = $newslettersRepository;
+    $this->newsletterDeleteController = $newsletterDeleteController;
   }
 
   public function init(): void {
@@ -43,6 +50,12 @@ class AutomationEditorLoadingHooks {
       return;
     }
     $this->disconnectEmptyEmailsFromSendEmailStep($automation);
+    $this->setAutomationIdForEmails($automation);
+  }
+
+  private function setAutomationIdForEmails(Automation $automation): void {
+    $emailFactory = ContainerWrapper::getInstance()->get(EmailFactory::class);
+    $emailFactory->setAutomationIdForEmails($automation);
   }
 
   private function disconnectEmptyEmailsFromSendEmailStep(Automation $automation): void {
@@ -62,9 +75,22 @@ class AutomationEditorLoadingHooks {
         continue;
       }
 
-      $this->newslettersRepository->bulkDelete([$emailId]);
+      if ($newsletterEntity && $newsletterEntity->getWpPostId()) {
+        $wpPost = $this->wp->getPost($newsletterEntity->getWpPostId());
+        // Skip if the wp post has content for emails created by the new block editor.
+        if ($wpPost && $wpPost instanceof \WP_Post && !empty($wpPost->post_content)) { // phpcs:ignore Squiz.NamingConventions.ValidVariableName.MemberNotCamelCaps
+          continue;
+        }
+      }
+
+      $this->newsletterDeleteController->bulkDelete([$emailId]);
       $args = $step->getArgs();
       unset($args['email_id']);
+
+      if (isset($args['email_wp_post_id'])) {
+        unset($args['email_wp_post_id']);
+      }
+
       $updatedStep = new Step(
         $step->getId(),
         $step->getType(),

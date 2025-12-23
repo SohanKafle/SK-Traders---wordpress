@@ -226,12 +226,12 @@ class Jetpack_Debug_Data {
 		);
 		$debug_info['blog_token']   = array(
 			'label'   => 'Blog Public Key',
-			'value'   => ( $blog_token ) ? $blog_key : 'Not set.',
+			'value'   => $blog_key ?? 'Not set.',
 			'private' => false,
 		);
 		$debug_info['user_token']   = array(
 			'label'   => 'User Public Key',
-			'value'   => ( $user_token ) ? $user_key : 'Not set.',
+			'value'   => $user_key ?? 'Not set.',
 			'private' => false,
 		);
 
@@ -291,6 +291,7 @@ class Jetpack_Debug_Data {
 
 		/** Sync Debug Information */
 		$sync_module = Modules::get_module( 'full-sync' );
+		'@phan-var \Automattic\Jetpack\Sync\Modules\Full_Sync_Immediately|\Automattic\Jetpack\Sync\Modules\Full_Sync $sync_module';
 		if ( $sync_module ) {
 			$sync_statuses              = $sync_module->get_status();
 			$human_readable_sync_status = array();
@@ -390,7 +391,7 @@ class Jetpack_Debug_Data {
 
 		$user = new WP_User( $master_user );
 
-		if ( ! $user ) {
+		if ( ! $user->exists() ) {
 			return __( 'Master user no longer exists. Please disconnect and reconnect Jetpack.', 'jetpack' );
 		}
 

@@ -11,6 +11,10 @@ use Automattic\Jetpack\My_Jetpack\Module_Product;
 use Automattic\Jetpack\My_Jetpack\Wpcom_Products;
 use WP_Error;
 
+if ( ! defined( 'ABSPATH' ) ) {
+	exit( 0 );
+}
+
 /**
  * Class responsible for handling the Starter plan
  */
@@ -31,21 +35,21 @@ class Starter extends Module_Product {
 	public static $module_name = 'starter';
 
 	/**
-	 * Get the internationalized product name
+	 * Get the product name
 	 *
 	 * @return string
 	 */
 	public static function get_name() {
-		return _x( 'Starter', 'Jetpack product name', 'jetpack-my-jetpack' );
+		return 'Starter';
 	}
 
 	/**
-	 * Get the internationalized product title
+	 * Get the product title
 	 *
 	 * @return string
 	 */
 	public static function get_title() {
-		return _x( 'Jetpack Starter', 'Jetpack product name', 'jetpack-my-jetpack' );
+		return 'Jetpack Starter';
 	}
 
 	/**
@@ -166,12 +170,25 @@ class Starter extends Module_Product {
 		}
 		if ( is_array( $purchases_data ) && ! empty( $purchases_data ) ) {
 			foreach ( $purchases_data as $purchase ) {
-				if ( 0 === strpos( $purchase->product_slug, 'jetpack_starter' ) ) {
+				if ( str_starts_with( $purchase->product_slug, 'jetpack_starter' ) ) {
 					return true;
 				}
 			}
 		}
 		return false;
+	}
+
+	/**
+	 * Get the product-slugs of the paid plans for this product.
+	 * (Do not include bundle plans, unless it's a bundle plan itself).
+	 *
+	 * @return array
+	 */
+	public static function get_paid_plan_product_slugs() {
+		return array(
+			'jetpack_starter_yearly',
+			'jetpack_starter_monthly',
+		);
 	}
 
 	/**

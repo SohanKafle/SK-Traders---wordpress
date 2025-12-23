@@ -33,7 +33,12 @@ class Installer {
 
   public function generatePluginDownloadUrl(): string {
     $premiumKey = $this->settings->get(Bridge::PREMIUM_KEY_SETTING_NAME);
-    return "https://release.mailpoet.com/downloads/mailpoet-premium/$premiumKey/latest/mailpoet-premium.zip";
+    $freeMinorVersion = self::getFreeMinorVersionZero();
+    return sprintf(
+      'https://release.mailpoet.com/downloads/mailpoet-premium/%s/%s/mailpoet-premium.zip',
+      rawurlencode((string)$premiumKey),
+      rawurlencode($freeMinorVersion)
+    );
   }
 
   public function generatePluginActivationUrl(string $plugin): string {
@@ -98,16 +103,18 @@ class Installer {
   public function retrievePluginInformation() {
     $key = $this->settings->get(Bridge::PREMIUM_KEY_SETTING_NAME);
     $api = new API($key);
-    $info = $api->getPluginInformation($this->slug);
-    $info = $this->formatInformation($info);
-    return $info;
+    return $api->getPluginInformation($this->slug);
   }
 
-  private function formatInformation($info) {
-    // cast sections object to array for WP to understand
-    if (isset($info->sections)) {
-      $info->sections = (array)$info->sections;
+  private static function getFreeMinorVersionZero(): string {
+    $version = defined('MAILPOET_VERSION') ? (string)MAILPOET_VERSION : '';
+    if ($version === '') {
+      return 'latest';
     }
-    return $info;
+
+    $parts = explode('.', $version);
+    $major = $parts[0] ?? '0';
+    $minor = $parts[1] ?? '0';
+    return $major . '.' . $minor . '.0';
   }
 }

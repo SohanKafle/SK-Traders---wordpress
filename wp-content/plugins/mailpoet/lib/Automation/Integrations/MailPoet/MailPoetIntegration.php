@@ -7,6 +7,7 @@ if (!defined('ABSPATH')) exit;
 
 use MailPoet\Automation\Engine\Integration;
 use MailPoet\Automation\Engine\Registry;
+use MailPoet\Automation\Engine\WordPress;
 use MailPoet\Automation\Integrations\MailPoet\Actions\SendEmailAction;
 use MailPoet\Automation\Integrations\MailPoet\Analytics\Analytics;
 use MailPoet\Automation\Integrations\MailPoet\Hooks\AutomationEditorLoadingHooks;
@@ -15,6 +16,7 @@ use MailPoet\Automation\Integrations\MailPoet\Subjects\NewsletterLinkSubject;
 use MailPoet\Automation\Integrations\MailPoet\Subjects\SegmentSubject;
 use MailPoet\Automation\Integrations\MailPoet\Subjects\SubscriberSubject;
 use MailPoet\Automation\Integrations\MailPoet\SubjectTransformers\CommentSubjectToSubscriberSubjectTransformer;
+use MailPoet\Automation\Integrations\MailPoet\SubjectTransformers\CustomerSubjectToSubscriberSubjectTransformer;
 use MailPoet\Automation\Integrations\MailPoet\SubjectTransformers\OrderSubjectToSegmentSubjectTransformer;
 use MailPoet\Automation\Integrations\MailPoet\SubjectTransformers\OrderSubjectToSubscriberSubjectTransformer;
 use MailPoet\Automation\Integrations\MailPoet\SubjectTransformers\SubscriberSubjectToWordPressUserSubjectTransformer;
@@ -62,11 +64,17 @@ class MailPoetIntegration implements Integration {
   /** @var CommentSubjectToSubscriberSubjectTransformer */
   private $commentToSubscriberTransformer;
 
+  /** @var CustomerSubjectToSubscriberSubjectTransformer */
+  private $customerToSubscriberTransformer;
+
   /** @var TemplatesFactory */
   private $templatesFactory;
 
   /** @var Analytics */
   private $registerAnalytics;
+
+  /** @var WordPress */
+  private $wordPress;
 
   public function __construct(
     ContextFactory $contextFactory,
@@ -77,13 +85,15 @@ class MailPoetIntegration implements Integration {
     OrderSubjectToSegmentSubjectTransformer $orderToSegmentTransformer,
     SubscriberSubjectToWordPressUserSubjectTransformer $subscriberToWordPressUserTransformer,
     CommentSubjectToSubscriberSubjectTransformer $commentToSubscriberTransformer,
+    CustomerSubjectToSubscriberSubjectTransformer $customerToSubscriberTransformer,
     SomeoneSubscribesTrigger $someoneSubscribesTrigger,
     UserRegistrationTrigger $userRegistrationTrigger,
     SendEmailAction $sendEmailAction,
     AutomationEditorLoadingHooks $automationEditorLoadingHooks,
     CreateAutomationRunHook $createAutomationRunHook,
     TemplatesFactory $templatesFactory,
-    Analytics $registerAnalytics
+    Analytics $registerAnalytics,
+    WordPress $wordPress
   ) {
     $this->contextFactory = $contextFactory;
     $this->segmentSubject = $segmentSubject;
@@ -93,6 +103,7 @@ class MailPoetIntegration implements Integration {
     $this->orderToSegmentTransformer = $orderToSegmentTransformer;
     $this->subscriberToWordPressUserTransformer = $subscriberToWordPressUserTransformer;
     $this->commentToSubscriberTransformer = $commentToSubscriberTransformer;
+    $this->customerToSubscriberTransformer = $customerToSubscriberTransformer;
     $this->someoneSubscribesTrigger = $someoneSubscribesTrigger;
     $this->userRegistrationTrigger = $userRegistrationTrigger;
     $this->sendEmailAction = $sendEmailAction;
@@ -100,6 +111,7 @@ class MailPoetIntegration implements Integration {
     $this->createAutomationRunHook = $createAutomationRunHook;
     $this->templatesFactory = $templatesFactory;
     $this->registerAnalytics = $registerAnalytics;
+    $this->wordPress = $wordPress;
   }
 
   public function register(Registry $registry): void {
@@ -117,6 +129,7 @@ class MailPoetIntegration implements Integration {
     $registry->addSubjectTransformer($this->orderToSegmentTransformer);
     $registry->addSubjectTransformer($this->subscriberToWordPressUserTransformer);
     $registry->addSubjectTransformer($this->commentToSubscriberTransformer);
+    $registry->addSubjectTransformer($this->customerToSubscriberTransformer);
 
     foreach ($this->templatesFactory->createTemplates() as $template) {
       $registry->addTemplate($template);
@@ -127,6 +140,9 @@ class MailPoetIntegration implements Integration {
       [$this->sendEmailAction, 'saveEmailSettings'],
       $this->sendEmailAction->getKey()
     );
+
+    // execute send email step progress when email is sent
+    $this->wordPress->addAction('mailpoet_automation_email_sent', [$this->sendEmailAction, 'handleEmailSent']);
 
     $this->automationEditorLoadingHooks->init();
     $this->createAutomationRunHook->init();

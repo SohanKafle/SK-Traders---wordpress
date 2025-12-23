@@ -1,5 +1,9 @@
 <?php // phpcs:ignore WordPress.Files.FileName.InvalidClassFileName
 
+if ( ! defined( 'ABSPATH' ) ) {
+	exit( 0 );
+}
+
 /**
  * VideoPress Shortcode Handler
  *
@@ -127,7 +131,7 @@ class VideoPress_Shortcode {
 		 * If there was an invalid or unspecified width, set the width equal to the theme's `$content_width`.
 		 */
 		if ( 0 === $attr['width'] && isset( $content_width ) && $content_width >= VIDEOPRESS_MIN_WIDTH ) {
-			$attr['width'] = $content_width;
+			$attr['width'] = (int) $content_width;
 		}
 
 		/**

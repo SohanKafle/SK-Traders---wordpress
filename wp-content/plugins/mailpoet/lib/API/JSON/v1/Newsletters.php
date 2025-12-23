@@ -14,10 +14,12 @@ use MailPoet\Cron\CronHelper;
 use MailPoet\Doctrine\Validator\ValidationException;
 use MailPoet\Entities\NewsletterEntity;
 use MailPoet\Entities\NewsletterOptionFieldEntity;
+use MailPoet\Entities\ScheduledTaskEntity;
 use MailPoet\Entities\SendingQueueEntity;
 use MailPoet\InvalidStateException;
 use MailPoet\Listing;
 use MailPoet\Newsletter\Listing\NewsletterListingRepository;
+use MailPoet\Newsletter\NewsletterDeleteController;
 use MailPoet\Newsletter\NewsletterSaveController;
 use MailPoet\Newsletter\NewslettersRepository;
 use MailPoet\Newsletter\NewsletterValidator;
@@ -26,6 +28,7 @@ use MailPoet\Newsletter\Preview\SendPreviewException;
 use MailPoet\Newsletter\Scheduler\PostNotificationScheduler;
 use MailPoet\Newsletter\Scheduler\Scheduler;
 use MailPoet\Newsletter\Url as NewsletterUrl;
+use MailPoet\Services\AuthorizedEmailsController;
 use MailPoet\Settings\SettingsController;
 use MailPoet\UnexpectedValueException;
 use MailPoet\Util\License\Features\Subscribers as SubscribersFeature;
@@ -75,6 +78,8 @@ class Newsletters extends APIEndpoint {
   /** @var NewsletterSaveController */
   private $newsletterSaveController;
 
+  private NewsletterDeleteController $newsletterDeleteController;
+
   /** @var NewsletterUrl */
   private $newsletterUrl;
 
@@ -83,6 +88,9 @@ class Newsletters extends APIEndpoint {
 
   /** @var Scheduler */
   private $scheduler;
+
+  /** @var AuthorizedEmailsController */
+  private $authorizedEmailsController;
 
   public function __construct(
     Listing\Handler $listingHandler,
@@ -97,9 +105,11 @@ class Newsletters extends APIEndpoint {
     Emoji $emoji,
     SendPreviewController $sendPreviewController,
     NewsletterSaveController $newsletterSaveController,
+    NewsletterDeleteController $newsletterDeleteController,
     NewsletterUrl $newsletterUrl,
     Scheduler $scheduler,
-    NewsletterValidator $newsletterValidator
+    NewsletterValidator $newsletterValidator,
+    AuthorizedEmailsController $authorizedEmailsController
   ) {
     $this->listingHandler = $listingHandler;
     $this->wp = $wp;
@@ -113,9 +123,11 @@ class Newsletters extends APIEndpoint {
     $this->emoji = $emoji;
     $this->sendPreviewController = $sendPreviewController;
     $this->newsletterSaveController = $newsletterSaveController;
+    $this->newsletterDeleteController = $newsletterDeleteController;
     $this->newsletterUrl = $newsletterUrl;
     $this->scheduler = $scheduler;
     $this->newsletterValidator = $newsletterValidator;
+    $this->authorizedEmailsController = $authorizedEmailsController;
   }
 
   public function get($data = []) {
@@ -188,6 +200,12 @@ class Newsletters extends APIEndpoint {
       ]);
     }
 
+    if ($status === NewsletterEntity::STATUS_ACTIVE && !$this->authorizedEmailsController->isSenderAddressValid($newsletter)) {
+          return $this->errorResponse([
+            APIError::FORBIDDEN => __('The sender address is not an authorized sender domain.', 'mailpoet'),
+          ], [], Response::STATUS_FORBIDDEN);
+    }
+
     if ($status === NewsletterEntity::STATUS_ACTIVE) {
       $validationError = $this->newsletterValidator->validate($newsletter);
       if ($validationError !== null) {
@@ -197,6 +215,17 @@ class Newsletters extends APIEndpoint {
 
     $this->newslettersRepository->prefetchOptions([$newsletter]);
     $newsletter->setStatus($status);
+
+    // if there are paused tasks unpause them
+    if ($newsletter->getStatus() === NewsletterEntity::STATUS_ACTIVE) {
+      $queues = $newsletter->getUnfinishedQueues();
+      foreach ($queues as $queue) {
+        $task = $queue->getTask();
+        if ($task && $task->getStatus() === ScheduledTaskEntity::STATUS_PAUSED) {
+          $task->setStatus(ScheduledTaskEntity::STATUS_SCHEDULED);
+        }
+      }
+    }
 
     // if there are past due notifications, reschedule them for the next send date
     if ($newsletter->getType() === NewsletterEntity::TYPE_NOTIFICATION && $status === NewsletterEntity::STATUS_ACTIVE) {
@@ -212,7 +241,7 @@ class Newsletters extends APIEndpoint {
         $task = $queue->getTask();
         if (
           $task &&
-          $task->getScheduledAt() <= Carbon::createFromTimestamp($this->wp->currentTime('timestamp')) &&
+          $task->getScheduledAt() <= Carbon::now()->millisecond(0) &&
           $task->getStatus() === SendingQueueEntity::STATUS_SCHEDULED
         ) {
           $nextRunDate = $nextRunDate ? Carbon::createFromFormat('Y-m-d H:i:s', $nextRunDate) : null;
@@ -268,7 +297,7 @@ class Newsletters extends APIEndpoint {
     $newsletter = $this->getNewsletter($data);
     if ($newsletter instanceof NewsletterEntity) {
       $this->wp->doAction('mailpoet_api_newsletters_delete_before', [$newsletter->getId()]);
-      $this->newslettersRepository->bulkDelete([$newsletter->getId()]);
+      $this->newsletterDeleteController->bulkDelete([(int)$newsletter->getId()]);
       $this->wp->doAction('mailpoet_api_newsletters_delete_after', [$newsletter->getId()]);
       return $this->successResponse(null, ['count' => 1]);
     } else {
@@ -309,8 +338,9 @@ class Newsletters extends APIEndpoint {
       ]);
     }
 
+    $newslettersTableName = $this->newslettersRepository->getTableName();
     $newsletter->setBody(
-      json_decode($this->emoji->encodeForUTF8Column(MP_NEWSLETTERS_TABLE, 'body', $data['body']), true)
+      json_decode($this->emoji->encodeForUTF8Column($newslettersTableName, 'body', $data['body']), true)
     );
     $this->newslettersRepository->flush();
 
@@ -374,7 +404,7 @@ class Newsletters extends APIEndpoint {
       $this->newslettersRepository->bulkRestore($ids);
     } elseif ($data['action'] === 'delete') {
       $this->wp->doAction('mailpoet_api_newsletters_delete_before', $ids);
-      $this->newslettersRepository->bulkDelete($ids);
+      $this->newsletterDeleteController->bulkDelete($ids);
       $this->wp->doAction('mailpoet_api_newsletters_delete_after', $ids);
     } else {
       throw UnexpectedValueException::create()

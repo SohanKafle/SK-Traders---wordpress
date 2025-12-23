@@ -2,6 +2,10 @@
 
 use Automattic\Jetpack\Image_CDN\Image_CDN_Core;
 
+if ( ! defined( 'ABSPATH' ) ) {
+	exit( 0 );
+}
+
 /**
  * For back-compat, the final widget class must be named
  * Jetpack_Display_Posts_Widget.
@@ -106,7 +110,7 @@ abstract class Jetpack_Display_Posts_Widget__Base extends WP_Widget {
 			if ( current_user_can( 'manage_options' ) ) {
 				$content .= '<p>';
 				/* Translators: the "Blog URL" field mentioned is the input field labeled as such in the widget form. */
-				$content .= esc_html__( 'The Blog URL is not properly setup in the widget.', 'jetpack' );
+				$content .= esc_html__( 'The Blog URL is not properly set up in the widget.', 'jetpack' );
 				$content .= '</p>';
 			}
 			$content .= $args['after_widget'];
@@ -355,7 +359,7 @@ abstract class Jetpack_Display_Posts_Widget__Base extends WP_Widget {
 		if ( ! empty( $instance['url'] ) ) {
 			$blog_data = $this->fetch_blog_data( $instance['url'], array(), true );
 
-			if ( is_wp_error( $blog_data['site_info']['error'] ) && 'www.' === substr( $instance['url'], 0, 4 ) ) {
+			if ( is_wp_error( $blog_data['site_info']['error'] ) && str_starts_with( $instance['url'], 'www.' ) ) {
 				$blog_data = $this->fetch_blog_data( substr( $instance['url'], 4 ), array(), true );
 
 				if ( ! is_wp_error( $blog_data['site_info']['error'] ) ) {

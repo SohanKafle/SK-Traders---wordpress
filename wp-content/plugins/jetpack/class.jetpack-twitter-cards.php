@@ -5,6 +5,10 @@
  * @package automattic/jetpack
  */
 
+if ( ! defined( 'ABSPATH' ) ) {
+	exit( 0 );
+}
+
 /**
  * Twitter Cards
  *
@@ -251,7 +255,7 @@ class Jetpack_Twitter_Cards {
 
 			// Not falling back on Gravatar, because there's no way to know if we end up with an auto-generated one.
 
-		} elseif ( $img_count && ( 'image' === $extract['type'] || 'gallery' === $extract['type'] ) ) {
+		} elseif ( 'image' === $extract['type'] || 'gallery' === $extract['type'] ) {
 			// Test for $extract['type'] to limit to image and gallery, so we don't send a potential fallback image like a Gravatar as a photo post.
 			$card_type                = 'summary_large_image';
 			$og_tags['twitter:image'] = esc_url( add_query_arg( 'w', 1400, ( empty( $extract['images'] ) ) ? $extract['image'] : $extract['images'][0]['url'] ) );
@@ -268,7 +272,7 @@ class Jetpack_Twitter_Cards {
 	 * @return string Result of the OG tag.
 	 */
 	public static function twitter_cards_output( $og_tag ) {
-		return ( false !== strpos( $og_tag, 'twitter:' ) ) ? preg_replace( '/property="([^"]+)"/', 'name="\1"', $og_tag ) : $og_tag;
+		return ( str_contains( $og_tag, 'twitter:' ) ) ? preg_replace( '/property="([^"]+)"/', 'name="\1"', $og_tag ) : $og_tag;
 	}
 
 	/**

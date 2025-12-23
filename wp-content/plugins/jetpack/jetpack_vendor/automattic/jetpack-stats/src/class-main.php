@@ -75,6 +75,10 @@ class Main {
 		add_filter( 'map_meta_cap', array( __CLASS__, 'map_meta_caps' ), 10, 3 );
 
 		XMLRPC_Provider::init();
+		REST_Provider::init();
+
+		// Set up package version hook.
+		add_filter( 'jetpack_package_versions', __NAMESPACE__ . '\Package_Version::send_package_version_to_tracker' );
 	}
 
 	/**
@@ -116,8 +120,11 @@ class Main {
 	public static function map_meta_caps( $caps, $cap, $user_id ) {
 		// Map view_stats to exists.
 		if ( 'view_stats' === $cap ) {
-			$user        = new WP_User( $user_id );
-			$user_role   = array_shift( $user->roles );
+			$user = new WP_User( $user_id );
+			// WordPress 6.9 introduced lazy-loading of some WP_User properties, including `roles`.
+			// It also made said properties protected, so we can't modify keys directly.
+			$user_roles  = $user->roles;
+			$user_role   = array_shift( $user_roles ); // Work with the copy
 			$stats_roles = Options::get_option( 'roles' );
 
 			// Is the users role in the available stats roles?
@@ -192,9 +199,9 @@ class Main {
 			return false;
 		}
 
-		// Staging Sites should not generate tracking stats.
+		// Sites in Safe Mode should not generate tracking stats.
 		$status = new Status();
-		if ( $status->is_staging_site() ) {
+		if ( $status->in_safe_mode() ) {
 			return false;
 		}
 

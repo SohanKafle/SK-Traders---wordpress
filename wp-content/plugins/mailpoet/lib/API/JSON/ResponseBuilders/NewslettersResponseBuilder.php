@@ -78,12 +78,13 @@ class NewslettersResponseBuilder {
       'body' => $newsletter->getBody(),
       'sent_at' => ($sentAt = $newsletter->getSentAt()) ? $sentAt->format(self::DATE_FORMAT) : null,
       'created_at' => ($createdAt = $newsletter->getCreatedAt()) ? $createdAt->format(self::DATE_FORMAT) : null,
-      'updated_at' => $newsletter->getUpdatedAt()->format(self::DATE_FORMAT),
+      'updated_at' => ($updatedAt = $newsletter->getUpdatedAt()) ? $updatedAt->format(self::DATE_FORMAT) : null,
       'deleted_at' => ($deletedAt = $newsletter->getDeletedAt()) ? $deletedAt->format(self::DATE_FORMAT) : null,
       'parent_id' => ($parent = $newsletter->getParent()) ? $parent->getId() : null,
       'unsubscribe_token' => $newsletter->getUnsubscribeToken(),
       'ga_campaign' => $newsletter->getGaCampaign(),
       'wp_post_id' => $newsletter->getWpPostId(),
+      'campaign_name' => $newsletter->getCampaignName(),
     ];
 
     foreach ($relations as $relation) {
@@ -103,9 +104,8 @@ class NewslettersResponseBuilder {
         $data['children_count'] = $this->newslettersStatsRepository->getChildrenCount($newsletter);
       }
       if ($relation === self::RELATION_SCHEDULED) {
-        $data['total_scheduled'] = $this->sendingQueuesRepository->countAllByNewsletterAndTaskStatus(
-          $newsletter,
-          SendingQueueEntity::STATUS_SCHEDULED
+        $data['total_scheduled'] = $this->sendingQueuesRepository->countAllToProcessByNewsletter(
+          $newsletter
         );
       }
 
@@ -116,10 +116,31 @@ class NewslettersResponseBuilder {
     return $data;
   }
 
-  /**
-   * @param NewsletterEntity[] $newsletters
-   * @return mixed[]
-   */
+  private function processPersonalizationTags(?string $content): ?string {
+    if (is_null($content) || strlen($content) === 0) {
+      return $content;
+    }
+    if (strpos($content, '<!--') === false) {
+      // we don't need to parse anything if there are no personalization tags
+      return $content;
+    }
+    if (!class_exists('\Automattic\WooCommerce\EmailEditor\Engine\PersonalizationTags\HTML_Tag_Processor')) {
+      // editor is not active, we cannot process personalization tags
+      return $content;
+    }
+
+    $content_processor = new \Automattic\WooCommerce\EmailEditor\Engine\PersonalizationTags\HTML_Tag_Processor($content);
+    while ($content_processor->next_token()) {
+      $type = $content_processor->get_token_type();
+      if ($type === '#comment') {
+        $token = $content_processor->get_modifiable_text();
+        $content_processor->replace_token($token);
+      }
+    }
+    $content_processor->flush_updates();
+    return $content_processor->get_updated_html();
+  }
+
   public function buildForListing(array $newsletters): array {
     $statistics = $this->newslettersStatsRepository->getBatchStatistics($newsletters);
     $latestQueues = $this->getBatchLatestQueuesWithTasks($newsletters);
@@ -134,19 +155,24 @@ class NewslettersResponseBuilder {
     return $data;
   }
 
-  private function buildListingItem(NewsletterEntity $newsletter, NewsletterStatistics $statistics = null, SendingQueueEntity $latestQueue = null): array {
+  /**
+   * @param NewsletterEntity $newsletter
+   * @param NewsletterStatistics|null $statistics
+   * @param SendingQueueEntity|null $latestQueue
+   * @return array<string, mixed>
+   */
+  private function buildListingItem(NewsletterEntity $newsletter, ?NewsletterStatistics $statistics = null, ?SendingQueueEntity $latestQueue = null): array {
     $couponBlockLogs = array_map(function ($item) {
       return "Coupon block: $item";
     }, $this->logRepository->getRawMessagesForNewsletter($newsletter, LoggerFactory::TOPIC_COUPONS));
-
     $data = [
       'id' => (string)$newsletter->getId(), // (string) for BC
       'hash' => $newsletter->getHash(),
-      'subject' => $newsletter->getSubject(),
+      'subject' => $this->processPersonalizationTags($newsletter->getSubject()),
       'type' => $newsletter->getType(),
       'status' => $newsletter->getStatus(),
       'sent_at' => ($sentAt = $newsletter->getSentAt()) ? $sentAt->format(self::DATE_FORMAT) : null,
-      'updated_at' => $newsletter->getUpdatedAt()->format(self::DATE_FORMAT),
+      'updated_at' => ($updatedAt = $newsletter->getUpdatedAt()) ? $updatedAt->format(self::DATE_FORMAT) : null,
       'deleted_at' => ($deletedAt = $newsletter->getDeletedAt()) ? $deletedAt->format(self::DATE_FORMAT) : null,
       'segments' => [],
       'queue' => false,
@@ -162,6 +188,7 @@ class NewslettersResponseBuilder {
           : null
       ),
       'logs' => $couponBlockLogs,
+      'campaign_name' => $newsletter->getCampaignName(),
     ];
 
     if ($newsletter->getType() === NewsletterEntity::TYPE_STANDARD) {
@@ -172,9 +199,8 @@ class NewslettersResponseBuilder {
       $data['segments'] = [];
       $data['options'] = $this->buildOptions($newsletter);
       $data['total_sent'] = $statistics ? $statistics->getTotalSentCount() : 0;
-      $data['total_scheduled'] = $this->sendingQueuesRepository->countAllByNewsletterAndTaskStatus(
-        $newsletter,
-        SendingQueueEntity::STATUS_SCHEDULED
+      $data['total_scheduled'] = $this->sendingQueuesRepository->countAllToProcessByNewsletter(
+        $newsletter
       );
     } elseif ($newsletter->getType() === NewsletterEntity::TYPE_NOTIFICATION) {
       $data['segments'] = $this->buildSegments($newsletter);
@@ -235,7 +261,7 @@ class NewslettersResponseBuilder {
       }, $filters),
       'description' => $segment->getDescription(),
       'created_at' => ($createdAt = $segment->getCreatedAt()) ? $createdAt->format(self::DATE_FORMAT) : null,
-      'updated_at' => $segment->getUpdatedAt()->format(self::DATE_FORMAT),
+      'updated_at' => ($updatedAt = $segment->getUpdatedAt()) ? $updatedAt->format(self::DATE_FORMAT) : null,
       'deleted_at' => ($deletedAt = $segment->getDeletedAt()) ? $deletedAt->format(self::DATE_FORMAT) : null,
     ];
   }
@@ -245,8 +271,6 @@ class NewslettersResponseBuilder {
     if ($task === null) {
       return null;
     }
-    // the following crazy mix of '$queue' and '$task' comes from 'array_merge($task, $queue)'
-    // (MailPoet\Tasks\Sending) which means all equal-named fields will be taken from '$queue'
     return [
       'id' => (string)$queue->getId(), // (string) for BC
       'type' => $task->getType(),
@@ -255,12 +279,12 @@ class NewslettersResponseBuilder {
       'scheduled_at' => ($scheduledAt = $task->getScheduledAt()) ? $scheduledAt->format(self::DATE_FORMAT) : null,
       'processed_at' => ($processedAt = $task->getProcessedAt()) ? $processedAt->format(self::DATE_FORMAT) : null,
       'created_at' => ($createdAt = $queue->getCreatedAt()) ? $createdAt->format(self::DATE_FORMAT) : null,
-      'updated_at' => $queue->getUpdatedAt()->format(self::DATE_FORMAT),
+      'updated_at' => ($updatedAt = $queue->getUpdatedAt()) ? $updatedAt->format(self::DATE_FORMAT) : null,
       'deleted_at' => ($deletedAt = $queue->getDeletedAt()) ? $deletedAt->format(self::DATE_FORMAT) : null,
       'meta' => $queue->getMeta(),
       'task_id' => (string)$task->getId(), // (string) for BC
       'newsletter_id' => ($newsletter = $queue->getNewsletter()) ? (string)$newsletter->getId() : null, // (string) for BC
-      'newsletter_rendered_subject' => $queue->getNewsletterRenderedSubject(),
+      'newsletter_rendered_subject' => $this->processPersonalizationTags($queue->getNewsletterRenderedSubject()),
       'count_total' => (string)$queue->getCountTotal(), // (string) for BC
       'count_processed' => (string)$queue->getCountProcessed(), // (string) for BC
       'count_to_process' => (string)$queue->getCountToProcess(), // (string) for BC

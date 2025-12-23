@@ -13,11 +13,18 @@ use Automattic\Jetpack\Connection\Client;
 use Automattic\Jetpack\Constants;
 use WP_Error;
 use WP_REST_Controller;
+use WP_REST_Request;
 use WP_REST_Response;
 use WP_REST_Server;
 
+if ( ! defined( 'ABSPATH' ) ) {
+	exit( 0 );
+}
+
 /**
  * VideoPress wpcom api v2 endpoint
+ *
+ * @phan-constructor-used-for-side-effects
  */
 class WPCOM_REST_API_V2_Endpoint_VideoPress extends WP_REST_Controller {
 	/**
@@ -238,6 +245,7 @@ class WPCOM_REST_API_V2_Endpoint_VideoPress extends WP_REST_Controller {
 
 		$request_args = array_merge( $args, array( 'body' => $body ) );
 
+		// @phan-suppress-next-line PhanAccessMethodInternal -- Phan is correct, but the usage is intentional.
 		$result = Client::_wp_remote_request( $url, $request_args );
 
 		if ( is_wp_error( $result ) ) {

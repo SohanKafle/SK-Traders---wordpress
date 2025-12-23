@@ -9,6 +9,8 @@ namespace Automattic\Jetpack\VideoPress;
 
 use Automattic\Jetpack\Connection\Client;
 use Automattic\Jetpack\Current_Plan;
+use WP_Error;
+use WP_Post;
 
 /**
  * VideoPress Attachment_Handler class.
@@ -192,7 +194,7 @@ class Attachment_Handler {
 	 */
 	public static function prepare_attachment_for_js( $post ) {
 		if ( 'video' === $post['type'] ) {
-			$guid = get_post_meta( $post['id'], 'videopress_guid' );
+			$guid = get_post_meta( $post['id'], 'videopress_guid', true );
 			if ( $guid ) {
 				$post['videopress_guid'] = $guid;
 			}

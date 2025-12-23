@@ -16,6 +16,10 @@ use Jetpack;
 use Jetpack_Gutenberg;
 use Jetpack_Mapbox_Helper;
 
+if ( ! defined( 'ABSPATH' ) ) {
+	exit( 0 );
+}
+
 if ( ! class_exists( 'Jetpack_Mapbox_Helper' ) ) {
 	require_once JETPACK__PLUGIN_DIR . '_inc/lib/class-jetpack-mapbox-helper.php';
 }
@@ -58,7 +62,7 @@ function wpcom_load_event( $access_token_source ) {
 /**
  * Function to determine which map provider to choose
  *
- * @param array $html The block's HTML - needed for the class name.
+ * @param string $html The block's HTML - needed for the class name.
  *
  * @return string The name of the map provider.
  */
@@ -66,7 +70,7 @@ function get_map_provider( $html ) {
 	$mapbox_styles = array( 'is-style-terrain' );
 	// return mapbox if html contains one of the mapbox styles
 	foreach ( $mapbox_styles as $style ) {
-		if ( strpos( $html, $style ) !== false ) {
+		if ( str_contains( $html, $style ) ) {
 			return 'mapbox';
 		}
 	}
@@ -124,7 +128,7 @@ function load_assets( $attr, $content ) {
 
 	$map_provider = get_map_provider( $content );
 	if ( $map_provider === 'mapkit' ) {
-		return preg_replace( '/<div /', '<div data-map-provider="mapkit" data-blog-id="' . \Jetpack_Options::get_option( 'id' ) . '" ', $content, 1 );
+		return preg_replace( '/<div /', '<div data-map-provider="mapkit" data-api-key="' . esc_attr( $access_token['key'] ) . '"  data-blog-id="' . \Jetpack_Options::get_option( 'id' ) . '" ', $content, 1 );
 	}
 
 	return preg_replace( '/<div /', '<div data-map-provider="mapbox" data-api-key="' . esc_attr( $access_token['key'] ) . '" ', $content, 1 );
@@ -153,6 +157,11 @@ function render_single_block_page() {
 	$post_html = new \DOMDocument();
 	/** This filter is already documented in core/wp-includes/post-template.php */
 	$content = apply_filters( 'the_content', $post->post_content );
+
+	// Return early if empty to prevent DOMDocument::loadHTML fatal.
+	if ( empty( $content ) ) {
+		return;
+	}
 
 	/* Suppress warnings */
 	libxml_use_internal_errors( true );
@@ -189,7 +198,7 @@ function render_single_block_page() {
 		preg_replace( '/(?<=<div\s)/', 'data-api-key="' . esc_attr( $access_token['key'] ) . '" ', $block_markup, 1 )
 	);
 	echo $page_html; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-	exit;
+	exit( 0 );
 }
 add_action( 'wp', __NAMESPACE__ . '\render_single_block_page' );
 
@@ -228,7 +237,7 @@ function map_block_from_geo_points( $points ) {
 	$map_block .= sprintf(
 		'<div class="wp-block-jetpack-map" data-map-style="default" data-map-details="true" data-points="%1$s" data-zoom="%2$d" data-map-center="%3$s" data-marker-color="red" data-show-fullscreen-button="true">',
 		esc_html( wp_json_encode( $map_block_data['points'] ) ),
-		(int) $map_block_data['zoom'],
+		$map_block_data['zoom'],
 		esc_html( wp_json_encode( $map_block_data['mapCenter'] ) )
 	);
 	$map_block .= '<ul>' . implode( "\n", $list_items ) . '</ul>';
