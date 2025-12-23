@@ -11,6 +11,7 @@ defined('ABSPATH') || exit;
 /**
  * WC_Gateway_Khalti_Response class.
  */
+#[AllowDynamicProperties] 
 abstract class WC_Gateway_Khalti_Response
 {
     /**

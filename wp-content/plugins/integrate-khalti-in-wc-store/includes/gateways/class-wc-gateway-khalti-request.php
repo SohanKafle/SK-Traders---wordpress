@@ -11,6 +11,7 @@ defined('ABSPATH') || exit;
 /**
  * WC_Gateway_Khalti_Request class.
  */
+#[AllowDynamicProperties] 
 class WC_Gateway_Khalti_Request
 {
 
@@ -66,12 +67,26 @@ class WC_Gateway_Khalti_Request
             ]
         );
 
-        if ($this->api_response_is_ok($order_id, $response)) {
-            $response_body = wp_remote_retrieve_body($response);
-            $response_body = json_decode($response_body, true);
-            $redirect_to = $response_body['payment_url'];
 
-            return $redirect_to;
+// echo '<pre>';
+// print_r($response);
+// echo '</pre>';
+// exit;
+
+        $response_body = wp_remote_retrieve_body($response);
+        $response_body = json_decode($response_body, true);
+
+        if ($this->api_response_is_ok($order_id, $response)) {
+            return array(
+                'result' => 'success',
+                'redirect' => $response_body['payment_url']
+            );
+        } else {
+            return array(
+                'result' => 'success',
+                'redirect' => false,
+                'messages' => $this->collect_error_messages_from_api_response($response_body)
+            );
         }
 
         return false;
@@ -96,7 +111,7 @@ class WC_Gateway_Khalti_Request
             'return_url' => $this->notify_url,
             'website_url' => get_site_url(),
             'amount' => $order->get_total() * 100,
-            'purchase_order_id' => $order->get_id(),
+            'purchase_order_id' => $order->get_order_key(),
             'purchase_order_name' => $order->get_order_key(),
             'product_details' => $this->get_products_info($order)
         ];
@@ -135,9 +150,6 @@ class WC_Gateway_Khalti_Request
      */
     private function get_amount_breakdown($order)
     {
-        // $sub_total = ($order->data['total'] + $order->data['discount_total'])
-        //     - ($order->data['shipping_total'] + $order->data['total_tax']);
-
         $total = $order->get_total();
         $discount_total = $order->get_discount_total();
         $shipping_total = $order->get_shipping_total();
@@ -298,5 +310,54 @@ class WC_Gateway_Khalti_Request
         }
 
         return true;
+    }
+
+    /**
+     * Collect error messages from responde body of api response
+     *
+     * @param  $response_body arrayobject.
+     * @return string
+     */
+    private function collect_error_messages_from_api_response($response_body)
+    {
+        if (
+            array_key_exists('error_key', (array) $response_body)
+            && 'validation_error' == $response_body['error_key']
+        ) {
+            unset($response_body['error_key']);
+
+            $errors = [];
+
+            foreach ($response_body as $key_1 => $response_l1) {
+                if (is_array($response_l1)) {
+                    foreach ($response_l1 as $key_2 => $response_l2) {
+                        if (is_array($response_l2)) {
+                            foreach ($response_l2 as $key_3 => $response_l3) {
+                                array_push(
+                                    $errors,
+                                    (is_numeric($key_3) ? $key_2 : $key_3) . ' - ' . $response_l3
+                                );
+                            }
+                        } else {
+                            array_push(
+                                $errors,
+                                (is_numeric($key_2) ? $key_1 : $key_2) . ' - ' .  $response_l2
+                            );
+                        }
+                    }
+                } else {
+                    array_push(
+                        $errors,
+                        $key_1 . ' - ' . $response_l1
+                    );
+                }
+            }
+
+            $message =  implode('<br/>', $errors);
+        } else {
+            $message = 'Integration error: ' . @$response_body['detail'];
+        }
+
+        return "<div class='woocommerce-error'>$message</div>";
     }
 }

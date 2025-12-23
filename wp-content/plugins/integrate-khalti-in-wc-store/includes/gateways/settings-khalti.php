@@ -8,6 +8,8 @@
 
 defined('ABSPATH') || exit;
 
+// use Automattic\WooCommerce\Utilities\LoggingUtil;
+
 /**
  * Settings for Khalti Gateway.
  */
@@ -106,7 +108,14 @@ return array(
                 'Log Khalti events, such as IPN requests, inside <code>%s</code>',
                 'woocommerce-khalti'
             ),
-            wc_get_log_file_path('khalti')
+            wp_upload_dir()['basedir'].'/wc-logs/khalti-'.date('Y-m-d').'-xxxxxxxxxx.log'
+        ). '<br/>'. sprintf(
+            /* translators: %s: WooCommerce log link */
+            __(
+                'You may also check WC logs from <a href="%s">WooCommerce > Status > Logs</a>',
+                'woocommerce-khalti'
+            ),
+            admin_url('admin.php?page=wc-status&tab=logs')
         ),
     ),
     'ipn_notification'     => array(

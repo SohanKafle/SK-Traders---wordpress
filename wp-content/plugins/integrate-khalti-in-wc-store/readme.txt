@@ -1,12 +1,13 @@
 === Integrate Khalti in WC Store ===
-Contributors: khaltiwp
+Contributors: act360
 Tags: woocommerce, khalti, payment gateway
 Requires at least: 5.0
-Tested up to: 6.4.2
-Stable tag: 6.3
+Tested up to: 6.8
+Stable tag: 1.1.2
 License: GPLv3 or later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
+Adds Khalti payment gateway option in the WooCommerce plugin.
 
 == Description ==
 
@@ -16,26 +17,9 @@ Please note that [WooCommerce](https://wordpress.org/plugins/woocommerce/) must 
 
 == Introduction ==
 
-[Khalti](https://Khalti.com/) is a Digital Wallet, Payment Gateway, and API Provider System for various online services for Nepal. If your online business is looking for an easy and secure way to start accepting payments online, then Khalti Payment Gateway is your solution. 
+Add Khalti as a payment method in your WooCommerce store.
 
-With Khalti, you can accepts payments from:
-
-* Khalti users
-* eBanking users from Khalti’s partnered banks
-* Mobile Banking users from partnered banks of Khalti
-* SCT/VISA card holders(Approval for Card options to be enabled after request)
-* ConnectIPS users
-
-Using Khalti Payment Gateway, you can avoid the hassle of integrating with individual banks. 
-
-== To use Khalti Payment Gateway ==
-
-* Install the Khalti plugin
-* Create a merchant account at Khalti at admin.khalti.com
-* Confirm the agreement with Khalti and get live keys generated from Khalti team
-* Find the live key from the merchant account and use it on the Plugin at Woocommerce
-* Activate the plugin and test live transaction
-* Coordinate with Khalti team for increasing limitation and slabs when you’re ready to accept payments
+[Khalti](https://Khalti.com/) is a Nepali Digital Payment Portal developed by Khalti. This means, if your store doesn't accept payment in NPR, you do not need this plugin.
 
 
 == Installation ==
@@ -85,7 +69,7 @@ You forgot to select the Nepal during registration at checkout. The Khalti payme
 
 = The request was paid and got the status of "processing" and not as "complete", that is right? =
 
-Yes, this is right and it means that the plugin is working as it should.
+Yes, this is right and it means that the plugin is working as it should. Order status is changed to complete only if the all order items are virtual.
 
 Payment gateways in WooCommerce change the order status to "processing" when the payment is confirmed and should never be changed alone to "complete" because the request should go only to the status "completed" after it has been delivered.
 
@@ -100,21 +84,8 @@ Bugs can be reported either in our support forum or preferably on the [WooCommer
 Of course! Join in on our [GitHub repository](https://github.com/khalti/woocommerce-plugin-kpg-2)
 
 
-== Khalti Business Team ==
-
-+977 9801165557 / [merchant@khalti.com](merchant@khalti.com)
-
-
-== Support ==
-
-For any queries, feel free to call us at :-
-
-Mobile(Viber/Whatsapp/Skype) : 9801301162, 9801165565
-Email : [merchantsupport@khalti.com](merchantsupport@khalti.com)
-
-
 == Credits ==
-[Khalti](https://khalti.com/)
+[ACT360](https://www.act360.com.np/)
 
 
 == Screenshots ==
@@ -122,8 +93,19 @@ Email : [merchantsupport@khalti.com](merchantsupport@khalti.com)
 1. Settings page.
 2. Checkout page.
 
-
 == Changelog ==
+
+= 1.1.2 - 04-08-2024 =
+* Updated log path display method
+* Added link to view WooCommerce log
+* Supress PHP(8.2) warning "Creation of dynamic property is deprecated" in the log
+
+
+= 1.1.1 - 09-02-2024 =
+* Added validation error display returned by Khalti API
+
+= 1.1.0 - 29-12-2023 =
+* Added Woocommerce HPOS compatiblity
 
 = 1.0.0 - 12-05-2023 =
 * First release.

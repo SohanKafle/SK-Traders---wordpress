@@ -4,7 +4,7 @@
  * Plugin Name: Integrate Khalti in WC Store
  * Plugin URI: https://khalti.com/payment-gateway/
  * Description: Integrate Khalti in WooCommerce is a plugin that enables payment via Khalti Wallet in WooCommerce shop in Nepal.
- * Version: 1.0
+ * Version: 1.1.2
  * Requires at least: 5.0
  * Requires PHP: 5.6
  * Author: Khalti
@@ -13,10 +13,23 @@
  * Domain Path: /languages
  *
  * WC requires at least: 4.5.0
- * WC tested up to: 8.0.1
+ * WC tested up to: 9.1.4
  */
 
 defined('ABSPATH') || exit;
+
+add_action(
+    'before_woocommerce_init',
+    function () {
+        if (class_exists(\Automattic\WooCommerce\Utilities\FeaturesUtil::class)) {
+            \Automattic\WooCommerce\Utilities\FeaturesUtil::declare_compatibility(
+                'custom_order_tables',
+                __FILE__,
+                true
+            );
+        }
+    }
+);
 
 // Define WC_KHALTI_PLUGIN_FILE.
 if (!defined('WC_KHALTI_PLUGIN_FILE')) {

@@ -13,6 +13,7 @@ defined('ABSPATH') || exit;
  *
  * @class WooCommerce_Khalti
  */
+#[AllowDynamicProperties]
 final class WooCommerce_Khalti
 {
     /**

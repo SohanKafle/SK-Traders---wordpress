@@ -1,5 +1,7 @@
 <?php
 
+use Automattic\WooCommerce\Utilities\OrderUtil;
+
 if (!class_exists('WP_List_Table')) {
     include_once ABSPATH . 'wp-admin/includes/class-wp-list-table.php';
 }
@@ -7,6 +9,7 @@ if (!class_exists('WP_List_Table')) {
 /**
  * Transaction_Gateway_Report class.
  */
+#[AllowDynamicProperties] 
 class WooCommerce_Khalti_Transaction_Report extends WP_List_Table
 {
     /**
@@ -42,7 +45,7 @@ class WooCommerce_Khalti_Transaction_Report extends WP_List_Table
             case 'order_id':
                 return $item->get_id();
             case 'reference':
-                return $item->get_order_key();
+                return method_exists($item, 'get_order_key') ? $item->get_order_key() : 'N/A';
             case 'amount':
                 return $item->get_total();
             case 'status':
@@ -178,14 +181,34 @@ class WooCommerce_Khalti_Transaction_Report extends WP_List_Table
      */
     public function fetch_order()
     {
-        $args = array(
-            'meta_key'      => '_payment_method',
-            'meta_value'    => 'khalti',
-            'meta_compare'  => '=',
-        );
+        if (OrderUtil::custom_orders_table_usage_is_enabled()) {
+            $args = array(
+                'status' => array('wc-processing', 'wc-on-hold', 'wc-cancelled', 'wc-completed', 'wc-pending', 'wc-failed', 'wc-refunded'),
+                'meta_query' => array(
+                    'meta_key'      => '_payment_method',
+                    'meta_value'    => 'khalti',
+                    'meta_compare'  => '=',
+                )
+            );
 
-        if (!empty($_POST) && isset($_POST['s'])) {
-            $args['post_password'] = sanitize_text_field($_POST['s']);
+            if (!empty($_POST) && isset($_POST['s']) && '' != $_POST['s']) {
+                $args['field_query'] = array(
+                    array(
+                        'field' => 'order_key',
+                        'value' => sanitize_text_field($_POST['s'])
+                    )
+                );
+            }
+        } else {
+            $args = array(
+                'meta_key' => '_payment_method',
+                'meta_value' => 'khalti',
+                'meta_compare' => '=',
+            );
+
+            if (!empty($_POST) && isset($_POST['s'])) {
+                $args['post_password'] = sanitize_text_field($_POST['s']);
+            }
         }
 
         return wc_get_orders($args);

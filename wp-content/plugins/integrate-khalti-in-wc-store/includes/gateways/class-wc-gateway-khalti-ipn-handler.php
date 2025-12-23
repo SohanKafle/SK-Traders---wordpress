@@ -8,11 +8,14 @@
 
 defined('ABSPATH') || exit;
 
+use Automattic\WooCommerce\Utilities\OrderUtil;
+
 require_once dirname(__FILE__) . '/class-wc-gateway-khalti-response.php';
 
 /**
  * WC_Gateway_Khalti_IPN_Handler class.
  */
+#[AllowDynamicProperties] 
 class WC_Gateway_Khalti_IPN_Handler extends WC_Gateway_Khalti_Response
 {
     /**
@@ -217,17 +220,34 @@ class WC_Gateway_Khalti_IPN_Handler extends WC_Gateway_Khalti_Response
 
         // Log Khalti Reference Code.
         if ($txn_id) {
-            update_post_meta(
-                $order->get_id(),
-                '_khalti_pidx',
-                wc_clean($response['pidx'])
-            );
 
-            update_post_meta(
-                $order->get_id(),
-                '_khalti_txn_id',
-                $txn_id
-            );
+            if (OrderUtil::custom_orders_table_usage_is_enabled()) {
+                // HPOS usage is enabled.
+                $order->add_meta_data(
+                    '_khalti_pidx',
+                    wc_clean($response['pidx'])
+                );
+
+                $order->add_meta_data(
+                    '_khalti_txn_id',
+                    $txn_id
+                );
+
+                $order->save();
+            } else {
+                // Traditional CPT-based orders are in use.
+                update_post_meta(
+                    $order->get_id(),
+                    '_khalti_pidx',
+                    wc_clean($response['pidx'])
+                );
+
+                update_post_meta(
+                    $order->get_id(),
+                    '_khalti_txn_id',
+                    $txn_id
+                );
+            }
         }
     }
 
@@ -322,7 +342,7 @@ class WC_Gateway_Khalti_IPN_Handler extends WC_Gateway_Khalti_Response
     /**
      * Marks order as complete if contains virtual items only.
      *
-     * @param string $order order object.
+     * @param WC_Order $order order object.
      */
     private function mark_order_as_complete($order)
     {

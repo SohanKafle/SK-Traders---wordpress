@@ -13,6 +13,7 @@ defined('ABSPATH') || exit;
 /**
  * WC_Gateway_Khalti Class.
  */
+#[AllowDynamicProperties] 
 class WC_Gateway_Khalti extends WC_Payment_Gateway
 {
     const LIVE_URL = 'https://khalti.com/api/v2/epayment';
@@ -54,7 +55,7 @@ class WC_Gateway_Khalti extends WC_Payment_Gateway
 
         $this->icon = apply_filters(
             'woocommerce_khalti_icon',
-            plugins_url('assets/khalti.png', WC_KHALTI_PLUGIN_FILE)
+            plugins_url('assets/images/khalti.png', WC_KHALTI_PLUGIN_FILE)
         );
         $this->has_fields = false;
         $this->order_button_text = __('Proceed to Khalti', 'woocommerce-khalti');
@@ -223,10 +224,7 @@ class WC_Gateway_Khalti extends WC_Payment_Gateway
         $order = wc_get_order($order_id);
         $khalti_request = new WC_Gateway_Khalti_Request($this);
 
-        return array(
-            'result' => 'success',
-            'redirect' => $khalti_request->get_request_url($order),
-        );
+        return  $khalti_request->get_request_url($order);
     }
 
     /**

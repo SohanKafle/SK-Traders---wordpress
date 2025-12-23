@@ -10,9 +10,12 @@
 
 defined('ABSPATH') || exit;
 
+use Automattic\WooCommerce\Internal\DataStores\Orders\CustomOrdersTableController;
+
 /**
  * WC_Gateway_Khalti Class.
  */
+#[AllowDynamicProperties] 
 class WooCommerce_Khalti_Data
 {
     /**
@@ -26,7 +29,9 @@ class WooCommerce_Khalti_Data
     {
         add_action(
             'add_meta_boxes',
-            array($this, 'add_custom_meta_boxes')
+            array($this, 'add_custom_meta_boxes'),
+            10,
+            1
         );
 
         add_action(
@@ -59,29 +64,24 @@ class WooCommerce_Khalti_Data
 
     public function add_custom_meta_boxes()
     {
-        global $post;
-
-        if (($order = wc_get_order($post->ID))
-            && ('khalti' != $order->get_payment_method())
-        ) {
-            return;
-        }
+        $screen = (class_exists('\Automattic\WooCommerce\Internal\DataStores\Orders\CustomOrdersTableController')
+            && wc_get_container()->get(CustomOrdersTableController::class)->custom_orders_table_usage_is_enabled())
+            ? wc_get_page_screen_id('shop-order')
+            : 'shop_order';
 
         add_meta_box(
             'mv_other_fields',
             'Payment Info',
             array($this, 'khalti_info'),
-            'shop_order',
+            $screen,
             'side',
             'core'
         );
     }
 
-    public function khalti_info()
+    public function khalti_info($post)
     {
-        global $post;
-
-        $order = wc_get_order($post->ID);
+        $order = ($post instanceof WP_Post) ? wc_get_order($post->ID) : $post;
 
         $meta_info = '<p>Payment Method: <strong>Khalti </strong>';
         $meta_info .= '<p>Txn ID: <strong>' . $order->get_meta('_khalti_txn_id') . '</strong>';
