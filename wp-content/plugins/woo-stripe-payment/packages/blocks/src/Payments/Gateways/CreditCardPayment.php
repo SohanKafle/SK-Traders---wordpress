@@ -22,6 +22,10 @@ class CreditCardPayment extends AbstractStripePayment {
 	 */
 	private $payment_intent_ctrl;
 
+	public function is_active() {
+		return wc_string_to_bool( $this->get_setting( 'enabled', 'yes' ) );
+	}
+
 	public function get_payment_method_script_handles() {
 		$this->assets_api->register_script( 'wc-stripe-block-credit-card', 'build/wc-stripe-credit-card.js' );
 
@@ -36,7 +40,6 @@ class CreditCardPayment extends AbstractStripePayment {
 			'customFieldOptions'     => $this->payment_method->get_card_custom_field_options(),
 			'customFormActive'       => $this->payment_method->is_custom_form_active(),
 			'isPaymentElement'       => $this->payment_method->is_payment_element_active(),
-			'elementOptions'         => $this->payment_method->get_element_options(),
 			'customForm'             => $this->payment_method->get_option( 'custom_form' ),
 			'customFormLabels'       => wp_list_pluck( wc_stripe_get_custom_forms(), 'label' ),
 			'postalCodeEnabled'      => $this->payment_method->postal_enabled(),
@@ -95,6 +98,22 @@ class CreditCardPayment extends AbstractStripePayment {
 
 	public function is_payment_element_active() {
 		return $this->get_setting( 'form_type' ) === 'payment';
+	}
+
+	protected function get_script_translations() {
+		return [
+			'labels'           => [
+				'number' => __( 'Card Number', 'woo-stripe-payment' ),
+				'exp'    => __( 'Expiration', 'woo-stripe-payment' ),
+				'cvv'    => __( 'CVV', 'woo-stripe-payment' )
+			],
+			'unsupported_form' => __( 'Unsupported custom form. Please choose another custom form option in the Credit Card Settings.', 'woo-stripe-payment' ),
+			'installments'     => [
+				'pay'           => __( 'Pay in installments:', 'woo-stripe-payment' ),
+				'loading'       => __( 'Loading installments...', 'woo-stripe-payment' ),
+				'complete_form' => __( 'Fill out card form for eligibility.', 'woo-stripe-payment' )
+			]
+		];
 	}
 
 }

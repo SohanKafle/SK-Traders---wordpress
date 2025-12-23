@@ -55,6 +55,7 @@ final class Stripe implements IntegrationInterface {
 		$api = new Api\PaymentIntents();
 
 		( new WebhooksHealthCheck() )->init();
+		( new DomainHealthCheck() )->init();
 		( new Admin\Payments\SingleActionsHandler() )->init( $api );
 
 		// Bail early for paid users with active Stripe addon.
@@ -74,6 +75,7 @@ final class Stripe implements IntegrationInterface {
 
 		if ( wpforms_is_admin_page( 'builder' ) ) {
 			( new Admin\Builder\Settings() )->init();
+			( new Admin\Builder\Notifications() )->init();
 		}
 	}
 }

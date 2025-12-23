@@ -7,7 +7,6 @@ if (!defined('ABSPATH')) exit;
 
 use MailPoet\Analytics\Analytics;
 use MailPoet\Entities\ScheduledTaskEntity;
-use MailPoet\WP\Functions;
 use Mixpanel as MixpanelLibrary;
 
 class Mixpanel extends SimpleWorker {
@@ -19,14 +18,12 @@ class Mixpanel extends SimpleWorker {
 
   const TASK_TYPE = 'mixpanel';
 
-  /** @var MixpanelLibrary */
-  private $mixpanel;
+  private MixpanelLibrary $mixpanel;
 
   public function __construct(
-    Analytics $analytics,
-    Functions $wp
+    Analytics $analytics
   ) {
-    parent::__construct($wp);
+    parent::__construct();
     $this->analytics = $analytics;
     $this->mixpanel = MixpanelLibrary::getInstance(self::PRODUCTION_PROJECT_ID);
     $this->mixpanel->register('Platform', 'Plugin');
@@ -37,7 +34,7 @@ class Mixpanel extends SimpleWorker {
   }
 
   public function maybeReportAnalyticsToMixpanel(): bool {
-    if (!$this->analytics->shouldSend()) {
+    if (!$this->analytics->shouldSendToMixpanel()) {
       return true;
     }
     return $this->reportAnalyticsToMixpanel();
@@ -56,12 +53,12 @@ class Mixpanel extends SimpleWorker {
     $this->mixpanel->people->set($publicId, $data);
     $this->mixpanel->track('User Properties', $data);
 
-    $this->analytics->recordDataSent();
+    $this->analytics->recordMixpanelDataSent();
 
     return true;
   }
 
   public function getNextRunDate() {
-    return $this->analytics->getNextSendDate()->addMinutes(rand(0, 59));
+    return $this->analytics->getNextSendDateForMixpanel()->addMinutes(rand(0, 59));
   }
 }

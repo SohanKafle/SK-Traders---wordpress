@@ -250,6 +250,10 @@ class Swatches {
 		if ( empty( $settings ) ) {
 			return $select_html;
 		}
+
+		// Retrieve the product from the filter if not available then use the Global Product.
+		$product = ! empty( $args['product'] ) && is_a( $args['product'], 'WC_Product_Variable' ) ? $args['product'] : $product;
+		
 		$attribute     = $product->get_attributes();
 		$attr_id       = isset( $attribute[ strtolower( $args['attribute'] ) ] ) ? $attribute[ strtolower( $args['attribute'] ) ]->get_id() : 0;
 		$shape         = get_option( "cfvsw_product_attribute_shape-$attr_id", 'default' );
@@ -309,7 +313,7 @@ class Swatches {
 					$tooltip       = $settings['tooltip'] ? $term_name : '';
 					$style         = $common_style;
 					$inner_style   = 'background-color:' . $color . ';';
-					$html         .= "<div class='cfvsw-swatches-option' data-slug='" . esc_attr( $slug ) . "' data-title='" . esc_attr( $term_name ) . "' data-tooltip='" . esc_attr( $tooltip ) . "' style=" . esc_attr( $style ) . '><div class="cfvsw-swatch-inner" style="' . esc_attr( $inner_style ) . '"></div></div>';
+					$html         .= "<div class='cfvsw-swatches-option ' data-slug='" . esc_attr( $slug ) . "' data-title='" . esc_attr( $term_name ) . "' data-tooltip='" . esc_attr( $tooltip ) . "' style=" . esc_attr( $style ) . '><div class="cfvsw-swatch-inner" style="' . esc_attr( $inner_style ) . '"></div></div>';
 				}
 				$html .= $more ? '<span class="cfvsw-more-link" style="line-height:' . esc_attr( $min_height ) . '">' . $more . '</span' : '';
 				$html .= '</div>';
@@ -323,8 +327,9 @@ class Swatches {
 					$tooltip       = $settings['tooltip'] ? $term_name : '';
 					$style         = $common_style;
 					$inner_style   = "background-image:url('" . esc_url( $image ) . "');background-size:cover;";
-					$html         .= "<div class='cfvsw-swatches-option cfvsw-image-option' data-slug='" . esc_attr( $slug ) . "' data-title='" . esc_attr( $term_name ) . "' data-tooltip='" . esc_attr( $tooltip ) . "' style=" . esc_attr( $style ) . '>';
-					$html         .= '<div class="cfvsw-swatch-inner" style="' . $inner_style . '"></div></div>';
+
+					$html .= "<div class='cfvsw-swatches-option cfvsw-image-option' data-slug='" . esc_attr( $slug ) . "' data-title='" . esc_attr( $term_name ) . "' data-tooltip='" . esc_attr( $tooltip ) . "' style=" . esc_attr( $style ) . '>';
+					$html .= '<div class="cfvsw-swatch-inner" style="' . $inner_style . '"></div></div>';
 				}
 				$html .= $more ? '<span class="cfvsw-more-link" style="line-height:' . esc_attr( $min_height ) . '">' . $more . '</span' : '';
 				$html .= '</div>';
@@ -428,11 +433,17 @@ class Swatches {
 	 */
 	public function variation_attribute_html_shop_page() {
 		global $product;
+
 		if ( ! $this->settings[ CFVSW_GLOBAL ]['enable_swatches_shop'] ) {
 			return;
 		}
 
 		if ( ! $this->requires_shop_settings() ) {
+			return;
+		}
+
+		// Return of product is not found.
+		if ( empty( $product ) ) {
 			return;
 		}
 
@@ -443,14 +454,18 @@ class Swatches {
 		if ( ! $product->get_available_variations() ) {
 			return;
 		}
+
 		$product_id = $product->get_id();
 		$settings   = $this->settings[ CFVSW_SHOP ];
+
 		// Get Available variations?
 		$get_variations       = count( $product->get_children() ) <= apply_filters( 'woocommerce_ajax_variation_threshold', 30, $product );
 		$available_variations = $get_variations ? $product->get_available_variations() : false;
 		$attributes           = $product->get_variation_attributes();
+
 		// Catlog mode functionality.
 		$count_attr_for_catalog = '';
+
 		if ( ! empty( $settings['special_attr_archive'] ) ) {
 			$count_attr_for_catalog = count( $attributes ) > 1 ? 'data-cfvsw-catalog=1' : '';
 			$attributes             = $this->catalog_show_attr_shop_page( $settings, $product_id, $attributes );
@@ -460,7 +475,7 @@ class Swatches {
 		}
 
 		$attribute_keys  = array_keys( $attributes );
-		$variations_json = wp_json_encode( $available_variations );
+		$variations_json = apply_filters( 'cfvsw_available_variations', wp_json_encode( $available_variations ) );
 		?>
 		<div class="cfvsw_variations_form variations_form cfvsw_shop_align_<?php echo esc_attr( $settings['alignment'] ); ?>" data-product_variations="<?php echo esc_attr( $variations_json ); ?>" data-product_id="<?php echo absint( $product_id ); ?>" <?php echo esc_attr( $count_attr_for_catalog ); ?>>
 			<?php if ( empty( $available_variations ) && false !== $available_variations ) { ?>
@@ -540,7 +555,8 @@ class Swatches {
 	 * @since 1.0.0
 	 */
 	public function inline_css() {
-		$style = $this->settings[ CFVSW_STYLE ];
+		$style    = $this->settings[ CFVSW_STYLE ];
+		$settings = array();
 
 		if ( $this->requires_shop_settings() ) {
 			$settings = $this->settings[ CFVSW_SHOP ]['override_global'] ? $this->settings[ CFVSW_SHOP ] : array_merge( $this->settings[ CFVSW_SHOP ], $this->settings[ CFVSW_GLOBAL ] );
@@ -558,11 +574,12 @@ class Swatches {
 		}
 
 		$custom_css .= ':root {';
-		$custom_css .= "--cfvsw-swatches-font-size: {$settings['font_size']}px;";
-		$custom_css .= "--cfvsw-swatches-border-color: {$style['border_color']};";
-		$custom_css .= "--cfvsw-swatches-border-color-hover: {$style['border_color']}80;";
+		$custom_css .= ! empty( $settings['font_size'] ) ? "--cfvsw-swatches-font-size: {$settings['font_size']}px;" : '';
+		$custom_css .= ! empty( $style['border_color'] ) ? "--cfvsw-swatches-border-color: {$style['border_color']};" : '';
+		$custom_css .= ! empty( $style['border_color'] ) ? "--cfvsw-swatches-border-color-hover: {$style['border_color']}80;" : '';
+		$custom_css .= ! empty( $settings['border_width'] ) ? "--cfvsw-swatches-border-width: {$settings['border_width']}px;" : '';
 		$custom_css .= ! empty( $style['label_font_size'] ) ? "--cfvsw-swatches-label-font-size: {$style['label_font_size']}px;" : '';
-		$custom_css .= "--cfvsw-swatches-tooltip-font-size: {$style['tooltip_font_size']}px;";
+		$custom_css .= ! empty( $style['tooltip_font_size'] ) ? "--cfvsw-swatches-tooltip-font-size: {$style['tooltip_font_size']}px;" : '';
 		$custom_css .= '}';
 
 		if ( ! empty( $custom_css ) ) {
@@ -586,6 +603,12 @@ class Swatches {
 			$settings = $this->settings[ CFVSW_GLOBAL ];
 		}
 
+		// If the disable type is not set or empty in any case, then simply hide the attributes.
+		if ( empty( $settings['disable_attr_type'] ) ) {
+			$disable_class = 'cfvsw-swatches-hide';
+			return $disable_class;
+		}
+
 		switch ( $settings['disable_attr_type'] ) {
 			case 'blurCross':
 				$disable_class = 'cfvsw-swatches-blur-cross';
@@ -598,6 +621,7 @@ class Swatches {
 
 		return $disable_class;
 	}
+
 
 	/**
 	 * Returns the position of swatches on shop page

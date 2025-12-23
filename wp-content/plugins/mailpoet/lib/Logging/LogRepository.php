@@ -8,16 +8,40 @@ if (!defined('ABSPATH')) exit;
 use MailPoet\Doctrine\Repository;
 use MailPoet\Entities\LogEntity;
 use MailPoet\Entities\NewsletterEntity;
+use MailPoet\InvalidStateException;
 use MailPoet\Util\Helpers;
 use MailPoetVendor\Carbon\Carbon;
-use MailPoetVendor\Doctrine\DBAL\Driver\PDO\Connection;
+use MailPoetVendor\Doctrine\DBAL\ParameterType;
 
 /**
  * @extends Repository<LogEntity>
  */
 class LogRepository extends Repository {
-  protected function getEntityClassName() {
-    return LogEntity::class;
+  public function saveLog(LogEntity $log): void {
+    // Save log entity using DBAL to avoid calling "flush()" on the entity manager.
+    // Calling "flush()" can have unintended side effects, such as saving unwanted
+    // changes or trying to save entities that were detached from the entity manager.
+    $this->entityManager->getConnection()->insert(
+      $this->entityManager->getClassMetadata(LogEntity::class)->getTableName(),
+      [
+        'name' => $log->getName(),
+        'level' => $log->getLevel(),
+        'message' => $log->getMessage(),
+        'raw_message' => $log->getRawMessage(),
+        'context' => json_encode($log->getContext()),
+        'created_at' => (
+          $log->getCreatedAt() ?? Carbon::now()->millisecond(0)
+        )->format('Y-m-d H:i:s'),
+      ],
+    );
+
+    // sync the changes with the entity manager
+    if ($this->entityManager->isOpen()) {
+      $lastInsertId = (int)$this->entityManager->getConnection()->lastInsertId();
+      $log->setId($lastInsertId);
+      $this->entityManager->getUnitOfWork()->registerManaged($log, ['id' => $log->getId()], []);
+      $this->entityManager->refresh($log);
+    }
   }
 
   /**
@@ -29,11 +53,11 @@ class LogRepository extends Repository {
    * @return LogEntity[]
    */
   public function getLogs(
-    \DateTimeInterface $dateFrom = null,
-    \DateTimeInterface $dateTo = null,
-    string $search = null,
-    string $offset = null,
-    string $limit = null
+    ?\DateTimeInterface $dateFrom = null,
+    ?\DateTimeInterface $dateTo = null,
+    ?string $search = null,
+    ?string $offset = null,
+    ?string $limit = null
   ): array {
     $query = $this->doctrineRepository->createQueryBuilder('l')
       ->select('l');
@@ -69,20 +93,26 @@ class LogRepository extends Repository {
     return $query->getQuery()->getResult();
   }
 
-  public function purgeOldLogs(int $daysToKeepLogs, int $limit = 1000) {
+  public function purgeOldLogs(int $daysToKeepLogs, int $limit = 1000): int {
     $logsTable = $this->entityManager->getClassMetadata(LogEntity::class)->getTableName();
-    $this->entityManager->getConnection()->executeStatement("
-      DELETE FROM $logsTable
+    $result = $this->entityManager->getConnection()->executeStatement(
+      "
+      DELETE FROM `{$logsTable}`
       WHERE `created_at` < :date
-      ORDER BY `id` ASC LIMIT :limit
-    ", [
+      ORDER BY `created_at` ASC, `id` ASC
+      LIMIT :limit
+    ",
+      [
       'date' => Carbon::now()->subDays($daysToKeepLogs)->toDateTimeString(),
       'limit' => $limit,
-    ],
-    [
-      'date' => Connection::PARAM_STR,
-      'limit' => Connection::PARAM_INT,
-    ]);
+      ],
+      [
+      'date' => ParameterType::STRING,
+      'limit' => ParameterType::INTEGER,
+      ]
+    );
+
+    return (int)$result;
   }
 
   public function getRawMessagesForNewsletter(NewsletterEntity $newsletter, string $topic): array {
@@ -96,5 +126,17 @@ class LogRepository extends Repository {
       ->setParameter('topic', $topic)
       ->getQuery()
       ->getSingleColumnResult();
+  }
+
+  public function persist($entity): void {
+    throw new InvalidStateException('Use saveLog() instead to avoid unintended side effects');
+  }
+
+  public function flush(): void {
+    throw new InvalidStateException('Use saveLog() instead to avoid unintended side effects');
+  }
+
+  protected function getEntityClassName() {
+    return LogEntity::class;
   }
 }

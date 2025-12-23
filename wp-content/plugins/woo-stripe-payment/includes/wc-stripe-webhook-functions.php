@@ -1,4 +1,7 @@
 <?php
+/**
+ * @package PaymentPlugins\Functions
+ */
 
 defined( 'ABSPATH' ) || exit();
 
@@ -8,8 +11,9 @@ defined( 'ABSPATH' ) || exit();
  * @param \Stripe\Source  $source
  * @param WP_REST_Request $request
  *
- * @since   3.0.0
- * @package Stripe/Functions
+ * @since      3.0.0
+ * @deprecated 3.3.73
+ * @package    PaymentPlugins\Functions
  */
 function wc_stripe_process_source_chargeable( $source, $request ) {
 	if ( isset( $source->metadata['order_id'] ) ) {
@@ -62,8 +66,9 @@ function wc_stripe_process_source_chargeable( $source, $request ) {
  * @param \Stripe\Charge  $charge
  * @param WP_REST_Request $request
  *
- * @since   3.0.5
- * @package Stripe/Functions
+ * @since      3.0.5
+ * @deprecated 3.3.73
+ * @package    PaymentPlugins\Functions
  */
 function wc_stripe_process_charge_succeeded( $charge, $request ) {
 	// charges that belong to a payment intent can be  skipped
@@ -112,11 +117,12 @@ function wc_stripe_process_charge_succeeded( $charge, $request ) {
  *
  * @param \Stripe\PaymentIntent $intent
  * @param WP_REST_Request       $request
+ * @param \Stripe\Event         $event
  *
  * @since   3.1.0
- * @package Stripe/Functions
+ * @package PaymentPlugins\Functions
  */
-function wc_stripe_process_payment_intent_succeeded( $intent, $request ) {
+function wc_stripe_process_payment_intent_succeeded( $intent, $request, $event ) {
 	$order = WC_Stripe_Utils::get_order_from_payment_intent( $intent );
 	if ( ! $order ) {
 		wc_stripe_log_info( sprintf( 'Could not complete payment_intent.succeeded event for payment_intent %s. No order ID %s was found in your WordPress database. 
@@ -128,24 +134,33 @@ function wc_stripe_process_payment_intent_succeeded( $intent, $request ) {
 	/**
 	 * @var \WC_Payment_Gateway_Stripe $payment_method
 	 */
-	$payment_method = WC()->payment_gateways()->payment_gateways()[ $order->get_payment_method() ];
+	$payment_method = WC()->payment_gateways()->payment_gateways()[ $order->get_payment_method() ] ?? null;
 
-	if ( $payment_method instanceof WC_Payment_Gateway_Stripe_Local_Payment
-	     || ( $payment_method instanceof WC_Payment_Gateway_Stripe && ! $payment_method->synchronous )
-	     || ( in_array( 'card', $intent->payment_method_types ) && $order->get_meta( WC_Stripe_Constants::STRIPE_MANDATE ) )
-	) {
-		if ( $payment_method->has_order_lock( $order ) || $order->get_date_completed() ) {
+	if ( $payment_method instanceof WC_Payment_Gateway_Stripe ) {
+		if ( $payment_method->has_order_lock( $order ) || $order->get_date_paid() ) {
 			wc_stripe_log_info( sprintf( 'payment_intent.succeeded event received. Intent has been completed for order %s. Event exited.', $order->get_id() ) );
 
 			return;
 		}
 
-		$payment_method->set_order_lock( $order );
-		$order->update_meta_data( WC_Stripe_Constants::PAYMENT_INTENT, WC_Stripe_Utils::sanitize_intent( $intent->toArray() ) );
-		$result = $payment_method->payment_object->process_payment( $order );
-		if ( ! is_wp_error( $result ) && $result->complete_payment ) {
-			$payment_method->payment_object->payment_complete( $order, $result->charge );
-			$order->add_order_note( __( 'payment_intent.succeeded webhook received. Payment has been completed.', 'woo-stripe-payment' ) );
+		/**
+		 * We want to defer the processing of any credit card payments to prevent race conditions. The Stripe webhook can be
+		 * received while the checkout process is still running.
+		 */
+		if ( $payment_method->get_payment_method_type() === 'card' ) {
+			WC()->queue()->schedule_single( time() + 2 * MINUTE_IN_SECONDS, 'wc_stripe_process_deferred_webhook', array(
+				'type'           => $event->type,
+				'order_id'       => $order->get_id(),
+				'payment_intent' => $intent->id
+			) );
+		} else {
+			$payment_method->set_order_lock( $order );
+			$order->update_meta_data( WC_Stripe_Constants::PAYMENT_INTENT, WC_Stripe_Utils::sanitize_intent( $intent->toArray() ) );
+			$result = $payment_method->payment_object->process_payment( $order );
+			if ( ! is_wp_error( $result ) && $result->complete_payment ) {
+				$payment_method->payment_object->payment_complete( $order, $result->charge );
+				$order->add_order_note( __( 'payment_intent.succeeded webhook received. Payment has been completed.', 'woo-stripe-payment' ) );
+			}
 		}
 	}
 }
@@ -156,7 +171,7 @@ function wc_stripe_process_payment_intent_succeeded( $intent, $request ) {
  * @param WP_REST_Request $request
  *
  * @since   3.1.1
- * @package Stripe/Functions
+ * @package PaymentPlugins\Functions
  */
 function wc_stripe_process_charge_failed( $charge, $request ) {
 	$order = wc_get_order( wc_stripe_filter_order_id( $charge->metadata['order_id'], $charge ) );
@@ -195,6 +210,10 @@ function wc_stripe_process_create_refund( $charge ) {
 	try {
 		if ( ! $order ) {
 			throw new Exception( sprintf( 'Could not match order with charge %s.', $charge->id ) );
+		}
+		if ( isset( $charge->metadata['cancellation_via'] ) && $charge->metadata['cancellation_via'] === 'woocommerce_admin' ) {
+			// This refund webhook is the result of an authorized payment intent being cancelled. Don't create a refund object.
+			return;
 		}
 		$response = WC_Stripe_Gateway::load( wc_stripe_order_mode( $order ) )->refunds->all( array( 'charge' => $charge->id ) );
 		$refunds  = $response->data;
@@ -311,12 +330,12 @@ function wc_stripe_charge_dispute_closed( $dispute ) {
 		switch ( $dispute->status ) {
 			case 'won':
 				//set the order's status back to what it was before the dispute
-				if ( isset( $dispute->metadata['prev_order_status'] ) ) {
+				if ( ! empty( $dispute->metadata['prev_order_status'] ) ) {
 					$status = $dispute->metadata['prev_order_status'];
 				} else {
 					$status = $order->needs_processing() ? 'processing' : 'completed';
 				}
-				$order->update_status( $dispute->metadata['prev_order_status'], $message );
+				$order->update_status( $status, $message );
 				break;
 			case 'lost':
 				$order->update_status( apply_filters( 'wc_stripe_dispute_closed_order_status', 'failed', $dispute, $order ), $message );

@@ -6,6 +6,7 @@ if (!defined('ABSPATH')) exit;
 
 
 use DateTimeInterface;
+use MailPoet\AutomaticEmails\WooCommerce\Events\AbandonedCart;
 use MailPoet\Doctrine\EntityTraits\AutoincrementedIdTrait;
 use MailPoet\Doctrine\EntityTraits\CreatedAtTrait;
 use MailPoet\Doctrine\EntityTraits\DeletedAtTrait;
@@ -25,17 +26,19 @@ use MailPoetVendor\Symfony\Component\Validator\Constraints as Assert;
  */
 class NewsletterEntity {
   // types
-  const TYPE_AUTOMATIC = 'automatic';
   const TYPE_AUTOMATION = 'automation';
+  const TYPE_AUTOMATION_NOTIFICATION = 'automation_notification';
   const TYPE_AUTOMATION_TRANSACTIONAL = 'automation_transactional';
   const TYPE_STANDARD = 'standard';
-  const TYPE_WELCOME = 'welcome';
   const TYPE_NOTIFICATION = 'notification';
-  const TYPE_AUTOMATION_NOTIFICATION = 'automation_notification';
   const TYPE_NOTIFICATION_HISTORY = 'notification_history';
-  const TYPE_WC_TRANSACTIONAL_EMAIL = 'wc_transactional';
   const TYPE_RE_ENGAGEMENT = 're_engagement';
+  const TYPE_WC_TRANSACTIONAL_EMAIL = 'wc_transactional';
   const TYPE_CONFIRMATION_EMAIL_CUSTOMIZER = 'confirmation_email';
+
+  // legacy types, replaced by automations
+  const TYPE_AUTOMATIC = 'automatic';
+  const TYPE_WELCOME = 'welcome';
 
   // standard newsletters
   const STATUS_DRAFT = 'draft';
@@ -52,8 +55,29 @@ class NewsletterEntity {
     NewsletterEntity::TYPE_STANDARD,
   ];
 
+  /**
+   * Newsletters that have additional restrictions for activation and sending
+   */
+  const CAMPAIGN_TYPES = [
+    NewsletterEntity::TYPE_STANDARD,
+    NewsletterEntity::TYPE_NOTIFICATION,
+    NewsletterEntity::TYPE_NOTIFICATION_HISTORY,
+    NewsletterEntity::TYPE_RE_ENGAGEMENT,
+  ];
+
   // automatic newsletters status
   const STATUS_ACTIVE = 'active';
+
+  /**
+   * Newsletters that use status "active"
+   */
+  const ACTIVABLE_EMAILS = [
+    NewsletterEntity::TYPE_NOTIFICATION,
+    NewsletterEntity::TYPE_WELCOME,
+    NewsletterEntity::TYPE_AUTOMATIC,
+    NewsletterEntity::TYPE_AUTOMATION,
+    NewsletterEntity::TYPE_RE_ENGAGEMENT,
+  ];
 
   use AutoincrementedIdTrait;
   use CreatedAtTrait;
@@ -117,12 +141,6 @@ class NewsletterEntity {
   private $preheader = '';
 
   /**
-   * @ORM\Column(type="integer", nullable=true)
-   * @var int|null
-   */
-  private $wpPostId;
-
-  /**
    * @ORM\Column(type="json", nullable=true)
    * @var array|null
    */
@@ -176,6 +194,13 @@ class NewsletterEntity {
    */
   private $queues;
 
+  /**
+   * @ORM\OneToOne(targetEntity="MailPoet\Entities\WpPostEntity")
+   * @ORM\JoinColumn(name="wp_post_id", referencedColumnName="ID", nullable=true)
+   * @var WpPostEntity|null
+   */
+  private $wpPost;
+
   public function __construct() {
     $this->children = new ArrayCollection();
     $this->newsletterSegments = new ArrayCollection();
@@ -185,12 +210,18 @@ class NewsletterEntity {
 
   /**
    * @deprecated This is here only for backward compatibility with custom shortcodes https://kb.mailpoet.com/article/160-create-a-custom-shortcode
-   * This can be removed after 2021-08-01
+   * This can be removed after 2026-01-01
    */
   public function __get($key) {
     $getterName = 'get' . Helpers::underscoreToCamelCase($key, $capitaliseFirstChar = true);
     $callable = [$this, $getterName];
     if (is_callable($callable)) {
+      // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_trigger_error -- Intended for deprecation warnings
+      trigger_error(
+        // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- if the function is callable, it's safe to output
+        "Direct access to \$newsletter->{$key} is deprecated and will be removed after 2026-01-01. Use \$newsletter->{$getterName}() instead.",
+        E_USER_DEPRECATED
+      );
       return call_user_func($callable);
     }
   }
@@ -281,14 +312,6 @@ class NewsletterEntity {
     return $this->status;
   }
 
-  public function getWpPostId(): ?int {
-    return $this->wpPostId;
-  }
-
-  public function setWpPostId(?int $wpPostId): void {
-    $this->wpPostId = $wpPostId;
-  }
-
   /**
    * @param string $status
    */
@@ -297,12 +320,10 @@ class NewsletterEntity {
 
     // activate/deactivate unfinished tasks
     $newTaskStatus = null;
-    $typesWithActivation = [self::TYPE_NOTIFICATION, self::TYPE_WELCOME, self::TYPE_AUTOMATIC];
-
-    if (($status === self::STATUS_DRAFT) && in_array($this->type, $typesWithActivation)) {
+    if (($status === self::STATUS_DRAFT) && $this->canBeSetActive()) {
       $newTaskStatus = ScheduledTaskEntity::STATUS_PAUSED;
     }
-    if (($status === self::STATUS_ACTIVE) && in_array($this->type, $typesWithActivation)) {
+    if (($status === self::STATUS_ACTIVE) && $this->canBeSetActive()) {
       $newTaskStatus = ScheduledTaskEntity::STATUS_SCHEDULED;
     }
 
@@ -456,7 +477,8 @@ class NewsletterEntity {
    * @return int[]
    */
   public function getSegmentIds() {
-    return array_filter($this->newsletterSegments->map(function(NewsletterSegmentEntity $newsletterSegment) {
+    return array_filter($this->newsletterSegments->map(function(?NewsletterSegmentEntity $newsletterSegment = null) {
+      if (!$newsletterSegment) return null;
       $segment = $newsletterSegment->getSegment();
       return $segment ? (int)$segment->getId() : null;
     })->toArray());
@@ -470,7 +492,8 @@ class NewsletterEntity {
   }
 
   public function getOption(string $name): ?NewsletterOptionEntity {
-    $option = $this->options->filter(function (NewsletterOptionEntity $option) use ($name): bool {
+    $option = $this->options->filter(function (?NewsletterOptionEntity $option = null) use ($name): bool {
+      if (!$option) return false;
       return ($field = $option->getOptionField()) ? $field->getName() === $name : false;
     })->first();
     return $option ?: null;
@@ -532,7 +555,7 @@ class NewsletterEntity {
   /**
    * @return Collection<int, SendingQueueEntity>
    */
-  private function getUnfinishedQueues(): Collection {
+  public function getUnfinishedQueues(): Collection {
     $criteria = new Criteria();
     $expr = Criteria::expr();
     $criteria->where($expr->neq('countToProcess', 0));
@@ -545,6 +568,14 @@ class NewsletterEntity {
       return null;
     }
     return $body['globalStyles'][$category][$style] ?? null;
+  }
+
+  public function setGlobalStyle(string $category, string $style, $value): void {
+    $body = $this->getBody();
+    if ($body === null) {
+      return;
+    }
+    $this->body['globalStyles'][$category][$style] = $value;
   }
 
   public function getProcessedAt(): ?DateTimeInterface {
@@ -574,15 +605,62 @@ class NewsletterEntity {
     return in_array($this->getType(), [self::TYPE_NOTIFICATION_HISTORY, self::TYPE_STANDARD], true);
   }
 
-  /**
-   * We don't use typehint for now because doctrine cache generator would fail as it doesn't know the class.
-   * @return \WP_Post|null
-   */
-  public function getWpPost() {
-    if ($this->wpPostId === null) {
+  public function canBeSetActive(): bool {
+    return in_array($this->getType(), self::ACTIVABLE_EMAILS, true);
+  }
+
+  public function getWpPost(): ?WpPostEntity {
+    $this->safelyLoadToOneAssociation('wpPost');
+    return $this->wpPost;
+  }
+
+  public function setWpPost(?WpPostEntity $wpPostEntity): void {
+    $this->wpPost = $wpPostEntity;
+  }
+
+  public function getWpPostId(): ?int {
+    $wpPost = $this->wpPost;
+    return $wpPost ? $wpPost->getId() : null;
+  }
+
+  public function getCampaignName(): ?string {
+    $wpPost = $this->getWpPost();
+    if (!$wpPost) {
       return null;
     }
-    $post = \WP_Post::get_instance($this->wpPostId);
-    return $post ?: null;
+    return $wpPost->getPostTitle();
+  }
+
+  /**
+   * Used for cases when we present newsletter by name.
+   * Newsletters created via legacy editor have only subjects.
+   */
+  public function getCampaignNameOrSubject(): string {
+    $campaignName = $this->getCampaignName();
+    return $campaignName ?: $this->getSubject();
+  }
+
+  public function isTransactional(): bool {
+
+    // Legacy Abandoned Cart emails are transactional
+    if (
+      $this->getType() === NewsletterEntity::TYPE_AUTOMATIC
+      && $this->getOptionValue(NewsletterOptionFieldEntity::NAME_EVENT) === AbandonedCart::SLUG
+    ) {
+      return true;
+    }
+
+    return in_array($this->getType(), [
+      NewsletterEntity::TYPE_AUTOMATION_TRANSACTIONAL,
+      NewsletterEntity::TYPE_WC_TRANSACTIONAL_EMAIL,
+    ]);
+  }
+
+  public function isAutomation(): bool {
+    return $this->getType() === NewsletterEntity::TYPE_AUTOMATION;
+  }
+
+  public function isAutomationTransactional(): bool {
+    return $this->getType() === NewsletterEntity::TYPE_AUTOMATION_TRANSACTIONAL;
   }
 }

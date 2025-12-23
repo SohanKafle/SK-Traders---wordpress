@@ -48,6 +48,8 @@ class Admin_Menu {
 		add_action( 'admin_enqueue_scripts', [ $this, 'settings_page_scripts' ] );
 		add_action( 'wp_ajax_cfvsw_update_settings', [ $this, 'cfvsw_update_settings' ] );
 		add_action( 'admin_head', [ $this, 'hide_notices' ] );
+		// Let WooCommerce know, CartFlows Pro is compatible with HPOS.
+		add_action( 'before_woocommerce_init', array( $this, 'declare_woo_hpos_compatibility' ) );
 	}
 
 	/**
@@ -99,7 +101,8 @@ class Admin_Menu {
 				'version'      => CFVSW_VER,
 			);
 
-		$script_dep = array_merge( $script_info['dependencies'], array( 'updates' ) );
+		$script_dep          = array_merge( $script_info['dependencies'], array( 'updates' ) );
+		$is_cartflows_active = 'active' === $this->helper->get_plugin_status( 'cartflows/cartflows.php' );
 
 		wp_register_script( 'cfvsw_settings', $this->tailwind_assets . 'settings.js', $script_dep, CFVSW_VER, true );
 		wp_enqueue_script( 'cfvsw_settings' );
@@ -113,6 +116,7 @@ class Admin_Menu {
 				CFVSW_SHOP          => $this->helper->get_option( CFVSW_SHOP ),
 				CFVSW_STYLE         => $this->helper->get_option( CFVSW_STYLE ),
 				'get_woo_attr_list' => $this->get_woo_attr_list(),
+				'cartflows_status'  => $is_cartflows_active,
 			]
 		);
 
@@ -227,6 +231,7 @@ class Admin_Menu {
 			'min_width',
 			'min_height',
 			'border_radius',
+			'border_width',
 		];
 
 		foreach ( $data as $key => $value ) {
@@ -255,5 +260,15 @@ class Admin_Menu {
 			remove_all_actions( 'admin_notices' );
 		}
 
+	}
+
+	/**
+	 *  Declare the woo HPOS compatibility.
+	 */
+	public function declare_woo_hpos_compatibility() {
+
+		if ( class_exists( '\Automattic\WooCommerce\Utilities\FeaturesUtil' ) ) {
+			\Automattic\WooCommerce\Utilities\FeaturesUtil::declare_compatibility( 'custom_order_tables', CFVSW_FILE, true );
+		}
 	}
 }

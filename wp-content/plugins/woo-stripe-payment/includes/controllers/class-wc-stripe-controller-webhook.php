@@ -5,7 +5,7 @@ defined( 'ABSPATH' ) || exit();
 /**
  *
  * @author  PaymentPlugins
- * @package Stripe/Controllers
+ * @package PaymentPlugins\Controllers
  *
  */
 class WC_Stripe_Controller_Webhook extends WC_Stripe_Rest_Controller {
@@ -61,6 +61,8 @@ class WC_Stripe_Controller_Webhook extends WC_Stripe_Rest_Controller {
 			wc_stripe_log_info( sprintf( 'Webhook notification received: Event: %s', $event->type ) );
 			$type = $event->type;
 			$type = str_replace( '.', '_', $type );
+
+			define( WC_Stripe_Constants::WOOCOMMERCE_STRIPE_PROCESSING_WEBHOOK, true );
 
 			// allow functionality to hook in to the event action
 			do_action( 'wc_stripe_webhook_' . $type, $event->data->object, $request, $event );

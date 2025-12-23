@@ -63,15 +63,15 @@ class Shortcodes {
     $this->wp = $wp;
   }
 
-  public function setNewsletter(NewsletterEntity $newsletter = null): void {
+  public function setNewsletter(?NewsletterEntity $newsletter = null): void {
     $this->newsletter = $newsletter;
   }
 
-  public function setSubscriber(SubscriberEntity $subscriber = null): void {
+  public function setSubscriber(?SubscriberEntity $subscriber = null): void {
     $this->subscriber = $subscriber;
   }
 
-  public function setQueue(SendingQueueEntity $queue = null): void {
+  public function setQueue(?SendingQueueEntity $queue = null): void {
     $this->queue = $queue;
   }
 
@@ -116,6 +116,9 @@ class Shortcodes {
    * The syntax is [category:action arg1="value1" arg2="value2"], it can have multiple arguments.
    */
   public function matchWPShortcode($shortcode) {
+    // Decode HTML entities in case the shortcode came from HTML content (e.g., &quot; -> ")
+    $shortcode = html_entity_decode($shortcode, ENT_QUOTES, 'UTF-8');
+
     $atts = $this->wp->shortcodeParseAtts(trim($shortcode, '[]/'));
     if (empty($atts[0])) {
       return [];
@@ -130,11 +133,13 @@ class Shortcodes {
       if (is_numeric($attrName)) {
         continue; // Skip unnamed attributes
       }
-      $shortcodeDetails['arguments'][$attrName] = $attrValue;
+      // Strip surrounding quotes from attribute values
+      $cleanValue = trim($attrValue, '"\' ');
+      $shortcodeDetails['arguments'][$attrName] = $cleanValue;
       // Make a shortcut to the first argument
       if (!isset($shortcodeDetails['argument'])) {
         $shortcodeDetails['argument'] = $attrName;
-        $shortcodeDetails['argument_value'] = $attrValue;
+        $shortcodeDetails['argument_value'] = $cleanValue;
       }
     }
     return $shortcodeDetails;

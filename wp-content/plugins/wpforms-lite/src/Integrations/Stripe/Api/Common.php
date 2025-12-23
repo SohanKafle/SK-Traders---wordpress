@@ -175,11 +175,58 @@ abstract class Common {
 	 * Check if a customer exists in Stripe, if not creates one.
 	 *
 	 * @since 1.8.2
+	 * @since 1.8.6 Added customer name argument and allow empty email.
+	 * @since 1.8.8 Added customer billing address argument.
+	 * @since 1.9.6 Added customer phone and metadata arguments.
 	 *
-	 * @param string $email Email to fetch an existing customer.
+	 * @param string $email    Email to fetch an existing customer.
+	 * @param string $name     Customer name.
+	 * @param array  $address  Customer billing address.
+	 * @param string $phone    Customer phone number.
+	 * @param array  $metadata Customer metadata.
 	 */
-	protected function set_customer( $email ) {
+	protected function set_customer( string $email = '', string $name = '', array $address = [], string $phone = '', array $metadata = [] ) {
 
+		if ( ! $email && ! $name && ! $phone ) {
+			return;
+		}
+
+		$args = [];
+
+		if ( $name ) {
+			$args['name'] = $name;
+		}
+
+		if ( $address ) {
+			$args['address'] = $address;
+		}
+
+		if ( $phone ) {
+			$args['phone'] = $phone;
+		}
+
+		if ( $metadata ) {
+			$args['metadata'] = $metadata;
+		}
+
+		// Create a customer with name only if email is empty.
+		if ( ! $email ) {
+
+			try {
+				$customer = Customer::create( $args, Helpers::get_auth_opts() );
+			} catch ( \Exception $e ) {
+				$customer = null;
+			}
+
+			if ( ! isset( $customer->id ) ) {
+				return;
+			}
+
+			$this->customer = $customer;
+			return;
+		}
+
+		// Retrieve a customer by email.
 		try {
 			$customers = Customer::all(
 				[ 'email' => $email ],
@@ -189,17 +236,46 @@ abstract class Common {
 			$customers = null;
 		}
 
+		// Determine whether the customer name/address needs to be updated.
 		if ( isset( $customers->data[0]->id ) ) {
 			$this->customer = $customers->data[0];
+
+			$needUpdateName    = ! empty( $name ) && $name !== $this->customer->name;
+			$needUpdatePhone   = ! empty( $phone ) && $phone !== $this->customer->phone;
+			$needUpdateAddress = false;
+
+			if ( ! $needUpdateName ) {
+				$existingAddress   = isset( $this->customer->address ) && method_exists( $this->customer->address, 'toArray' ) ? $this->customer->address->toArray() : [];
+				$needUpdateAddress = ! empty( array_diff_assoc( $address, $existingAddress ) );
+			}
+
+			// Update customer name/address/phone.
+			if ( $needUpdateName || $needUpdateAddress || $needUpdatePhone ) {
+				try {
+					$this->customer = Customer::update(
+						$this->customer->id,
+						$args,
+						Helpers::get_auth_opts()
+					);
+				} catch ( \Exception $e ) {
+					wpforms_log(
+						'Stripe: Unable to update customer information.',
+						$e->getMessage(),
+						[
+							'type' => [ 'payment', 'error' ],
+						]
+					);
+				}
+			}
 
 			return;
 		}
 
+		// Create a customer with email.
 		try {
-			$customer = Customer::create(
-				[ 'email' => $email ],
-				Helpers::get_auth_opts()
-			);
+			$args['email'] = $email;
+
+			$customer = Customer::create( $args, Helpers::get_auth_opts() );
 		} catch ( \Exception $e ) {
 			$customer = null;
 		}
@@ -348,6 +424,17 @@ abstract class Common {
 			$args['amount'],
 			$period['desc']
 		);
+
+		/**
+		 * Allow to filter Stripe subscription plan name.
+		 *
+		 * @since 1.8.8
+		 *
+		 * @param string $name   Plan name.
+		 * @param array  $period Subscription period data.
+		 * @param array  $args   Additional arguments.
+		 */
+		$name = (string) apply_filters( 'wpforms_integrations_stripe_api_common_create_plan_name', $name, $period, $args );
 
 		$plan_args = [
 			'amount'         => $args['amount'],

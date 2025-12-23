@@ -7,7 +7,7 @@ use MailPoetVendor\Symfony\Component\Translation\Formatter\MessageFormatterInter
 class TranslatorImmutable extends Translator
 {
  private $constructed = \false;
- public function __construct($locale, MessageFormatterInterface $formatter = null, $cacheDir = null, $debug = \false)
+ public function __construct($locale,?MessageFormatterInterface $formatter = null, $cacheDir = null, $debug = \false)
  {
  parent::__construct($locale, $formatter, $cacheDir, $debug);
  $this->constructed = \true;
@@ -32,7 +32,7 @@ class TranslatorImmutable extends Translator
  $this->disallowMutation(__METHOD__);
  return parent::setTranslations($messages);
  }
- public function setConfigCacheFactory(ConfigCacheFactoryInterface $configCacheFactory)
+ public function setConfigCacheFactory(ConfigCacheFactoryInterface $configCacheFactory) : void
  {
  $this->disallowMutation(__METHOD__);
  parent::setConfigCacheFactory($configCacheFactory);

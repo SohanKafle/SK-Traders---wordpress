@@ -1,3 +1,55 @@
+Version 2.0.4 - Thursday, 20th November 2025
+- Fix: Resolved the issue where the {store_address} shortcode did not render in Abandoned Cart emails when WooCommerce email styling was enabled.
+- Improvement: Removed unnecessary plugin notices from the dashboard.
+- Improvement: Added unsubscribed email indicators to the follow-up report and detailed report.
+
+Version 2.0.3 - Wednesday, 29th October 2025
+- Fix: Resolved an issue where completed orders were incorrectly marked as abandoned after the cutoff time, despite being excluded.
+- Fix: Corrected incorrect UTM parameters used in tracking links.
+- Improvement: Added support for custom order statuses to improve compatibility.
+- Improvement: Implemented minor UI enhancements for a smoother and more intuitive user experience.
+
+Version 2.0.2 - Friday, 17th October 2025
+- Fix: Users with the Shop Manager role were unable to delete records from Follow-up Reports.
+- Fix: UI toggle for switching to the older version was not functioning as expected.
+- Fix: Resolved a fatal error caused by a call to an undefined utils function when enabling webhook settings in certain cases.
+- Fix: Improved toggle field logic to ensure correct display and saving of values when enabling or disabling settings.
+- Fix: Resolved an issue where the GDPR opt-out link below the email field was unclickable.
+
+Version 2.0.1 - Tuesday, 30th September 2025
+- Improvement: Added future compatibility support for the Pro plugin.
+- Improvement: Standardized function calls by replacing direct helper usage with common methods.
+- Improvement: Made minor UI enhancements across multiple screens.
+- Fix: Resolved an issue where the switch UI notice continued to display even after updating to the new UI.
+- Fix: Corrected the improper usage of the _load_textdomain_just_in_time function.
+- Fix: Fixed a critical error that occurred when all order statuses were unchecked in the "Exclude email sending for" option.
+
+Version 2.0.0 - Thursday, 21st August 2025
+- New: Revamped the whole Cart Abandoned user-interface to add a user-friendly touch.
+- New: Introduced language files for multiple languages for quick translation of the plugin.
+- Improvement: Revamped the plugin dashboard to give more abandoned cart's recovery statistics. 
+- Improvement: Added a future compatibility of Pro plugin.
+
+Version 1.3.3 - Tuesday, 24th June 2025
+- New: Added import and export functionality for follow-up email templates, making it easier to back up, share, and migrate email configurations.
+
+Version 1.3.2 - Thursday, 15th May 2025
+- Improvement: Included the abandoned cart recorded date in the exported file.
+- Fix: Prevented recovery emails from being sent if the cart contains out-of-stock products.
+- Fix: Resolved a CSS conflict between the DIVI dashboard and the Cart Abandoned plugin.
+
+Version 1.3.1 - Wednesday, 11th December 2024
+- Fix: Resolved an incorrect usage error for the _load_textdomain_just_in_time function.
+- Fix: Resolved a PHP notice related to attempting to get the property 'meta_value' of a non-object.
+
+Version 1.3.0 - Tuesday, 2nd July 2024
+- New: Introduced the support of Cart abandoned tracking for WooCommerce Blocks Checkout.
+- Improvement: Optimized the cart abandonment tracking for speed improvements.
+- Fix: Resolved error warnings when a null value is passed in PHP 8.2 and later versions.
+
+Version 1.2.27 - Tuesday, 12th March 2024
+- Security Fix: Hardened the security of the plugin suggested by WPScan.
+
 Version 1.2.26 - Wednesday, 29th November 2023
 - Fix: Product's custom data options were not displayed in the abandoned order data.
 - Fix: Fixed the error warning if null value passed while using the PHP 8.1 version.

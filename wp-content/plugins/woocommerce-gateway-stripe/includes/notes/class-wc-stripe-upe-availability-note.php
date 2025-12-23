@@ -13,6 +13,8 @@ defined( 'ABSPATH' ) || exit;
 
 /**
  * Class WC_Stripe_UPE_Availability_Note
+ *
+ * @deprecated 10.2.0 This note is now deprecated since UPE is generally available.
  */
 class WC_Stripe_UPE_Availability_Note {
 	use NoteTraits;
@@ -39,7 +41,7 @@ class WC_Stripe_UPE_Availability_Note {
 		$message = sprintf(
 		/* translators: 1) HTML anchor open tag 2) HTML anchor closing tag */
 			__( 'Get early access to an improved checkout experience, now available to select merchants. %1$sLearn more%2$s.', 'woocommerce-gateway-stripe' ),
-			'<a href="https://woocommerce.com/document/stripe/#new-checkout-experience" target="_blank">',
+			'<a href="https://woocommerce.com/document/stripe/admin-experience/new-checkout-experience/" target="_blank">',
 			'</a>'
 		);
 		$note->set_content( $message );
@@ -71,35 +73,6 @@ class WC_Stripe_UPE_Availability_Note {
 	}
 
 	public static function init() {
-		/**
-		 * No need to display the admin inbox note when
-		 * - UPE preview is disabled
-		 * - UPE is already enabled
-		 * - UPE has been manually disabled
-		 * - Stripe is not enabled
-		 */
-		if ( ! WC_Stripe_Feature_Flags::is_upe_preview_enabled() ) {
-			return;
-		}
-
-		if ( WC_Stripe_Feature_Flags::is_upe_checkout_enabled() ) {
-			return;
-		}
-
-		if ( WC_Stripe_Feature_Flags::did_merchant_disable_upe() ) {
-			return;
-		}
-
-		if ( ! woocommerce_gateway_stripe()->connect->is_connected() ) {
-			return;
-		}
-
-		$stripe_settings = get_option( 'woocommerce_stripe_settings', [] );
-		$stripe_enabled  = isset( $stripe_settings['enabled'] ) && 'yes' === $stripe_settings['enabled'];
-		if ( ! $stripe_enabled ) {
-			return;
-		}
-
-		self::possibly_add_note();
+		return;
 	}
 }

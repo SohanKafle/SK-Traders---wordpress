@@ -6,6 +6,8 @@
  *
  * @package WooCommerce_Stripe/Classes/Payment_Request
  * @since   4.0.0
+ *
+ * @deprecated 10.2.0 This class is now deprecated in favor of ECE and will be removed in future versions.
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -14,6 +16,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 /**
  * WC_Stripe_Payment_Request class.
+ *
+ * @deprecated 10.2.0 This class is now deprecated in favor of ECE and will be removed in future versions.
  */
 class WC_Stripe_Payment_Request {
 
@@ -68,9 +72,10 @@ class WC_Stripe_Payment_Request {
 	 * @version 4.0.0
 	 */
 	public function __construct() {
+
 		self::$_this           = $this;
-		$this->stripe_settings = get_option( 'woocommerce_stripe_settings', [] );
-		$this->testmode        = ( ! empty( $this->stripe_settings['testmode'] ) && 'yes' === $this->stripe_settings['testmode'] ) ? true : false;
+		$this->stripe_settings = WC_Stripe_Helper::get_stripe_settings();
+		$this->testmode        = WC_Stripe_Mode::is_test();
 		$this->publishable_key = ! empty( $this->stripe_settings['publishable_key'] ) ? $this->stripe_settings['publishable_key'] : '';
 		$this->secret_key      = ! empty( $this->stripe_settings['secret_key'] ) ? $this->stripe_settings['secret_key'] : '';
 		$this->total_label     = ! empty( $this->stripe_settings['statement_descriptor'] ) ? WC_Stripe_Helper::clean_statement_descriptor( $this->stripe_settings['statement_descriptor'] ) : '';
@@ -81,6 +86,11 @@ class WC_Stripe_Payment_Request {
 		}
 
 		$this->total_label = str_replace( "'", '', $this->total_label ) . apply_filters( 'wc_stripe_payment_request_total_label_suffix', ' (via WooCommerce)' );
+
+		add_action( 'woocommerce_stripe_updated', [ $this, 'migrate_button_size' ] );
+
+		// Don't initiate this class as it is deprecated.
+		return;
 
 		// Checks if Stripe Gateway is enabled.
 		if ( empty( $this->stripe_settings ) || ( isset( $this->stripe_settings['enabled'] ) && 'yes' !== $this->stripe_settings['enabled'] ) ) {
@@ -94,6 +104,11 @@ class WC_Stripe_Payment_Request {
 
 		// Don't load for change payment method page.
 		if ( isset( $_GET['change_payment_method'] ) ) {
+			return;
+		}
+
+		// Don't load for switch subscription page.
+		if ( isset( $_GET['switch-subscription'] ) ) {
 			return;
 		}
 
@@ -175,7 +190,12 @@ class WC_Stripe_Payment_Request {
 	 * @return void
 	 */
 	public function set_session() {
-		if ( ! $this->is_product() || ( isset( WC()->session ) && WC()->session->has_session() ) ) {
+		// Don't set session cookies on product pages to allow for caching when payment request
+		// buttons are disabled. But keep cookies if there is already an active WC session in place.
+		if (
+			! ( $this->is_product() && $this->should_show_payment_request_button() )
+			|| ( isset( WC()->session ) && WC()->session->has_session() )
+		) {
 			return;
 		}
 
@@ -234,8 +254,6 @@ class WC_Stripe_Payment_Request {
 		add_action( 'woocommerce_checkout_order_processed', [ $this, 'add_order_meta' ], 10, 2 );
 		add_filter( 'woocommerce_login_redirect', [ $this, 'get_login_redirect_url' ], 10, 3 );
 		add_filter( 'woocommerce_registration_redirect', [ $this, 'get_login_redirect_url' ], 10, 3 );
-
-		add_action( 'woocommerce_stripe_updated', [ $this, 'migrate_button_size' ] );
 	}
 
 	/**
@@ -268,10 +286,6 @@ class WC_Stripe_Payment_Request {
 	 * @return  string
 	 */
 	public function get_button_height() {
-		if ( ! WC_Stripe_Feature_Flags::is_upe_preview_enabled() ) {
-			return isset( $this->stripe_settings['payment_request_button_height'] ) ? str_replace( 'px', '', $this->stripe_settings['payment_request_button_height'] ) : '64';
-		}
-
 		$height = isset( $this->stripe_settings['payment_request_button_size'] ) ? $this->stripe_settings['payment_request_button_size'] : 'default';
 		if ( 'small' === $height ) {
 			return '40';
@@ -315,12 +329,7 @@ class WC_Stripe_Payment_Request {
 	 * @return  boolean
 	 */
 	public function is_custom_button() {
-		// no longer a valid option
-		if ( WC_Stripe_Feature_Flags::is_upe_preview_enabled() ) {
-			return false;
-		}
-
-		return 'custom' === $this->get_button_type();
+		return false;
 	}
 
 	/**
@@ -342,12 +351,7 @@ class WC_Stripe_Payment_Request {
 	 * @return  string
 	 */
 	public function get_button_label() {
-		// no longer a valid option
-		if ( WC_Stripe_Feature_Flags::is_upe_preview_enabled() ) {
-			return '';
-		}
-
-		return isset( $this->stripe_settings['payment_request_button_label'] ) ? $this->stripe_settings['payment_request_button_label'] : 'Buy now';
+		return '';
 	}
 
 	/**
@@ -356,13 +360,13 @@ class WC_Stripe_Payment_Request {
 	 * @since 5.2.0
 	 *
 	 * @param object $product WC_Product_* object.
-	 * @return integer Total price.
+	 * @return float Total price.
 	 */
 	public function get_product_price( $product ) {
-		$product_price = $product->get_price();
+		$product_price = (float) $product->get_price();
 		// Add subscription sign-up fees to product price.
 		if ( in_array( $product->get_type(), [ 'subscription', 'subscription_variation' ] ) && class_exists( 'WC_Subscriptions_Product' ) ) {
-			$product_price = $product->get_price() + WC_Subscriptions_Product::get_sign_up_fee( $product );
+			$product_price += (float) WC_Subscriptions_Product::get_sign_up_fee( $product );
 		}
 
 		return $product_price;
@@ -459,14 +463,18 @@ class WC_Stripe_Payment_Request {
 	 * Filters the gateway title to reflect Payment Request type
 	 */
 	public function filter_gateway_title( $title, $id ) {
-		global $post;
+		global $theorder;
 
-		if ( ! is_object( $post ) ) {
+		// If $theorder is empty (i.e. non-HPOS), fallback to using the global post object.
+		if ( empty( $theorder ) && ! empty( $GLOBALS['post']->ID ) ) {
+			$theorder = wc_get_order( $GLOBALS['post']->ID );
+		}
+
+		if ( ! is_object( $theorder ) ) {
 			return $title;
 		}
 
-		$order        = wc_get_order( $post->ID );
-		$method_title = is_object( $order ) ? $order->get_payment_method_title() : '';
+		$method_title = $theorder->get_payment_method_title();
 
 		if ( 'stripe' === $id && ! empty( $method_title ) ) {
 			if ( 'Apple Pay (Stripe)' === $method_title
@@ -483,8 +491,6 @@ class WC_Stripe_Payment_Request {
 			if ( 'Chrome Payment Request (Stripe)' === $method_title ) {
 				return 'Payment Request (Stripe)';
 			}
-
-			return $method_title;
 		}
 
 		return $title;
@@ -500,14 +506,35 @@ class WC_Stripe_Payment_Request {
 	 */
 	public function get_normalized_postal_code( $postcode, $country ) {
 		/**
-		 * Currently, Apple Pay truncates the UK and Canadian postal codes to the first 4 and 3 characters respectively
-		 * when passing it back from the shippingcontactselected object. This causes WC to invalidate
+		 * Currently, Apple Pay truncates the UK postcodes by removing the "inward" (last 3 chars) of the postcode.
+		 * Apple Pay also truncates Canadian postal codes to the first 4 characters.
+		 * When either of these are passed back from the shippingcontactselected object. This causes WC to invalidate
 		 * the postal code and not calculate shipping zones correctly.
 		 */
 		if ( 'GB' === $country ) {
-			// Replaces a redacted string with something like LN10***.
-			return str_pad( preg_replace( '/\s+/', '', $postcode ), 7, '*' );
+			// UK Postcodes returned from Apple Pay can be alpha numeric 2 chars, 3 chars, or 4 chars long will optionally have a trailing space,
+			// depending on whether the customer put a space in their postcode between the outcode and incode part.
+			// See https://assets.publishing.service.gov.uk/media/5a7b997d40f0b62826a049e0/ILRSpecification2013_14Appendix_C_Dec2012_v1.pdf for more details.
+
+			// Here is a table showing the functionality by example:
+			//  Original  | Apple Pay |  Normalized
+			// 'LN10 1AA' |  'LN10 '  |  'LN10 ***'
+			// 'LN101AA'  |  'LN10'   |  'LN10 ***'
+			// 'W10 2AA'  |  'W10 '   |  'W10 ***'
+			// 'W102AA'   |  'W10'    |  'W10 ***'
+			// 'N2 3AA    |  'N2 '    |  'N2 ***'
+			// 'N23AA     |  'N2'     |  'N2 ***'
+
+			$spaceless_postcode = preg_replace( '/\s+/', '', $postcode );
+
+			if ( strlen( $spaceless_postcode ) < 5 ) {
+				// Always reintroduce the space so that Shipping Zones regex like 'N1 *' work to match N1 postcodes like N1 1AA, but don't match N10 postcodes like N10 1AA
+				return $spaceless_postcode . ' ***';
+			}
+
+			return $postcode; // 5 or more chars means it probably wasn't redacted and will likely validate unchanged.
 		}
+
 		if ( 'CA' === $country ) {
 			// Replaces a redacted string with something like L4Y***.
 			return str_pad( preg_replace( '/\s+/', '', $postcode ), 6, '*' );
@@ -584,9 +611,9 @@ class WC_Stripe_Payment_Request {
 			return false;
 		}
 
-		// If the cart is not available we don't have any unsupported products in the cart, so we
+		// If the cart is not available or if the cart is empty we don't have any unsupported products in the cart, so we
 		// return true. This can happen e.g. when loading the cart or checkout blocks in Gutenberg.
-		if ( is_null( WC()->cart ) ) {
+		if ( is_null( WC()->cart ) || WC()->cart->is_empty() ) {
 			return true;
 		}
 
@@ -634,7 +661,7 @@ class WC_Stripe_Payment_Request {
 			return false;
 		}
 
-		$is_invalid      = true;
+		$is_invalid = true;
 
 		if ( $product->get_type() === 'variable-subscription' ) {
 			$products = $product->get_available_variations( 'object' );
@@ -774,7 +801,7 @@ class WC_Stripe_Payment_Request {
 				'key'                        => $this->publishable_key,
 				'allow_prepaid_card'         => apply_filters( 'wc_stripe_allow_prepaid_card', true ) ? 'yes' : 'no',
 				'locale'                     => WC_Stripe_Helper::convert_wc_locale_to_stripe_locale( get_locale() ),
-				'is_link_enabled'            => WC_Stripe_UPE_Payment_Method_Link::is_link_enabled(),
+				'is_link_enabled'            => false, // Link is not available for PRB.
 				'is_payment_request_enabled' => $this->is_payment_request_enabled(),
 			],
 			'nonce'              => [
@@ -931,11 +958,6 @@ class WC_Stripe_Payment_Request {
 			return true;
 		}
 
-		// Link is enabled.
-		if ( WC_Stripe_UPE_Payment_Method_Link::is_link_enabled() ) {
-			return true;
-		}
-
 		return false;
 	}
 
@@ -957,6 +979,11 @@ class WC_Stripe_Payment_Request {
 		// If no SSL bail.
 		if ( ! $this->testmode && ! is_ssl() ) {
 			WC_Stripe_Logger::log( 'Stripe Payment Request live mode requires SSL.' );
+			return false;
+		}
+
+		$available_gateways = WC()->payment_gateways->get_available_payment_gateways();
+		if ( ! isset( $available_gateways['stripe'] ) ) {
 			return false;
 		}
 
@@ -1170,15 +1197,15 @@ class WC_Stripe_Payment_Request {
 		$shipping_address          = filter_input_array(
 			INPUT_POST,
 			[
-				'country'   => FILTER_SANITIZE_STRING,
-				'state'     => FILTER_SANITIZE_STRING,
-				'postcode'  => FILTER_SANITIZE_STRING,
-				'city'      => FILTER_SANITIZE_STRING,
-				'address'   => FILTER_SANITIZE_STRING,
-				'address_2' => FILTER_SANITIZE_STRING,
+				'country'   => FILTER_SANITIZE_SPECIAL_CHARS,
+				'state'     => FILTER_SANITIZE_SPECIAL_CHARS,
+				'postcode'  => FILTER_SANITIZE_SPECIAL_CHARS,
+				'city'      => FILTER_SANITIZE_SPECIAL_CHARS,
+				'address'   => FILTER_SANITIZE_SPECIAL_CHARS,
+				'address_2' => FILTER_SANITIZE_SPECIAL_CHARS,
 			]
 		);
-		$product_view_options      = filter_input_array( INPUT_POST, [ 'is_product_page' => FILTER_SANITIZE_STRING ] );
+		$product_view_options      = filter_input_array( INPUT_POST, [ 'is_product_page' => FILTER_SANITIZE_SPECIAL_CHARS ] );
 		$should_show_itemized_view = ! isset( $product_view_options['is_product_page'] ) ? true : filter_var( $product_view_options['is_product_page'], FILTER_VALIDATE_BOOLEAN );
 
 		$data = $this->get_shipping_options( $shipping_address, $should_show_itemized_view );
@@ -1192,6 +1219,7 @@ class WC_Stripe_Payment_Request {
 	 * @param boolean $itemized_display_items Indicates whether to show subtotals or itemized views.
 	 *
 	 * @return array Shipping options data.
+	 *
 	 * phpcs:ignore Squiz.Commenting.FunctionCommentThrowTag
 	 */
 	public function get_shipping_options( $shipping_address, $itemized_display_items = false ) {
@@ -1200,7 +1228,7 @@ class WC_Stripe_Payment_Request {
 			$data = [];
 
 			// Remember current shipping method before resetting.
-			$chosen_shipping_methods = WC()->session->get( 'chosen_shipping_methods' );
+			$chosen_shipping_methods = WC()->session->get( 'chosen_shipping_methods', [] );
 			$this->calculate_shipping( apply_filters( 'wc_stripe_payment_request_shipping_posted_values', $shipping_address ) );
 
 			$packages          = WC()->shipping->get_packages();
@@ -1257,6 +1285,8 @@ class WC_Stripe_Payment_Request {
 
 			WC()->cart->calculate_totals();
 
+			$this->maybe_restore_recurring_chosen_shipping_methods( $chosen_shipping_methods );
+
 			$data          += $this->build_display_items( $itemized_display_items );
 			$data['result'] = 'success';
 		} catch ( Exception $e ) {
@@ -1282,7 +1312,7 @@ class WC_Stripe_Payment_Request {
 
 		WC()->cart->calculate_totals();
 
-		$product_view_options      = filter_input_array( INPUT_POST, [ 'is_product_page' => FILTER_SANITIZE_STRING ] );
+		$product_view_options      = filter_input_array( INPUT_POST, [ 'is_product_page' => FILTER_SANITIZE_SPECIAL_CHARS ] );
 		$should_show_itemized_view = ! isset( $product_view_options['is_product_page'] ) ? true : filter_var( $product_view_options['is_product_page'], FILTER_VALIDATE_BOOLEAN );
 
 		$data           = [];
@@ -1314,12 +1344,12 @@ class WC_Stripe_Payment_Request {
 	 *
 	 * @since   4.0.0
 	 * @version 4.0.0
-	 * @return  array $data
+	 * @return  array $data The selected product data.
 	 */
 	public function ajax_get_selected_product_data() {
 		check_ajax_referer( 'wc-stripe-get-selected-product-data', 'security' );
 
-		try {
+		try { // @phpstan-ignore-line (return statement is added)
 			$product_id   = isset( $_POST['product_id'] ) ? absint( $_POST['product_id'] ) : 0;
 			$qty          = ! isset( $_POST['qty'] ) ? 1 : apply_filters( 'woocommerce_add_to_cart_quantity', absint( $_POST['qty'] ), $product_id );
 			$addon_value  = isset( $_POST['addon_value'] ) ? max( floatval( $_POST['addon_value'] ), 0 ) : 0;
@@ -1412,7 +1442,7 @@ class WC_Stripe_Payment_Request {
 	 *
 	 * @since   4.0.0
 	 * @version 4.0.0
-	 * @return  array $data
+	 * @return  array $data Results of adding the product to the cart.
 	 */
 	public function ajax_add_to_cart() {
 		check_ajax_referer( 'wc-stripe-add-to-cart', 'security' );
@@ -1421,36 +1451,45 @@ class WC_Stripe_Payment_Request {
 			define( 'WOOCOMMERCE_CART', true );
 		}
 
-		WC()->shipping->reset_shipping();
+		try {
+			WC()->shipping->reset_shipping();
 
-		$product_id   = isset( $_POST['product_id'] ) ? absint( $_POST['product_id'] ) : 0;
-		$qty          = ! isset( $_POST['qty'] ) ? 1 : absint( $_POST['qty'] );
-		$product      = wc_get_product( $product_id );
-		$product_type = $product->get_type();
+			$product_id = isset( $_POST['product_id'] ) ? absint( $_POST['product_id'] ) : 0;
+			$qty        = ! isset( $_POST['qty'] ) ? 1 : absint( $_POST['qty'] );
+			$product    = wc_get_product( $product_id );
 
-		// First empty the cart to prevent wrong calculation.
-		WC()->cart->empty_cart();
+			if ( ! is_a( $product, 'WC_Product' ) ) {
+				/* translators: 1) The product Id */
+				throw new Exception( sprintf( __( 'Product with the ID (%1$s) cannot be found.', 'woocommerce-gateway-stripe' ), $product_id ) );
+			}
 
-		if ( ( 'variable' === $product_type || 'variable-subscription' === $product_type ) && isset( $_POST['attributes'] ) ) {
-			$attributes = wc_clean( wp_unslash( $_POST['attributes'] ) );
+			$product_type = $product->get_type();
 
-			$data_store   = WC_Data_Store::load( 'product' );
-			$variation_id = $data_store->find_matching_product_variation( $product, $attributes );
+			// First empty the cart to prevent wrong calculation.
+			WC()->cart->empty_cart();
 
-			WC()->cart->add_to_cart( $product->get_id(), $qty, $variation_id, $attributes );
+			if ( ( 'variable' === $product_type || 'variable-subscription' === $product_type ) && isset( $_POST['attributes'] ) ) {
+				$attributes = wc_clean( wp_unslash( $_POST['attributes'] ) );
+
+				$data_store   = WC_Data_Store::load( 'product' );
+				$variation_id = $data_store->find_matching_product_variation( $product, $attributes );
+
+				WC()->cart->add_to_cart( $product->get_id(), $qty, $variation_id, $attributes );
+			} elseif ( in_array( $product_type, $this->supported_product_types(), true ) ) {
+				WC()->cart->add_to_cart( $product->get_id(), $qty );
+			}
+
+			WC()->cart->calculate_totals();
+
+			$data           = [];
+			$data          += $this->build_display_items();
+			$data['result'] = 'success';
+
+			// @phpstan-ignore-next-line (return statement is added)
+			wp_send_json( $data );
+		} catch ( Exception $e ) {
+			wp_send_json( [ 'error' => wp_strip_all_tags( $e->getMessage() ) ] );
 		}
-
-		if ( in_array( $product_type, [ 'simple', 'variation', 'subscription', 'subscription_variation' ], true ) ) {
-			WC()->cart->add_to_cart( $product->get_id(), $qty );
-		}
-
-		WC()->cart->calculate_totals();
-
-		$data           = [];
-		$data          += $this->build_display_items();
-		$data['result'] = 'success';
-
-		wp_send_json( $data );
 	}
 
 	/**
@@ -1687,6 +1726,8 @@ class WC_Stripe_Payment_Request {
 			define( 'WOOCOMMERCE_CHECKOUT', true );
 		}
 
+		$this->fix_address_fields_mapping();
+
 		// Normalizes billing and shipping state values.
 		$this->normalize_state();
 
@@ -1772,32 +1813,18 @@ class WC_Stripe_Payment_Request {
 		// it would be DRYer to use `array_merge`,
 		// but I thought that this approach might be more straightforward to clean up when we remove the feature flag code.
 		$button_type = $this->get_button_type();
-		if ( WC_Stripe_Feature_Flags::is_upe_preview_enabled() ) {
-			return [
-				'type'         => $button_type,
-				'theme'        => $this->get_button_theme(),
-				'height'       => $this->get_button_height(),
-				// Default format is en_US.
-				'locale'       => apply_filters( 'wc_stripe_payment_request_button_locale', substr( get_locale(), 0, 2 ) ),
-				'branded_type' => 'default' === $button_type ? 'short' : 'long',
-				// these values are no longer applicable - all the JS relying on them can be removed.
-				'css_selector' => '',
-				'label'        => '',
-				'is_custom'    => false,
-				'is_branded'   => false,
-			];
-		}
-
 		return [
 			'type'         => $button_type,
 			'theme'        => $this->get_button_theme(),
 			'height'       => $this->get_button_height(),
-			'locale'       => apply_filters( 'wc_stripe_payment_request_button_locale', substr( get_locale(), 0, 2 ) ),
 			// Default format is en_US.
-			'is_custom'    => $this->is_custom_button(),
-			'is_branded'   => $this->is_branded_button(),
-			'css_selector' => $this->custom_button_selector(),
-			'branded_type' => $this->get_button_branded_type(),
+			'locale'       => apply_filters( 'wc_stripe_payment_request_button_locale', substr( get_locale(), 0, 2 ) ),
+			'branded_type' => 'default' === $button_type ? 'short' : 'long',
+			// these values are no longer applicable - all the JS relying on them can be removed.
+			'css_selector' => '',
+			'label'        => '',
+			'is_custom'    => false,
+			'is_branded'   => false,
 		];
 	}
 
@@ -1917,11 +1944,25 @@ class WC_Stripe_Payment_Request {
 			];
 		}
 
+		$calculated_total = WC_Stripe_Helper::get_stripe_amount( $order_total );
+		$calculated_total = apply_filters_deprecated(
+			'woocommerce_stripe_calculated_total',
+			[ $calculated_total, $order_total, WC()->cart ],
+			'9.6.0',
+			'wc_stripe_calculated_total',
+			'The woocommerce_stripe_calculated_total filter is deprecated since WooCommerce Stripe Gateway 9.6.0, and will be removed in a future version. Use wc_stripe_calculated_total instead.'
+		);
+
+		/**
+		 * This filter is documented in includes/payment-methods/class-wc-stripe-express-checkout-helper.php
+		 */
+		$calculated_total = apply_filters( 'wc_stripe_calculated_total', $calculated_total, $order_total, WC()->cart );
+
 		return [
 			'displayItems' => $items,
 			'total'        => [
 				'label'   => $this->total_label,
-				'amount'  => max( 0, apply_filters( 'woocommerce_stripe_calculated_total', WC_Stripe_Helper::get_stripe_amount( $order_total ), $order_total, WC()->cart ) ),
+				'amount'  => max( 0, $calculated_total ),
 				'pending' => false,
 			],
 		];
@@ -1994,13 +2035,19 @@ class WC_Stripe_Payment_Request {
 	public function migrate_button_size() {
 		$previous_version = get_option( 'wc_stripe_version' );
 
-		// Exit if it's a new install or the previous version is already 7.8.0 or greater.
-		if ( ! $previous_version || version_compare( $previous_version, '7.8.0', '>=' ) ) {
+		// Exit if it's a new install, or if we don't have a stored button size.
+		if ( ! $previous_version || ! isset( $this->stripe_settings['payment_request_button_size'] ) ) {
 			return;
 		}
 
-		if ( ! isset( $this->stripe_settings['payment_request_button_size'] ) ) {
-			return;
+		$button_size = $this->stripe_settings['payment_request_button_size'];
+
+		// If the previous version is already 7.8.0 or greater, exit unless we have 'medium' as the value.
+		if ( version_compare( $previous_version, '7.8.0', '>=' ) ) {
+			if ( 'medium' !== $button_size ) {
+				return;
+			}
+			// If we have 'medium' as the value, we need to migrate it below.
 		}
 
 		$gateway = woocommerce_gateway_stripe()->get_main_stripe_gateway();
@@ -2009,8 +2056,6 @@ class WC_Stripe_Payment_Request {
 			return;
 		}
 
-		$button_size = $this->stripe_settings['payment_request_button_size'];
-
 		// If the button was set to the default, it is now the small size (40px). If it was set to medium, it is now the default size (48px).
 		if ( 'default' === $button_size ) {
 			$this->stripe_settings['payment_request_button_size'] = 'small';
@@ -2018,6 +2063,78 @@ class WC_Stripe_Payment_Request {
 		} elseif ( 'medium' === $button_size ) {
 			$this->stripe_settings['payment_request_button_size'] = 'default';
 			$gateway->update_option( 'payment_request_button_size', 'default' );
+		}
+	}
+
+	/**
+	 * Restores the shipping methods previously chosen for each recurring cart after shipping was reset and recalculated
+	 * during the Payment Request get_shipping_options flow.
+	 *
+	 * When the cart contains multiple subscriptions with different billing periods, customers are able to select different shipping
+	 * methods for each subscription, however, this is not supported when purchasing with Apple Pay and Google Pay as it's
+	 * only concerned about handling the initial purchase.
+	 *
+	 * In order to avoid Woo Subscriptions's `WC_Subscriptions_Cart::validate_recurring_shipping_methods` throwing an error, we need to restore
+	 * the previously chosen shipping methods for each recurring cart.
+	 *
+	 * This function needs to be called after `WC()->cart->calculate_totals()` is run, otherwise `WC()->cart->recurring_carts` won't exist yet.
+	 *
+	 * @since 8.3.0
+	 *
+	 * @param array $previous_chosen_methods The previously chosen shipping methods.
+	 */
+	private function maybe_restore_recurring_chosen_shipping_methods( $previous_chosen_methods = [] ) {
+		if ( empty( WC()->cart->recurring_carts ) || ! method_exists( 'WC_Subscriptions_Cart', 'get_recurring_shipping_package_key' ) ) {
+			return;
+		}
+
+		$chosen_shipping_methods = WC()->session->get( 'chosen_shipping_methods', [] );
+
+		foreach ( WC()->cart->recurring_carts as $recurring_cart_key => $recurring_cart ) {
+			foreach ( $recurring_cart->get_shipping_packages() as $recurring_cart_package_index => $recurring_cart_package ) {
+				if ( class_exists( 'WC_Subscriptions_Cart' ) ) {
+					$package_key = WC_Subscriptions_Cart::get_recurring_shipping_package_key( $recurring_cart_key, $recurring_cart_package_index );
+
+					// If the recurring cart package key is found in the previous chosen methods, but not in the current chosen methods, restore it.
+					if ( isset( $previous_chosen_methods[ $package_key ] ) && ! isset( $chosen_shipping_methods[ $package_key ] ) ) {
+						$chosen_shipping_methods[ $package_key ] = $previous_chosen_methods[ $package_key ];
+					}
+				}
+			}
+		}
+
+		WC()->session->set( 'chosen_shipping_methods', $chosen_shipping_methods );
+	}
+
+	/**
+	 * Performs special mapping for address fields for specific contexts.
+	 */
+	private function fix_address_fields_mapping() {
+		$billing_country  = ! empty( $_POST['billing_country'] ) ? wc_clean( wp_unslash( $_POST['billing_country'] ) ) : '';
+		$shipping_country = ! empty( $_POST['shipping_country'] ) ? wc_clean( wp_unslash( $_POST['shipping_country'] ) ) : '';
+
+		// For UAE, Google Pay stores the emirate in "region", which gets mapped to the "state" field,
+		// but WooCommerce expects it in the "city" field.
+		if ( 'AE' === $billing_country ) {
+			$billing_state = ! empty( $_POST['billing_state'] ) ? wc_clean( wp_unslash( $_POST['billing_state'] ) ) : '';
+			$billing_city  = ! empty( $_POST['billing_city'] ) ? wc_clean( wp_unslash( $_POST['billing_city'] ) ) : '';
+
+			// Move the state (emirate) to the city field.
+			if ( empty( $billing_city ) && ! empty( $billing_state ) ) {
+				$_POST['billing_city']  = $billing_state;
+				$_POST['billing_state'] = '';
+			}
+		}
+
+		if ( 'AE' === $shipping_country ) {
+			$shipping_state = ! empty( $_POST['shipping_state'] ) ? wc_clean( wp_unslash( $_POST['shipping_state'] ) ) : '';
+			$shipping_city  = ! empty( $_POST['shipping_city'] ) ? wc_clean( wp_unslash( $_POST['shipping_city'] ) ) : '';
+
+			// Move the state (emirate) to the city field.
+			if ( empty( $shipping_city ) && ! empty( $shipping_state ) ) {
+				$_POST['shipping_city']  = $shipping_state;
+				$_POST['shipping_state'] = '';
+			}
 		}
 	}
 }

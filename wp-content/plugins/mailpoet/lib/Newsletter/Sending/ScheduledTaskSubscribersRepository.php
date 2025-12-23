@@ -11,7 +11,7 @@ use MailPoet\Entities\ScheduledTaskSubscriberEntity;
 use MailPoet\Entities\SubscriberEntity;
 use MailPoet\InvalidStateException;
 use MailPoetVendor\Carbon\Carbon;
-use MailPoetVendor\Doctrine\DBAL\Connection;
+use MailPoetVendor\Doctrine\DBAL\ArrayParameterType;
 use MailPoetVendor\Doctrine\ORM\QueryBuilder;
 
 /**
@@ -92,10 +92,15 @@ class ScheduledTaskSubscribersRepository extends Repository {
         ->set('sts.processed', ScheduledTaskSubscriberEntity::STATUS_PROCESSED)
         ->where('sts.subscriber IN (:subscriberIds)')
         ->andWhere('sts.task = :task')
-        ->setParameter('subscriberIds', $subscriberIds, Connection::PARAM_INT_ARRAY)
+        ->setParameter('subscriberIds', $subscriberIds, ArrayParameterType::INTEGER)
         ->setParameter('task', $task)
         ->getQuery()
         ->execute();
+
+      // update was done via DQL, make sure the entities are also refreshed in the entity manager
+      $this->refreshAll(function (ScheduledTaskSubscriberEntity $entity) use ($task, $subscriberIds) {
+        return $entity->getTask() === $task && in_array($entity->getSubscriberId(), $subscriberIds, true);
+      });
     }
 
     $this->checkCompleted($task);
@@ -120,6 +125,22 @@ class ScheduledTaskSubscribersRepository extends Repository {
     $stmt->executeQuery();
   }
 
+  /** @param int[] $ids */
+  public function deleteByTaskIds(array $ids): void {
+    $this->entityManager->createQueryBuilder()
+      ->delete(ScheduledTaskSubscriberEntity::class, 'sts')
+      ->where('sts.task IN (:taskIds)')
+      ->setParameter('taskIds', $ids)
+      ->getQuery()
+      ->execute();
+
+    // delete was done via DQL, make sure the entities are also detached from the entity manager
+    $this->detachAll(function (ScheduledTaskSubscriberEntity $entity) use ($ids) {
+      $task = $entity->getTask();
+      return $task && in_array($task->getId(), $ids, true);
+    });
+  }
+
   public function deleteByScheduledTask(ScheduledTaskEntity $scheduledTask): void {
     $this->entityManager->createQueryBuilder()
       ->delete(ScheduledTaskSubscriberEntity::class, 'sts')
@@ -127,6 +148,11 @@ class ScheduledTaskSubscribersRepository extends Repository {
       ->setParameter('task', $scheduledTask)
       ->getQuery()
       ->execute();
+
+    // delete was done via DQL, make sure the entities are also detached from the entity manager
+    $this->detachAll(function (ScheduledTaskSubscriberEntity $entity) use ($scheduledTask) {
+      return $entity->getTask() === $scheduledTask;
+    });
   }
 
   public function deleteByScheduledTaskAndSubscriberIds(ScheduledTaskEntity $scheduledTask, array $subscriberIds): void {
@@ -135,9 +161,14 @@ class ScheduledTaskSubscribersRepository extends Repository {
       ->where('sts.task = :task')
       ->andWhere('sts.subscriber IN (:subscriberIds)')
       ->setParameter('task', $scheduledTask)
-      ->setParameter('subscriberIds', $subscriberIds, Connection::PARAM_INT_ARRAY)
+      ->setParameter('subscriberIds', $subscriberIds, ArrayParameterType::INTEGER)
       ->getQuery()
       ->execute();
+
+    // delete was done via DQL, make sure the entities are also detached from the entity manager
+    $this->detachAll(function (ScheduledTaskSubscriberEntity $entity) use ($scheduledTask, $subscriberIds) {
+      return $entity->getTask() === $scheduledTask && in_array($entity->getSubscriberId(), $subscriberIds, true);
+    });
 
     $this->checkCompleted($scheduledTask);
   }
@@ -179,7 +210,7 @@ class ScheduledTaskSubscribersRepository extends Repository {
     $count = $this->countUnprocessed($task);
     if ($count === 0) {
       $task->setStatus(ScheduledTaskEntity::STATUS_COMPLETED);
-      $task->setProcessedAt(new Carbon());
+      $task->setProcessedAt(Carbon::now()->millisecond(0));
       $this->entityManager->flush();
     }
   }

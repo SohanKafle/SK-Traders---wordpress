@@ -1,4 +1,7 @@
 <?php
+
+use Automattic\WooCommerce\Enums\OrderStatus;
+
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
@@ -9,6 +12,8 @@ if ( ! defined( 'ABSPATH' ) ) {
  * @extends WC_Gateway_Stripe
  *
  * @since 4.0.0
+ *
+ * @deprecated 10.2.0 This class is now deprecated along with the legacy checkout and will be removed in a future release.
  */
 class WC_Gateway_Stripe_Sepa extends WC_Stripe_Payment_Gateway {
 
@@ -88,11 +93,11 @@ class WC_Gateway_Stripe_Sepa extends WC_Stripe_Payment_Gateway {
 		// Check if pre-orders are enabled and add support for them.
 		$this->maybe_init_pre_orders();
 
-		$main_settings              = get_option( 'woocommerce_stripe_settings' );
+		$main_settings              = WC_Stripe_Helper::get_stripe_settings();
 		$this->title                = $this->get_option( 'title' );
 		$this->description          = $this->get_option( 'description' );
 		$this->enabled              = $this->get_option( 'enabled' );
-		$this->testmode             = ( ! empty( $main_settings['testmode'] ) && 'yes' === $main_settings['testmode'] ) ? true : false;
+		$this->testmode             = WC_Stripe_Mode::is_test();
 		$this->saved_cards          = ( ! empty( $main_settings['saved_cards'] ) && 'yes' === $main_settings['saved_cards'] ) ? true : false;
 		$this->publishable_key      = ! empty( $main_settings['publishable_key'] ) ? $main_settings['publishable_key'] : '';
 		$this->secret_key           = ! empty( $main_settings['secret_key'] ) ? $main_settings['secret_key'] : '';
@@ -118,7 +123,7 @@ class WC_Gateway_Stripe_Sepa extends WC_Stripe_Payment_Gateway {
 		return apply_filters(
 			'wc_stripe_sepa_supported_currencies',
 			[
-				'EUR',
+				WC_Stripe_Currency_Code::EURO,
 			]
 		);
 	}
@@ -183,7 +188,6 @@ class WC_Gateway_Stripe_Sepa extends WC_Stripe_Payment_Gateway {
 	 *
 	 * @since 4.0.0
 	 * @version 4.0.0
-	 * @return string
 	 */
 	public function mandate_display() {
 		/* translators: statement descriptor */
@@ -250,7 +254,7 @@ class WC_Gateway_Stripe_Sepa extends WC_Stripe_Payment_Gateway {
 
 		$description = trim( $description );
 
-		echo wpautop( esc_html( apply_filters( 'wc_stripe_description', wp_kses_post( $description ), $this->id ) ) );
+		echo wp_kses_post( wpautop( apply_filters( 'wc_stripe_description', $description, $this->id ) ) );
 
 		if ( $display_tokenization ) {
 			$this->tokenization_script();
@@ -308,12 +312,14 @@ class WC_Gateway_Stripe_Sepa extends WC_Stripe_Payment_Gateway {
 
 			$this->save_source_to_order( $order, $prepared_source );
 
+			$order_helper = WC_Stripe_Order_Helper::get_instance();
+
 			// Result from Stripe API request.
 			$response = null;
 
 			if ( $order->get_total() > 0 ) {
 				// This will throw exception if not valid.
-				$this->validate_minimum_order_amount( $order );
+				$order_helper->validate_minimum_order_amount( $order );
 
 				WC_Stripe_Logger::log( "Info: Begin processing payment for order $order_id for the amount of {$order->get_total()}" );
 
@@ -324,7 +330,7 @@ class WC_Gateway_Stripe_Sepa extends WC_Stripe_Payment_Gateway {
 					// Customer param wrong? The user may have been deleted on stripe's end. Remove customer_id. Can be retried without.
 					if ( $this->is_no_such_customer_error( $response->error ) ) {
 						delete_user_option( $order->get_customer_id(), '_stripe_customer_id' );
-						$order->delete_meta_data( '_stripe_customer_id' );
+						$order_helper->delete_stripe_customer_id( $order );
 						$order->save();
 					}
 
@@ -371,7 +377,13 @@ class WC_Gateway_Stripe_Sepa extends WC_Stripe_Payment_Gateway {
 					throw new WC_Stripe_Exception( print_r( $response, true ), $localized_message );
 				}
 
-				do_action( 'wc_gateway_stripe_process_payment', $response, $order );
+				do_action_deprecated(
+					'wc_gateway_stripe_process_payment',
+					[ $response, $order ],
+					'9.7.0',
+					'wc_gateway_stripe_process_payment_charge',
+					'The wc_gateway_stripe_process_payment action is deprecated. Use wc_gateway_stripe_process_payment_charge instead.'
+				);
 
 				// Process valid response.
 				$this->process_response( $response, $order );
@@ -397,7 +409,7 @@ class WC_Gateway_Stripe_Sepa extends WC_Stripe_Payment_Gateway {
 			if ( $order->has_status(
 				apply_filters(
 					'wc_stripe_allowed_payment_processing_statuses',
-					[ 'pending', 'failed' ],
+					[ OrderStatus::PENDING, OrderStatus::FAILED ],
 					$order
 				)
 			) ) {

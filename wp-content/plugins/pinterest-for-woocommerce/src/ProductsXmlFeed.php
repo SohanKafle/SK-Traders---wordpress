@@ -69,6 +69,20 @@ class ProductsXmlFeed {
 	 */
 	const ADDITIONAL_IMAGES_LIMIT = 10;
 
+	/**
+	 * Limit of categories allowed by Pinterest in the product_type.
+	 *
+	 * @var int
+	 */
+	const PRODUCT_TYPE_CATEGORIES_LIMIT = 5;
+
+	/**
+	 * Limit of characters allowed by Pinterest in the product_type.
+	 *
+	 * @var int
+	 */
+	const PRODUCT_TYPE_CHARS_LIMIT = 1000;
+
 
 	/**
 	 * Returns the XML header to be printed.
@@ -256,6 +270,7 @@ class ProductsXmlFeed {
 		 *
 		 * @param bool       $apply_shortcodes Shortcodes are applied if set to `true` and stripped out if set to `false`.
 		 * @param WC_Product $product          WooCommerce product object.
+		 *
 		 * phpcs:disable WooCommerce.Commenting.CommentHooks.MissingSinceComment
 		 */
 		$apply_shortcodes = apply_filters( 'pinterest_for_woocommerce_product_description_apply_shortcodes', false, $product );
@@ -284,7 +299,7 @@ class ProductsXmlFeed {
 
 		$id         = $product->get_parent_id() ? $product->get_parent_id() : $product->get_id();
 		$taxonomies = array_map(
-			'self::sanitize',
+			self::class . '::sanitize',
 			self::get_taxonomies( $id )
 		);
 
@@ -292,12 +307,41 @@ class ProductsXmlFeed {
 			return;
 		}
 
-		return '<' . $property . '>' . implode( ' &gt; ', $taxonomies ) . '</' . $property . '>';
+		// Limit to first 5 categories as per Pinterest requirements.
+		$original_count = count( $taxonomies );
+		if ( $original_count > self::PRODUCT_TYPE_CATEGORIES_LIMIT ) {
+			$taxonomies = array_slice( $taxonomies, 0, self::PRODUCT_TYPE_CATEGORIES_LIMIT );
+			Logger::log( sprintf( 'Product [%1$s] has %2$d categories, limiting to first %3$d as per Pinterest requirements.', $id, $original_count, self::PRODUCT_TYPE_CATEGORIES_LIMIT ) );
+		}
+
+		// Build product_type string.
+		$product_type = implode( ' &gt; ', $taxonomies );
+
+		// Ensure product_type doesn't exceed 1000 character limit.
+		if ( strlen( $product_type ) > self::PRODUCT_TYPE_CHARS_LIMIT ) {
+			Logger::log( sprintf( 'Product [%1$s] product_type length is %2$d characters, truncating to %3$d characters as per Pinterest requirements.', $id, strlen( $product_type ), self::PRODUCT_TYPE_CHARS_LIMIT ) );
+
+			// Build product_type by adding taxonomies until we hit the character limit, we always include the first taxonomy.
+			$product_type = '';
+			foreach ( $taxonomies as $index => $taxonomy ) {
+				$separator        = $index > 0 ? ' &gt; ' : '';
+				$new_product_type = $product_type . $separator . $taxonomy;
+
+				if ( strlen( $new_product_type ) > self::PRODUCT_TYPE_CHARS_LIMIT && $index > 0 ) {
+					break;
+				}
+				$product_type = $new_product_type;
+			}
+		}
+
+		return '<' . $property . '>' . $product_type . '</' . $property . '>';
 	}
 
 
 	/**
 	 * Returns the permalink.
+	 *
+	 * @since 1.4.16 Url has UTM parameters used for tracking.
 	 *
 	 * @param WC_Product $product the product.
 	 * @param string     $property The name of the property.
@@ -305,7 +349,31 @@ class ProductsXmlFeed {
 	 * @return string
 	 */
 	private static function get_property_link( $product, $property ) {
-		return '<' . $property . '><![CDATA[' . $product->get_permalink() . ']]></' . $property . '>';
+		$product_url          = $product->get_permalink();
+		$product_url_with_utm = self::add_utm_parameters( $product_url );
+
+		return '<' . $property . '><![CDATA[' . $product_url_with_utm . ']]></' . $property . '>';
+	}
+
+	/**
+	 * Add UTM parameters to the product URL.
+	 * This is used to track the performance of the product pins.
+	 * The parameters are:
+	 * - utm_source: pinterest
+	 * - utm_medium: social
+	 *
+	 * @since 1.4.16
+	 *
+	 * @param string $product_url The product URL.
+	 * @return string
+	 */
+	private static function add_utm_parameters( $product_url ) {
+		$utm_params = array(
+			'utm_source' => 'pinterest',
+			'utm_medium' => 'social',
+		);
+
+		return add_query_arg( $utm_params, $product_url );
 	}
 
 	/**
@@ -486,11 +554,11 @@ class ProductsXmlFeed {
 		/*
 		 * Entry is a one or multiple XML nodes in the following format:
 		 *  <g:shipping>
-		 *		<g:country>...</g:country>
-		 *		<g:region>...</g:region>
-		 *		<g:service>...</g:service>
-		 *		<g:price>...</g:price>
-		 *	</g:shipping>
+		 *      <g:country>...</g:country>
+		 *      <g:region>...</g:region>
+		 *      <g:service>...</g:service>
+		 *      <g:price>...</g:price>
+		 *  </g:shipping>
 		 */
 		foreach ( $shipping_info as $info ) {
 			$shipping_name    = self::sanitize( $info['name'] );

@@ -9,6 +9,7 @@ class CaptchaBuilder implements CaptchaBuilderInterface
  protected $textColor = array();
  protected $lineColor = null;
  protected $backgroundColor = null;
+ protected $background = null;
  protected $backgroundImages = array();
  protected $contents = null;
  protected $phrase = null;
@@ -31,7 +32,7 @@ class CaptchaBuilder implements CaptchaBuilderInterface
  return $this;
  }
  public $tempDir = 'temp/';
- public function __construct($phrase = null, PhraseBuilderInterface $builder = null)
+ public function __construct($phrase = null,?PhraseBuilderInterface $builder = null)
  {
  if ($builder === null) {
  $this->builder = new PhraseBuilder();
@@ -166,12 +167,12 @@ class CaptchaBuilder implements CaptchaBuilderInterface
  return \imagecolorallocate($image, 0, 0, 0);
  }
  // Gets the text size and start position
- $size = (int) round($width / $length) - $this->rand(0, 3) - 1;
+ $size = (int) \round($width / $length) - $this->rand(0, 3) - 1;
  $box = \imagettfbbox($size, 0, $font, $phrase);
  $textWidth = $box[2] - $box[0];
  $textHeight = $box[1] - $box[7];
- $x = (int) round(($width - $textWidth) / 2);
- $y = (int) round(($height - $textHeight) / 2) + $size;
+ $x = (int) \round(($width - $textWidth) / 2);
+ $y = (int) \round(($height - $textHeight) / 2) + $size;
  if (!$this->textColor) {
  $textColor = array($this->rand(0, 150), $this->rand(0, 150), $this->rand(0, 150));
  } else {
@@ -231,7 +232,6 @@ class CaptchaBuilder implements CaptchaBuilderInterface
  $color = $this->backgroundColor;
  $bg = \imagecolorallocate($image, $color[0], $color[1], $color[2]);
  }
- $this->background = $bg;
  \imagefill($image, 0, 0, $bg);
  } else {
  // use a random background image
@@ -349,7 +349,7 @@ class CaptchaBuilder implements CaptchaBuilderInterface
  $value = \current($this->fingerprint);
  \next($this->fingerprint);
  } else {
- $value = \mt_rand((int) $min, (int)$max);
+ $value = \mt_rand((int) $min, (int) $max);
  $this->fingerprint[] = $value;
  }
  return $value;
@@ -418,7 +418,6 @@ class CaptchaBuilder implements CaptchaBuilderInterface
  break;
  default:
  throw new Exception('Not supported file type for background image!');
- break;
  }
  return $image;
  }

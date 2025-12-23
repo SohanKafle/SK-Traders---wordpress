@@ -10,15 +10,13 @@ use MailPoet\Entities\DynamicSegmentFilterEntity;
 use MailPoet\Entities\SubscriberEntity;
 use MailPoet\Util\Security;
 use MailPoet\WP\Functions as WPFunctions;
-use MailPoetVendor\Doctrine\DBAL\Connection;
+use MailPoetVendor\Doctrine\DBAL\ArrayParameterType;
 use MailPoetVendor\Doctrine\DBAL\Query\QueryBuilder;
 use MailPoetVendor\Doctrine\ORM\EntityManager;
 use WP_Term;
 
 class WooCommerceCategory implements Filter {
   const ACTION_CATEGORY = 'purchasedCategory';
-
-  const ACTION_PRODUCT = 'purchasedProduct';
 
   /** @var EntityManager */
   private $entityManager;
@@ -63,14 +61,25 @@ class WooCommerceCategory implements Filter {
       $this->applyTermTaxonomyJoin($queryBuilder, $parameterSuffix);
 
     } elseif ($operator === DynamicSegmentFilterData::OPERATOR_ALL) {
-      $orderStatsAlias = $this->wooFilterHelper->applyOrderStatusFilter($queryBuilder);
-      $this->applyProductJoin($queryBuilder, $orderStatsAlias);
-      $this->applyTermRelationshipsJoin($queryBuilder);
-      $this->applyTermTaxonomyJoin($queryBuilder, $parameterSuffix)
-        ->groupBy("$subscribersTable.id, $orderStatsAlias.order_id")
-        ->having("COUNT($orderStatsAlias.order_id) = :count_" . $parameterSuffix)
-        ->setParameter('count_' . $parameterSuffix, count($categoryIds));
-
+      $subQueryCount = 1;
+      foreach ($categoryIds as $categoryId) {
+        $uniqueParamaterSuffix = Security::generateRandomString();
+        $categoryIdWithChildrenIds = $this->getCategoriesWithChildren([$categoryId]);
+        $subQuery = $this->filterHelper->getNewSubscribersQueryBuilder();
+        $orderStatsAlias = $this->wooFilterHelper->applyOrderStatusFilter($subQuery);
+        $this->applyProductJoin($subQuery, $orderStatsAlias);
+        $this->applyTermRelationshipsJoin($subQuery);
+        $this->applyTermTaxonomyJoin($subQuery, $uniqueParamaterSuffix);
+        $subQuery->setParameter("category_$uniqueParamaterSuffix", $categoryIdWithChildrenIds, ArrayParameterType::STRING);
+        $alias = sprintf("subQuery%s", $subQueryCount);
+        $queryBuilder->innerJoin(
+          $subscribersTable,
+          sprintf("(%s)", $this->filterHelper->getInterpolatedSQL($subQuery)),
+          $alias,
+          "$subscribersTable.id = $alias.id"
+        );
+        $subQueryCount++;
+      }
     } elseif ($operator === DynamicSegmentFilterData::OPERATOR_NONE) {
       // subQuery with subscriber ids that bought products
       $subQuery = $this->createQueryBuilder($subscribersTable);
@@ -84,7 +93,7 @@ class WooCommerceCategory implements Filter {
     }
 
     return $queryBuilder
-      ->setParameter("category_$parameterSuffix", $categoryIdswithChildrenIds, Connection::PARAM_STR_ARRAY);
+      ->setParameter("category_$parameterSuffix", $categoryIdswithChildrenIds, ArrayParameterType::STRING);
   }
 
   private function applyProductJoin(QueryBuilder $queryBuilder, string $orderStatsAlias): QueryBuilder {
@@ -136,8 +145,10 @@ class WooCommerceCategory implements Filter {
   }
 
   private function getAllCategoryIds(int $categoryId): array {
-    $subcategories = $this->wp->getTerms('product_cat', ['child_of' => $categoryId]);
-    if (!is_array($subcategories) || empty($subcategories)) return [$categoryId];
+    $subcategories = $this->wp->getTerms(['taxonomy' => 'product_cat', 'child_of' => $categoryId, 'hide_empty' => false]);
+    if (!is_array($subcategories) || empty($subcategories)) {
+      return [$categoryId];
+    }
     $ids = array_map(function($category) {
       return $category->term_id; // phpcs:ignore Squiz.NamingConventions.ValidVariableName.MemberNotCamelCaps
     }, $subcategories);
@@ -150,7 +161,7 @@ class WooCommerceCategory implements Filter {
       'categories' => [],
     ];
     $categoryIds = $filterData->getArrayParam('category_ids');
-    $terms = $this->wp->getTerms('product_cat', ['include' => $categoryIds, 'hide_empty' => false]);
+    $terms = $this->wp->getTerms(['taxonomy' => 'product_cat', 'include' => $categoryIds, 'hide_empty' => false]);
     /** @var WP_Term[] $terms */
     foreach ($terms as $term) {
       $lookupData['categories'][$term->term_id] = $term->name; // phpcs:ignore Squiz.NamingConventions.ValidVariableName.MemberNotCamelCaps

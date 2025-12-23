@@ -50,7 +50,6 @@ abstract class AbstractStripePayment extends AbstractPaymentMethodType {
 	}
 
 	protected function init() {
-		add_filter( 'woocommerce_saved_payment_methods_list', array( $this, 'transform_payment_method_type' ), 99 );
 	}
 
 	public function initialize() {
@@ -70,7 +69,7 @@ abstract class AbstractStripePayment extends AbstractPaymentMethodType {
 		return array(
 			'name'                   => $this->get_name(),
 			'title'                  => $this->get_setting( 'title_text' ),
-			'showSaveOption'         => \in_array( 'tokenization', $this->get_supported_features() ),
+			'showSaveOption'         => \in_array( 'tokenization', $this->get_supported_features() ) && wc_string_to_bool( $this->get_setting( 'save_card_enabled', true ) ),
 			'showSavedCards'         => \in_array( 'tokenization', $this->get_supported_features() ),
 			'features'               => $this->get_supported_features(),
 			'expressCheckoutEnabled' => $this->is_express_checkout_enabled(),
@@ -80,7 +79,10 @@ abstract class AbstractStripePayment extends AbstractPaymentMethodType {
 			'isAdmin'                => is_admin(),
 			'icons'                  => $this->get_payment_method_icon(),
 			'placeOrderButtonLabel'  => \esc_html( $this->get_setting( 'order_button_text' ) ),
-			'description'            => $this->get_setting( 'description' )
+			'description'            => $this->get_setting( 'description' ),
+			'i18n'                   => $this->get_script_translations(),
+			'elementOptions'         => $this->payment_method->get_element_options(),
+			'paymentElementOptions'  => $this->payment_method->get_payment_element_options()
 		);
 	}
 
@@ -97,19 +99,6 @@ abstract class AbstractStripePayment extends AbstractPaymentMethodType {
 	 * @return mixed
 	 */
 	public function transform_payment_method_type( $list ) {
-		if ( isset( $list[ $this->get_name() ] ) ) {
-			if ( $this->is_active() ) {
-				if ( isset( $list['cc'] ) ) {
-					foreach ( $list[ $this->get_name() ] as $entry ) {
-						$list['cc'][] = $entry;
-					}
-				} else {
-					$list['cc'] = $list[ $this->get_name() ];
-				}
-			}
-			unset( $list[ $this->get_name() ] );
-		}
-
 		return $list;
 	}
 
@@ -137,6 +126,10 @@ abstract class AbstractStripePayment extends AbstractPaymentMethodType {
 	}
 
 	public function get_endpoint_data() {
+		return [];
+	}
+
+	protected function get_script_translations() {
 		return [];
 	}
 

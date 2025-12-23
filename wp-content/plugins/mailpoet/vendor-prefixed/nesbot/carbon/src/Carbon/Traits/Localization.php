@@ -12,9 +12,11 @@ use MailPoetVendor\Symfony\Component\Translation\TranslatorBagInterface;
 use MailPoetVendor\Symfony\Component\Translation\TranslatorInterface;
 use MailPoetVendor\Symfony\Contracts\Translation\LocaleAwareInterface;
 use MailPoetVendor\Symfony\Contracts\Translation\TranslatorInterface as ContractsTranslatorInterface;
+// @codeCoverageIgnoreStart
 if (\interface_exists('MailPoetVendor\\Symfony\\Contracts\\Translation\\TranslatorInterface') && !\interface_exists('MailPoetVendor\\Symfony\\Component\\Translation\\TranslatorInterface')) {
  \class_alias('MailPoetVendor\\Symfony\\Contracts\\Translation\\TranslatorInterface', 'MailPoetVendor\\Symfony\\Component\\Translation\\TranslatorInterface');
 }
+// @codeCoverageIgnoreEnd
 trait Localization
 {
  protected static $translator;
@@ -192,7 +194,7 @@ trait Localization
  {
  return static::translateTimeString($timeString, $this->getTranslatorLocale(), $to);
  }
- public function locale(string $locale = null, ...$fallbackLocales)
+ public function locale(?string $locale = null, ...$fallbackLocales)
  {
  if ($locale === null) {
  return $this->getTranslatorLocale();

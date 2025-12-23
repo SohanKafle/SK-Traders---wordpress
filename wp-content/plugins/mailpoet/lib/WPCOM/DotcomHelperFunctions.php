@@ -5,11 +5,22 @@ namespace MailPoet\WPCOM;
 if (!defined('ABSPATH')) exit;
 
 
+use MailPoet\WP\Functions;
+
 /**
  * Plan detection documentation:
  * https://github.com/Automattic/wc-calypso-bridge#active-plan-detection
  */
 class DotcomHelperFunctions {
+
+  private Functions $wp;
+
+  public function __construct(
+    Functions $wp
+  ) {
+    $this->wp = $wp;
+  }
+
   /**
    * Returns true if in the context of WordPress.com Atomic platform.
    *
@@ -17,7 +28,8 @@ class DotcomHelperFunctions {
    */
   public function isAtomicPlatform(): bool {
     // ATOMIC_CLIENT_ID === '2' corresponds to WordPress.com client on the Atomic platform
-    return defined('IS_ATOMIC') && IS_ATOMIC && defined('ATOMIC_CLIENT_ID') && (ATOMIC_CLIENT_ID === '2');
+    $is_atomic_platform = defined('IS_ATOMIC') && IS_ATOMIC && defined('ATOMIC_CLIENT_ID') && (ATOMIC_CLIENT_ID === '2');
+    return (bool)$this->wp->applyFilters('mailpoet_is_atomic_platform', $is_atomic_platform);
   }
 
   /**
@@ -49,6 +61,40 @@ class DotcomHelperFunctions {
 
   public function isEcommerce(): bool {
     return function_exists('wc_calypso_bridge_is_ecommerce_plan') && wc_calypso_bridge_is_ecommerce_plan();
+  }
+
+  public function isGarden(): bool {
+    if (!function_exists('is_blog_garden')) {
+      return false;
+    }
+    $blog_id = \get_current_blog_id();
+    $site = function_exists('get_site')
+      ? \get_site($blog_id)
+      : (function_exists('get_blog_details') ? \get_blog_details($blog_id) : null);
+    return $site ? \is_blog_garden($site) : false;
+  }
+
+  protected function getSiteMetaValue(string $meta_key): ?string {
+    if (!function_exists('get_site_meta')) {
+      return null;
+    }
+    $blog_id = \get_current_blog_id();
+    $value = \get_site_meta($blog_id, $meta_key, true);
+    return is_string($value) && $value !== '' ? $value : null;
+  }
+
+  public function gardenName(): ?string {
+    if (!$this->isGarden()) {
+      return null;
+    }
+    return $this->getSiteMetaValue('garden_name');
+  }
+
+  public function gardenPartner(): ?string {
+    if (!$this->isGarden()) {
+      return null;
+    }
+    return $this->getSiteMetaValue('garden_partner');
   }
 
   /**

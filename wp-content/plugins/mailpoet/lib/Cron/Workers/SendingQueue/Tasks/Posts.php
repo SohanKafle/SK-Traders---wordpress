@@ -34,7 +34,8 @@ class Posts {
     preg_match_all(
       '/data-post-id="(\d+)"/ism',
       $renderedNewsletter['html'],
-      $matchedPostsIds);
+      $matchedPostsIds
+    );
     $matchedPostsIds = $matchedPostsIds[1];
     if (!count($matchedPostsIds)) {
       return false;
@@ -48,7 +49,7 @@ class Posts {
       return false;
     }
     foreach ($matchedPostsIds as $postId) {
-      $newsletterPost = new NewsletterPostEntity($parent, $postId);
+      $newsletterPost = new NewsletterPostEntity($parent, (int)$postId);
       $this->newsletterPostRepository->persist($newsletterPost);
     }
     $this->newsletterPostRepository->flush();

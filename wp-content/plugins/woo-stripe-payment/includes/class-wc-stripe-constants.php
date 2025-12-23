@@ -4,8 +4,9 @@ defined( 'ABSPATH' ) || exit();
 
 /**
  *
- * @since  3.1.0
- * @author Payment Plugins
+ * @since   3.1.0
+ * @author  Payment Plugins
+ * @package PaymentPlugins\Constants
  *
  */
 class WC_Stripe_Constants {
@@ -102,5 +103,14 @@ class WC_Stripe_Constants {
 	 * @since 3.3.42
 	 */
 	const STRIPE_MANDATE = '_stripe_mandate';
+
+	const STRIPE_UPE_PAYMENT_METHOD = '_stripe_upm_payment_method';
+
+	const STRIPE_PAYMENT_METHOD_TYPE = '_stripe_payment_method_type';
+
+	/**
+	 * @since 3.3.60
+	 */
+	const WOOCOMMERCE_STRIPE_PROCESSING_WEBHOOK = 'WOOCOMMERCE_STRIPE_PROCESSING_WEBHOOK';
 
 }

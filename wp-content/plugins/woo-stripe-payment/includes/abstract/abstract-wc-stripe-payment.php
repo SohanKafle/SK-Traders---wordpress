@@ -6,7 +6,7 @@ defined( 'ABSPATH' ) || exit();
  *
  * @since   3.1.0
  * @author  PaymentPlugins
- * @package Stripe/Abstract
+ * @package PaymentPlugins\Abstract
  *
  */
 abstract class WC_Stripe_Payment {
@@ -106,14 +106,14 @@ abstract class WC_Stripe_Payment {
 		$this->payment_method->save_order_meta( $order, $charge );
 		if ( 'pending' === $charge->status ) {
 			$order->update_status( apply_filters( 'wc_stripe_pending_charge_status', 'on-hold', $order, $this->payment_method ),
-				sprintf( __( 'Charge %1$s is pending. Payment Method: %2$s. Payment will be completed once charge.succeeded webhook received from Stripe.', 'woo-stripe-payment' ),
+				sprintf( __( 'Charge %1$s is pending. Payment Method: %2$s. Payment will be completed once payment_intent.succeeded webhook received from Stripe.', 'woo-stripe-payment' ),
 					$order->get_transaction_id(),
 					$order->get_payment_method_title() ) );
 		} else {
 			if ( $charge->captured ) {
 				$order->payment_complete( $charge->id );
 			} else {
-				$order_status = $this->payment_method->get_option( 'order_status' );
+				$order_status = $this->payment_method->get_order_status_option();
 				$order->update_status( apply_filters( 'wc_stripe_authorized_order_status', 'default' === $order_status ? 'on-hold' : $order_status, $order, $this->payment_method ) );
 			}
 			$order->add_order_note( sprintf( __( 'Order %1$s successful in Stripe. Charge: %2$s. Payment Method: %3$s', 'woo-stripe-payment' ),
@@ -135,7 +135,7 @@ abstract class WC_Stripe_Payment {
 	 *
 	 * @throws Exception
 	 */
-	public function process_refund( $order, $amount = null ) {
+	public function process_refund( $order, $amount = null, $reason = '' ) {
 		$charge = $order->get_transaction_id();
 		try {
 			if ( empty( $charge ) ) {
@@ -155,7 +155,8 @@ abstract class WC_Stripe_Payment {
 				'amount'   => wc_stripe_add_number_precision( $amount, $order->get_currency() ),
 				'metadata' => array(
 					'order_id'    => $order->get_id(),
-					'created_via' => 'woocommerce'
+					'created_via' => 'woocommerce',
+					'reason'      => substr( $reason, 0, 500 )
 				),
 				'expand'   => stripe_wc()->advanced_settings->is_fee_enabled() ? array( 'charge.balance_transaction', 'charge.refunds.data.balance_transaction' ) : array()
 			), $this, $order, $amount );
@@ -166,9 +167,9 @@ abstract class WC_Stripe_Payment {
 				/**
 				 * @since 3.3.35
 				 */
-				do_action( 'wc_stripe_process_refund_success', $order );
+				do_action( 'wc_stripe_process_refund_success', $order, $result );
 
-				return true;
+				return $result;
 			}
 
 			return $result;
@@ -237,8 +238,7 @@ abstract class WC_Stripe_Payment {
 			'user_id'    => $order->get_user_id(),
 			'ip_address' => $order->get_customer_ip_address(),
 			'user_agent' => isset( $_SERVER['HTTP_USER_AGENT'] ) ? $_SERVER['HTTP_USER_AGENT'] : 'unavailable',
-			'partner'    => 'PaymentPlugins',
-			'created'    => time()
+			'partner'    => 'PaymentPlugins'
 		);
 		$webhook_id = stripe_wc()->api_settings->get_option( 'webhook_id_' . wc_stripe_mode() );
 		if ( $webhook_id ) {
@@ -365,7 +365,7 @@ abstract class WC_Stripe_Payment {
 	 * @since 3.3.20
 	 */
 	protected function get_payment_method_charge_type() {
-		return $this->payment_method->get_option( 'charge_type' ) === 'capture' ? WC_Stripe_Constants::AUTOMATIC : WC_Stripe_Constants::MANUAL;
+		return $this->payment_method->get_payment_method_charge_type();
 	}
 
 	public function destroy_session_data() {

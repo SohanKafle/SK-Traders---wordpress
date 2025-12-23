@@ -4,7 +4,7 @@ defined( 'ABSPATH' ) || exit();
 
 /**
  * @since   3.1.2
- * @package Stripe/Classes
+ * @package PaymentPlugins\Classes
  * @author  PaymentPlugins
  *
  */
@@ -66,7 +66,7 @@ class WC_Stripe_Product_Gateway_Option {
 	}
 
 	/**
-	 * Initialzie the settings.
+	 * Initialize the settings.
 	 */
 	public function init_settings() {
 		if ( ! $this->settings && $this->product ) {

@@ -63,7 +63,7 @@ class Cartflows_Ca_Email_Templates_Table extends WP_List_Table {
 	 */
 	public function column_template_name( $item ) {
 
-		$row_actions['edit'] = '<a href="' . wp_nonce_url(
+		$edit_url = wp_nonce_url(
 			add_query_arg(
 				array(
 					'action'     => WCF_ACTION_EMAIL_TEMPLATES,
@@ -73,7 +73,9 @@ class Cartflows_Ca_Email_Templates_Table extends WP_List_Table {
 				$this->base_url
 			),
 			WCF_EMAIL_TEMPLATES_NONCE
-		) . '">' . __( 'Edit', 'woo-cart-abandonment-recovery' ) . '</a>';
+		);
+
+		$row_actions['edit'] = '<a href="' . $edit_url . '">' . __( 'Edit', 'woo-cart-abandonment-recovery' ) . '</a>';
 
 		$row_actions['delete'] = '<a onclick="return confirm(\'Are you sure to delete this email template?\');" href="' . wp_nonce_url(
 			add_query_arg(
@@ -99,7 +101,11 @@ class Cartflows_Ca_Email_Templates_Table extends WP_List_Table {
 			WCF_EMAIL_TEMPLATES_NONCE
 		) . '">' . __( 'Clone', 'woo-cart-abandonment-recovery' ) . '</a>';
 
-		return sprintf( '%s %s', esc_html( $item['template_name'] ), $this->row_actions( $row_actions ) );
+		$row_actions['export'] = '<a href="#" class="wcf-export-template" data-id="' . esc_attr( $item['id'] ) . '" data-nonce="' . esc_attr( wp_create_nonce( WCF_EMAIL_TEMPLATES_NONCE ) ) . '">' . __( 'Export', 'woo-cart-abandonment-recovery' ) . '</a>';
+
+		$template_name = '<a href="' . esc_url( $edit_url ) . '" title="' . esc_attr( $item['template_name'] ) . '">' . esc_html( $item['template_name'] ) . '</a>';
+
+		return sprintf( '%s %s', $template_name, $this->row_actions( $row_actions ) );
 	}
 
 	/**
@@ -119,7 +125,8 @@ class Cartflows_Ca_Email_Templates_Table extends WP_List_Table {
 	 */
 	public function get_bulk_actions() {
 		$actions = array(
-			WCF_ACTION_EMAIL_TEMPLATES => __( 'Delete', 'woo-cart-abandonment-recovery' ),
+			WCF_ACTION_EMAIL_TEMPLATES        => __( 'Delete', 'woo-cart-abandonment-recovery' ),
+			WCF_ACTION_EXPORT_EMAIL_TEMPLATES => __( 'Export', 'woo-cart-abandonment-recovery' ),
 		);
 		return $actions;
 	}
@@ -256,20 +263,27 @@ class Cartflows_Ca_Email_Templates_Table extends WP_List_Table {
 	public function process_bulk_action() {
 
 		global $wpdb;
-		$table_name = $wpdb->prefix . CARTFLOWS_CA_EMAIL_TEMPLATE_TABLE;
-		$action     = Cartflows_Ca_Helper::get_instance()->sanitize_text_filter( 'sub_action', 'GET' );
+		$action_nonce = Cartflows_Ca_Helper::get_instance()->sanitize_text_filter( WCF_SUB_ACTION_DELETE_BULK_EMAIL_TEMPLATES . '_nonce', 'GET' );
 
-		if ( WCF_SUB_ACTION_DELETE_BULK_EMAIL_TEMPLATES === $action ) {
+		// Process the delete only if the nonce is verified and the current user has the capability to manage it.
+		if ( ! empty( $action_nonce ) && wp_verify_nonce( $action_nonce, WCF_SUB_ACTION_DELETE_BULK_EMAIL_TEMPLATES ) && current_user_can( 'manage_woocommerce' ) ) {
 
-			$request_id = isset( $_REQUEST['id'] ) && is_array( $_REQUEST['id'] ) ? array_map( 'intval', $_REQUEST['id'] ) : array(); //phpcs:ignore WordPress.Security.NonceVerification.Recommended
-			$ids        = implode( ',', $request_id );
+			$action = Cartflows_Ca_Helper::get_instance()->sanitize_text_filter( 'sub_action', 'GET' );
 
-			if ( ! empty( $ids ) ) {
-				// Can't use placeholders for table/column names, it will be wrapped by a single quote (') instead of a backquote (`).
-				$wpdb->query(
-					"DELETE FROM {$table_name} WHERE id IN($ids)" //phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-				); // db call ok; no-cache ok.
-			}
+			if ( WCF_SUB_ACTION_DELETE_BULK_EMAIL_TEMPLATES === $action ) {
+
+				$table_name = $wpdb->prefix . CARTFLOWS_CA_EMAIL_TEMPLATE_TABLE;
+
+				$request_id = isset( $_REQUEST['id'] ) && is_array( $_REQUEST['id'] ) ? array_map( 'intval', $_REQUEST['id'] ) : array(); //phpcs:ignore WordPress.Security.NonceVerification.Recommended
+				$ids        = implode( ',', $request_id );
+
+				if ( ! empty( $ids ) ) {
+					// Can't use placeholders for table/column names, it will be wrapped by a single quote (') instead of a backquote (`).
+					$wpdb->query(
+						"DELETE FROM {$table_name} WHERE id IN($ids)" //phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+					); // db call ok; no-cache ok.
+				}
+			}       
 		}
 
 	}

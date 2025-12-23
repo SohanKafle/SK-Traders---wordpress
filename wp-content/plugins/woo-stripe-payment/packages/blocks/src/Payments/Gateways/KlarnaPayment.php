@@ -21,13 +21,15 @@ class KlarnaPayment extends AbstractStripeLocalPayment {
 			'currency'        => $currency,
 			'requiredParams'  => $this->payment_method->get_required_parameters(),
 			'messageOptions'  => array(
-				'countryCode' => stripe_wc()->account_settings->get_account_country()
+				'countryCode' => stripe_wc()->account_settings->get_account_country( wc_stripe_mode() )
 			),
 			'cartTotals'      => [
 				'value' => wc_stripe_add_number_precision( $cart_total, $currency )
 			],
 			'paymentSections' => $this->get_setting( 'payment_sections', [] ),
-			'cartEnabled'     => \in_array( 'cart', $this->get_setting( 'payment_sections', [] ) )
+			'cartEnabled'     => \in_array( 'cart', $this->get_setting( 'payment_sections', [] ) ),
+			'eea_countries'   => $this->payment_method->get_eea_countries(),
+			'accountCountry'  => stripe_wc()->account_settings->get_account_country( wc_stripe_mode() )
 		), parent::get_payment_method_data() );
 	}
 

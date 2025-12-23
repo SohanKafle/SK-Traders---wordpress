@@ -5,11 +5,11 @@ defined( 'ABSPATH' ) || exit();
 /**
  *
  * @since   3.0.5
- * @package Stripe/Tokens
+ * @package PaymentPlugins\PaymentTokens
  * @author  Payment Plugins
  *
  */
-class WC_Payment_Token_Stripe_ACH extends WC_Payment_Token_Stripe {
+class WC_Payment_Token_Stripe_ACH extends WC_Payment_Token_Stripe_Local {
 
 	use WC_Payment_Token_Payment_Method_Trait;
 

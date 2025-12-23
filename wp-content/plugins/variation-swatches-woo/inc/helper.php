@@ -29,6 +29,7 @@ class Helper {
 			'min_width'            => 24,
 			'min_height'           => 24,
 			'border_radius'        => 3,
+			'border_width'         => 1,
 			'disable_attr_type'    => 'blur',
 			'tooltip'              => true,
 			'html_design'          => 'none',
@@ -42,6 +43,7 @@ class Helper {
 			'min_width'            => 24,
 			'min_height'           => 24,
 			'border_radius'        => 24,
+			'border_width'         => 1,
 			'disable_attr_type'    => 'blur',
 			'alignment'            => 'left',
 			'label'                => false,
@@ -151,5 +153,26 @@ class Helper {
 	public function get_option( $option ) {
 		$db_values = get_option( $option, [] );
 		return wp_parse_args( $db_values, $this->defaults[ $option ] );
+	}
+
+	/**
+	 * Get plugin status
+	 *
+	 * @since x.x.x
+	 *
+	 * @param  string $plugin_init_file Plguin init file.
+	 * @return mixed
+	 */
+	public function get_plugin_status( $plugin_init_file ) {
+
+		$installed_plugins = get_plugins();
+
+		if ( ! isset( $installed_plugins[ $plugin_init_file ] ) ) {
+			return 'not-installed';
+		} elseif ( is_plugin_active( $plugin_init_file ) ) {
+			return 'active';
+		} else {
+			return 'inactive';
+		}
 	}
 }

@@ -1,4 +1,7 @@
 <?php
+
+use Automattic\WooCommerce\Enums\OrderStatus;
+
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
@@ -9,6 +12,8 @@ if ( ! defined( 'ABSPATH' ) ) {
  * @extends WC_Gateway_Stripe
  *
  * @since 4.0.0
+ *
+ * @deprecated 10.2.0 This class is now deprecated along with the legacy checkout and will be removed in a future release.
  */
 class WC_Gateway_Stripe_Sofort extends WC_Stripe_Payment_Gateway {
 
@@ -79,11 +84,11 @@ class WC_Gateway_Stripe_Sofort extends WC_Stripe_Payment_Gateway {
 		// Load the settings.
 		$this->init_settings();
 
-		$main_settings              = get_option( 'woocommerce_stripe_settings' );
+		$main_settings              = WC_Stripe_Helper::get_stripe_settings();
 		$this->title                = $this->get_option( 'title' );
 		$this->description          = $this->get_option( 'description' );
 		$this->enabled              = $this->get_option( 'enabled' );
-		$this->testmode             = ( ! empty( $main_settings['testmode'] ) && 'yes' === $main_settings['testmode'] ) ? true : false;
+		$this->testmode             = WC_Stripe_Mode::is_test();
 		$this->saved_cards          = ( ! empty( $main_settings['saved_cards'] ) && 'yes' === $main_settings['saved_cards'] ) ? true : false;
 		$this->publishable_key      = ! empty( $main_settings['publishable_key'] ) ? $main_settings['publishable_key'] : '';
 		$this->secret_key           = ! empty( $main_settings['secret_key'] ) ? $main_settings['secret_key'] : '';
@@ -109,7 +114,7 @@ class WC_Gateway_Stripe_Sofort extends WC_Stripe_Payment_Gateway {
 		return apply_filters(
 			'wc_stripe_sofort_supported_currencies',
 			[
-				'EUR',
+				WC_Stripe_Currency_Code::EURO,
 			]
 		);
 	}
@@ -193,7 +198,7 @@ class WC_Gateway_Stripe_Sofort extends WC_Stripe_Payment_Gateway {
 			data-currency="' . esc_attr( strtolower( get_woocommerce_currency() ) ) . '">';
 
 		if ( $description ) {
-			echo wpautop( esc_html( apply_filters( 'wc_stripe_description', wp_kses_post( $description ), $this->id ) ) );
+			echo wp_kses_post( wpautop( apply_filters( 'wc_stripe_description', $description, $this->id ) ) );
 		}
 
 		echo '</div>';
@@ -214,8 +219,8 @@ class WC_Gateway_Stripe_Sofort extends WC_Stripe_Payment_Gateway {
 		$post_data             = [];
 		$post_data['amount']   = WC_Stripe_Helper::get_stripe_amount( $order->get_total(), $currency );
 		$post_data['currency'] = strtolower( $currency );
-		$post_data['type']     = 'sofort';
-		$post_data['owner']    = $this->get_owner_details( $order );
+		$post_data['type']     = WC_Stripe_Payment_Methods::SOFORT;
+		$post_data['owner']    = WC_Stripe_Order_Helper::get_instance()->get_owner_details( $order );
 		$post_data['redirect'] = [ 'return_url' => $return_url ];
 		$post_data['sofort']   = [
 			'country'            => $bank_country,
@@ -247,7 +252,7 @@ class WC_Gateway_Stripe_Sofort extends WC_Stripe_Payment_Gateway {
 			$order = wc_get_order( $order_id );
 
 			// This will throw exception if not valid.
-			$this->validate_minimum_order_amount( $order );
+			WC_Stripe_Order_Helper::get_instance()->validate_minimum_order_amount( $order );
 
 			// This comes from the create account checkbox in the checkout page.
 			$create_account = ! empty( $_POST['createaccount'] ) ? true : false;
@@ -292,7 +297,7 @@ class WC_Gateway_Stripe_Sofort extends WC_Stripe_Payment_Gateway {
 			if ( $order->has_status(
 				apply_filters(
 					'wc_stripe_allowed_payment_processing_statuses',
-					[ 'pending', 'failed' ],
+					[ OrderStatus::PENDING, OrderStatus::FAILED ],
 					$order
 				)
 			) ) {

@@ -8,8 +8,13 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 class WC_Stripe_UPE_Payment_Method_Eps extends WC_Stripe_UPE_Payment_Method {
 
-	const STRIPE_ID = 'eps';
+	const STRIPE_ID = WC_Stripe_Payment_Methods::EPS;
 
+	/**
+	 * Legacy payment method class reference.
+	 *
+	 * @deprecated 10.2.0 This constant is deprecated and will be removed in future versions.
+	 */
 	const LPM_GATEWAY_CLASS = WC_Gateway_Stripe_Eps::class;
 
 	/**
@@ -18,9 +23,9 @@ class WC_Stripe_UPE_Payment_Method_Eps extends WC_Stripe_UPE_Payment_Method {
 	public function __construct() {
 		parent::__construct();
 		$this->stripe_id            = self::STRIPE_ID;
-		$this->title                = __( 'Pay with EPS', 'woocommerce-gateway-stripe' );
+		$this->title                = __( 'EPS', 'woocommerce-gateway-stripe' );
 		$this->is_reusable          = false;
-		$this->supported_currencies = [ 'EUR' ];
+		$this->supported_currencies = [ WC_Stripe_Currency_Code::EURO ];
 		$this->label                = __( 'EPS', 'woocommerce-gateway-stripe' );
 		$this->description          = __(
 			'EPS is an Austria-based payment method that allows customers to complete transactions online using their bank credentials.',

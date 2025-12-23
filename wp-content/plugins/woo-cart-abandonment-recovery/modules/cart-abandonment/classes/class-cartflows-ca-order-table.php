@@ -16,14 +16,37 @@ if ( ! class_exists( 'WP_List_Table' ) ) {
  * Cart abandonment tracking table class.
  */
 class Cartflows_Ca_Order_Table extends WP_List_Table {
-
-
+	/**
+	 * URL of this page
+	 *
+	 * @var   string
+	 * @since 1.2.27
+	 */
+	public $base_url;
 	/**
 	 * Member Variable
 	 *
 	 * @var object instance
 	 */
 	private static $instance;
+
+	/**
+	 *  Constructor function.
+	 */
+	public function __construct() {
+		global $status, $page;
+
+		$this->define_order_table_constants();
+
+		parent::__construct(
+			[
+				'singular' => 'id',
+				'plural'   => 'ids',
+			]
+		);
+
+		$this->base_url = admin_url( 'admin.php?page=' . WCF_CA_PAGE_NAME . '&action=' . WCF_ACTION_REPORTS );
+	}
 
 	/**
 	 *  Initiator
@@ -36,17 +59,13 @@ class Cartflows_Ca_Order_Table extends WP_List_Table {
 	}
 
 	/**
-	 *  Constructor function.
+	 * Define the order table constants.
+	 *
+	 * @since 1.2.27
+	 * @return void
 	 */
-	public function __construct() {
-		global $status, $page;
-
-		parent::__construct(
-			array(
-				'singular' => 'id',
-				'plural'   => 'ids',
-			)
-		);
+	public function define_order_table_constants(): void {
+		define( 'WCF_REPORTS_TABLE_ACTION', 'edit_reports_table_actions' );
 	}
 
 	/**
@@ -72,22 +91,50 @@ class Cartflows_Ca_Order_Table extends WP_List_Table {
 		$page = Cartflows_Ca_Helper::get_instance()->sanitize_text_filter( 'page', 'GET' );
 
 		$view_url = add_query_arg(
-			array(
+			[
 				'page'       => WCF_CA_PAGE_NAME,
 				'action'     => WCF_ACTION_REPORTS,
 				'sub_action' => WCF_SUB_ACTION_REPORTS_VIEW,
 				'session_id' => sanitize_text_field( $item['session_id'] ),
-			),
+			],
 			admin_url( '/admin.php' )
 		);
 
-		$actions = array(
+		$actions = [
 			'view'   => sprintf( '<a href="%s">%s</a>', esc_url( $view_url ), __( 'View', 'woo-cart-abandonment-recovery' ) ),
-			'delete' => sprintf( '<a onclick="return confirm(\'Are you sure to delete this order?\');" href="?page=%s&action=delete&id=%s">%s</a>', esc_html( $page ), esc_html( $item['id'] ), __( 'Delete', 'woo-cart-abandonment-recovery' ) ),
-		);
+			'delete' => sprintf(
+				'<a onclick="return confirm(\'Are you sure to delete this order?\');" href="' . wp_nonce_url(
+					add_query_arg(
+						[
+							'action' => 'delete',
+							'page'   => esc_html( $page ),
+							'id'     => esc_html( $item['id'] ),
+						],
+						$this->base_url
+					),
+					WCF_REPORTS_TABLE_ACTION,
+					WCF_REPORTS_TABLE_ACTION . '_nonce'
+				) . '">%s</a>',
+				__( 'Delete', 'woo-cart-abandonment-recovery' )
+			),
+		];
 
 		if ( WCF_CART_ABANDONED_ORDER === $item['order_status'] && ! $item['unsubscribed'] ) {
-			$actions['unsubscribe'] = sprintf( '<a onclick="return confirm(\'Are you sure to unsubscribe this user? \');" href="?page=%s&action=unsubscribe&id=%s">%s</a>', esc_html( $page ), esc_html( $item['id'] ), __( 'Unsubscribe', 'woo-cart-abandonment-recovery' ) );
+			$actions['unsubscribe'] = sprintf(
+				'<a onclick="return confirm(\'Are you sure to unsubscribe this user? \');" href="' . wp_nonce_url(
+					add_query_arg(
+						[
+							'action' => 'unsubscribe',
+							'page'   => esc_html( $page ),
+							'id'     => esc_html( $item['id'] ),
+						],
+						$this->base_url
+					),
+					WCF_REPORTS_TABLE_ACTION,
+					WCF_REPORTS_TABLE_ACTION . '_nonce'
+				) . '">%s</a>',
+				__( 'Unsubscribe', 'woo-cart-abandonment-recovery' )
+			);
 
 		}
 
@@ -142,9 +189,9 @@ class Cartflows_Ca_Order_Table extends WP_List_Table {
 	 * @return array
 	 */
 	public function get_bulk_actions() {
-		$actions      = array(
+		$actions      = [
 			'delete' => __( 'Delete', 'woo-cart-abandonment-recovery' ),
-		);
+		];
 		$filter_table = isset( $_GET['filter_table'] ) ? sanitize_text_field( wp_unslash( $_GET['filter_table'] ) ) : ''; //phpcs:ignore WordPress.Security.NonceVerification.Recommended
 		if ( ! isset( $filter_table ) || ( isset( $filter_table ) && WCF_CART_ABANDONED_ORDER === $filter_table ) ) {
 			$actions['unsubscribe'] = __( 'Unsubscribe', 'woo-cart-abandonment-recovery' );
@@ -176,10 +223,10 @@ class Cartflows_Ca_Order_Table extends WP_List_Table {
 		$per_page = 10;
 
 		$columns  = $this->get_columns();
-		$hidden   = array();
+		$hidden   = [];
 		$sortable = $this->get_sortable_columns();
 
-		$this->_column_headers = array( $columns, $hidden, $sortable );
+		$this->_column_headers = [ $columns, $hidden, $sortable ];
 
 		$this->process_bulk_action();
 
@@ -192,8 +239,8 @@ class Cartflows_Ca_Order_Table extends WP_List_Table {
 		$orderby = strtolower( str_replace( ' ', '_', $orderby ) );
 
 		$paged   = $paged ? max( 0, $paged - 1 ) : 0;
-		$orderby = ( $orderby && in_array( $orderby, array_keys( $this->get_sortable_columns() ), true ) ) ? $orderby : 'id';
-		$order   = ( $order && in_array( $order, array( 'asc', 'desc' ), true ) ) ? $order : 'desc';
+		$orderby = $orderby && in_array( $orderby, array_keys( $this->get_sortable_columns() ), true ) ? $orderby : 'id';
+		$order   = $order && in_array( $order, [ 'asc', 'desc' ], true ) ? $order : 'desc';
 		// Can't use placeholders for table/column names, it will be wrapped by a single quote (') instead of a backquote (`).
 		//phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 		$this->items = $wpdb->get_results(
@@ -213,11 +260,11 @@ class Cartflows_Ca_Order_Table extends WP_List_Table {
 
 		// [REQUIRED] configure pagination
 		$this->set_pagination_args(
-			array(
+			[
 				'total_items' => $total_items,
 				'per_page'    => $per_page,
 				'total_pages' => ceil( $total_items / $per_page ),
-			)
+			]
 		);
 
 		$export_data = filter_input( INPUT_GET, 'export_data', FILTER_VALIDATE_BOOLEAN );
@@ -244,15 +291,14 @@ class Cartflows_Ca_Order_Table extends WP_List_Table {
 	 * @return array
 	 */
 	public function get_columns() {
-		$columns = array(
+		return [
 			'cb'           => '<input type="checkbox" />',
 			'nameSurname'  => __( 'Name', 'woo-cart-abandonment-recovery' ),
 			'email'        => __( 'Email', 'woo-cart-abandonment-recovery' ),
 			'cart_total'   => __( 'Cart Total', 'woo-cart-abandonment-recovery' ),
 			'order_status' => __( 'Order Status', 'woo-cart-abandonment-recovery' ),
 			'time'         => __( 'Time', 'woo-cart-abandonment-recovery' ),
-		);
-		return $columns;
+		];
 	}
 
 	/**
@@ -261,55 +307,56 @@ class Cartflows_Ca_Order_Table extends WP_List_Table {
 	 * @return array
 	 */
 	public function get_sortable_columns() {
-		$sortable = array(
-			'nameSurname'  => array( 'name', true ),
-			'cart_total'   => array( 'cart_total', true ),
-			'cart_total'   => array( 'Cart Total', true ),
-			'order_status' => array( 'Order Status', true ),
-			'time'         => array( 'time', true ),
-		);
-		return $sortable;
+		return [
+			'nameSurname'  => [ 'name', true ],
+			'cart_total'   => [ 'cart_total', true ],
+			'cart_total'   => [ 'Cart Total', true ],
+			'order_status' => [ 'Order Status', true ],
+			'time'         => [ 'time', true ],
+		];
 	}
 
 	/**
 	 * Processes bulk actions
 	 */
-	public function process_bulk_action() {
+	public function process_bulk_action(): void {
 		global $wpdb;
-		$table_name = $wpdb->prefix . CARTFLOWS_CA_CART_ABANDONMENT_TABLE;
-		$ids        = array();
-		//phpcs:disable WordPress.Security.NonceVerification.Recommended
-		if ( isset( $_REQUEST['id'] ) ) {
 
-			if ( is_array( $_REQUEST['id'] ) ) {
-				$request_id = array_map( 'intval', $_REQUEST['id'] );
-				$ids        = implode( ',', $request_id );
-			} else {
-				$ids = intval( $_REQUEST['id'] );
+		$security_nonce = Cartflows_Ca_Helper::get_instance()->sanitize_text_filter( WCF_REPORTS_TABLE_ACTION . '_nonce', 'GET' );
+
+		// Process the actions only if the nonce is verified and the current user has the capability to manage it.
+		if ( ! empty( $security_nonce ) && wp_verify_nonce( $security_nonce, WCF_REPORTS_TABLE_ACTION ) && current_user_can( 'manage_woocommerce' ) ) {
+
+			$table_name = $wpdb->prefix . CARTFLOWS_CA_CART_ABANDONMENT_TABLE;
+			$ids        = [];
+
+			if ( isset( $_REQUEST['id'] ) ) {
+
+				if ( is_array( $_REQUEST['id'] ) ) {
+					$request_id = array_map( 'intval', $_REQUEST['id'] );
+					$ids        = implode( ',', $request_id );
+				} else {
+					$ids = intval( $_REQUEST['id'] );
+				}
+			}
+
+			if ( ! empty( $ids ) ) {
+				switch ( $this->current_action() ) {
+					case 'delete':
+						// Can't use placeholders for table/column names, it will be wrapped by a single quote (') instead of a backquote (`).
+						$wpdb->query(
+							"DELETE FROM {$table_name} WHERE id IN({$ids})" //phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+						); // db call ok; no cache ok.
+						break;
+					case 'unsubscribe':
+						$wpdb->query(
+							"UPDATE {$table_name} SET unsubscribed = 1 WHERE id IN({$ids})" //phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+						); // db call ok; no cache ok.
+						break;
+
+				}
 			}
 		}
-
-		if ( ! empty( $ids ) ) {
-
-			switch ( $this->current_action() ) {
-
-				case 'delete':
-					// Can't use placeholders for table/column names, it will be wrapped by a single quote (') instead of a backquote (`).
-					$wpdb->query(
-						"DELETE FROM {$table_name} WHERE id IN($ids)" //phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-					); // db call ok; no cache ok.
-					break;
-				case 'unsubscribe':
-					$wpdb->query(
-						"UPDATE {$table_name} SET unsubscribed = 1 WHERE id IN($ids)" //phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-					); // db call ok; no cache ok.
-					break;
-
-			}
-		}
-
-		//phpcs:enable WordPress.Security.NonceVerification.Recommended
 	}
-
 
 }

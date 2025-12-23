@@ -8,7 +8,7 @@ if ( ! class_exists( 'WC_Payment_Gateway_Stripe_Local_Payment' ) ) {
 
 /**
  *
- * @package Stripe/Gateways
+ * @package PaymentPlugins\Gateways
  * @author  PaymentPlugins
  *
  */
@@ -29,12 +29,5 @@ class WC_Payment_Gateway_Stripe_PayNow extends WC_Payment_Gateway_Stripe_Local_P
 		$this->icon               = stripe_wc()->assets_url( 'img/paynow.svg' );
 		parent::__construct();
 	}
-
-	public function get_local_payment_description() {
-		$this->local_payment_description = wc_stripe_get_template_html( 'checkout/paynow-instructions.php', array( 'button_text' => $this->order_button_text ) );
-
-		return parent::get_local_payment_description();
-	}
-
 
 }

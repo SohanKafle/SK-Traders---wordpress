@@ -8,7 +8,7 @@ require_once( WC_STRIPE_PLUGIN_FILE_PATH . 'includes/class-wc-stripe-api-operati
  * Gateway class that abstracts all API calls to Stripe.
  *
  * @author  Payment Plugins
- * @package Stripe/Classes
+ * @package PaymentPlugins\Classes
  *
  * @property \Stripe\Service\AccountLinkService                        $accountLinks
  * @property \Stripe\Service\AccountService                            $accounts
@@ -58,6 +58,7 @@ require_once( WC_STRIPE_PLUGIN_FILE_PATH . 'includes/class-wc-stripe-api-operati
  * @property \Stripe\Service\TopupService                              $topups
  * @property \Stripe\Service\TransferService                           $transfers
  * @property \Stripe\Service\WebhookEndpointService                    $webhookEndpoints
+ * @property \Stripe\Service\PaymentMethodConfigurationService         $paymentMethodConfigurations
  */
 class WC_Stripe_Gateway {
 

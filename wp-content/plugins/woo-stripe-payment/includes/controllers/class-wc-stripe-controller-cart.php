@@ -6,7 +6,7 @@ defined( 'ABSPATH' ) || exit();
  * Controller class that perfors cart operations for client side requests.
  *
  * @author  PaymentPlugins
- * @package Stripe/Controllers
+ * @package PaymentPlugins\Controllers
  *
  */
 class WC_Stripe_Controller_Cart extends WC_Stripe_Rest_Controller {
@@ -181,7 +181,7 @@ class WC_Stripe_Controller_Cart extends WC_Stripe_Rest_Controller {
 
 			$response = rest_ensure_response(
 				apply_filters(
-					'wc_stripe_update_shipping_method_response',
+					'wc_stripe_update_shipping_address_response',
 					array(
 						'data' => $gateway->get_update_shipping_address_response(
 							array(
@@ -313,6 +313,14 @@ class WC_Stripe_Controller_Cart extends WC_Stripe_Rest_Controller {
 
 			// clear the shipping rates so this cart calculation doesn't interfere with future cart calculations.
 			$this->clear_cached_shipping_rates( WC()->shipping()->get_packages() );
+			/**
+			 * @since 3.3.81 - It's necessary to set the global cart to the session because the cloned cart session might
+			 * have been saved by 3rd party plugins. You don't want the cloned cart used in the cart calculation to be saved
+			 * beyond this request. So the global cart should be set to the session to override anything related to the cloned cart.
+			 * This was added specifically to stop the Smart Coupons behavior where the cart calculation was resulting in
+			 * cart data being set to the session and thus persisting beyond this request.
+			 */
+			WC()->cart->set_session();
 		} else {
 			$response = new WP_Error( 'cart-error', $this->get_error_messages(), array( 'status' => 200 ) );
 		}

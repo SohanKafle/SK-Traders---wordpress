@@ -6,6 +6,9 @@ if ( ! class_exists( 'WC_Payment_Gateway_Stripe_Local_Payment' ) ) {
 	return;
 }
 
+/**
+ * @package PaymentPlugins\Gateways
+ */
 class WC_Payment_Gateway_Stripe_Affirm extends WC_Payment_Gateway_Stripe_Local_Payment {
 
 	use WC_Stripe_Local_Payment_Intent_Trait;
@@ -27,7 +30,6 @@ class WC_Payment_Gateway_Stripe_Affirm extends WC_Payment_Gateway_Stripe_Local_P
 		$this->method_description = __( 'Affirm gateway that integrates with your Stripe account.', 'woo-stripe-payment' );
 		$this->icon               = stripe_wc()->assets_url( 'img/affirm.svg' );
 		parent::__construct();
-		$this->template_name = 'affirm.php';
 		add_filter( 'woocommerce_gateway_icon', array( $this, 'get_woocommerce_gateway_icon' ), 10, 2 );
 	}
 
@@ -86,7 +88,11 @@ class WC_Payment_Gateway_Stripe_Affirm extends WC_Payment_Gateway_Stripe_Local_P
 
 	public function enqueue_checkout_scripts( $scripts ) {
 		parent::enqueue_checkout_scripts( $scripts );
-		$scripts->assets_api->register_script( 'wc-stripe-affirm-checkout', 'assets/build/affirm-message.js' );
+		$scripts->assets_api->register_script(
+			'wc-stripe-affirm-checkout',
+			'assets/build/affirm-message.js',
+			array( 'wc-stripe-vendors', 'wc-stripe-local-payment' )
+		);
 		wp_enqueue_script( 'wc-stripe-affirm-checkout' );
 	}
 
@@ -96,7 +102,10 @@ class WC_Payment_Gateway_Stripe_Affirm extends WC_Payment_Gateway_Stripe_Local_P
 	 * @return void
 	 */
 	public function enqueue_cart_scripts( $scripts ) {
-		$scripts->assets_api->register_script( 'wc-stripe-affirm-cart', 'assets/build/affirm-message.js' );
+		$scripts->assets_api->register_script(
+			'wc-stripe-affirm-cart',
+			'assets/build/affirm-message.js'
+		);
 		wp_enqueue_script( 'wc-stripe-affirm-cart' );
 		$this->enqueue_payment_method_styles();
 		$scripts->localize_script( 'wc-stripe-affirm-cart', $this->get_localized_params( 'cart' ) );
@@ -108,7 +117,10 @@ class WC_Payment_Gateway_Stripe_Affirm extends WC_Payment_Gateway_Stripe_Local_P
 	 * @return void
 	 */
 	public function enqueue_product_scripts( $scripts ) {
-		$scripts->assets_api->register_script( 'wc-stripe-affirm-product', 'assets/build/affirm-message.js' );
+		$scripts->assets_api->register_script(
+			'wc-stripe-affirm-product',
+			'assets/build/affirm-message.js'
+		);
 		wp_enqueue_script( 'wc-stripe-affirm-product' );
 		$scripts->localize_script( 'wc-stripe-affirm-product', $this->get_localized_params( 'product' ) );
 	}
@@ -148,6 +160,16 @@ class WC_Payment_Gateway_Stripe_Affirm extends WC_Payment_Gateway_Stripe_Local_P
 				'description' => __( 'This option determines whether the customer\'s funds are captured immediately or authorized and can be captured at a later date.',
 					'woo-stripe-payment' ),
 			),
+			'order_status'        => array(
+				'type'        => 'select',
+				'title'       => __( 'Order Status', 'woo-stripe-payment' ),
+				'default'     => 'default',
+				'class'       => 'wc-enhanced-select',
+				'options'     => array_merge( array( 'default' => __( 'Default', 'woo-stripe-payment' ) ), wc_get_order_statuses() ),
+				'tool_tip'    => true,
+				'description' => __( 'This is the status of the order once payment is complete. If <b>Default</b> is selected, then WooCommerce will set the order status automatically based on internal logic which states if a product is virtual and downloadable then status is set to complete. Products that require shipping are set to Processing. Default is the recommended setting as it allows standard WooCommerce code to process the order status.',
+					'woo-stripe-payment' ),
+			),
 			'payment_sections'    => array(
 				'type'        => 'multiselect',
 				'title'       => __( 'Message Sections', 'woo-stripe-payment' ),
@@ -158,7 +180,7 @@ class WC_Payment_Gateway_Stripe_Affirm extends WC_Payment_Gateway_Stripe_Local_P
 					'cart'     => __( 'Cart Page', 'woo-stripe-payment' ),
 					'shop'     => __( 'Shop/Category Page', 'woo-stripe-payment' )
 				),
-				'default'     => array( 'cart', 'checkout' ),
+				'default'     => array(),
 				'desc_tip'    => true,
 				'description' => __( 'These are the sections where the Affirm messaging will be enabled.',
 					'woo-stripe-payment' ),

@@ -5,7 +5,7 @@ return array(
 		'type'        => 'description',
 		'description' => '<p><a target="_blank" href="https://pay.google.com/business/console">' . __( 'GPay Business Console', 'woo-stripe-payment' ) .
 		                 '</a></p>' .
-		                 '<p><a target="_blank" href="https://docs.paymentplugins.com/wc-stripe/config/#/stripe_googlepay?id=testing">Testing GPay</a></p>' .
+		                 '<p><a target="_blank" href="https://paymentplugins.com/documentation/stripe/googlepay/testing/">Testing GPay</a></p>' .
 		                 __( 'When test mode is enabled, Google Pay will work without a merchant ID, allowing you to capture the necessary screenshots the Google API team needs to approve your integration request.',
 			                 'woo-stripe-payment' ),
 	),
@@ -54,6 +54,13 @@ return array(
 		'default'     => '',
 		'description' => __( 'Leave blank if you don\'t want a description to show for the gateway.', 'woo-stripe-payment' ),
 		'desc_tip'    => true,
+	),
+	'notice_enabled'   => array(
+		'title'       => __( 'Show Payment Notice', 'woo-stripe-payment' ),
+		'type'        => 'checkbox',
+		'default'     => 'yes',
+		'description' => __( 'When enabled, a notice with additional payment instructions is shown in the payment method section of the checkout shortcode.', 'woo-stripe-payment' ),
+		'desc_tip'    => true
 	),
 	'method_format'    => array(
 		'title'       => __( 'Credit Card Display', 'woo-stripe-payment' ),
@@ -150,17 +157,20 @@ return array(
 		'default'     => 'buy',
 		'description' => __( 'The button style of the GPay button.', 'woo-stripe-payment' ),
 	),
-	/*'button_shape'     => array(
-		'title'       => __( 'Button Shape', 'woo-stripe-payment' ),
-		'type'        => 'select',
-		'class'       => 'gpay-button-option gpay-button-shape',
-		'default'     => 'rect',
-		'options'     => array(
-			'rect' => __( 'Rectangle', 'woo-stripe-payment' ),
-			'pill' => __( 'Pill shape', 'woo-stripe-payment' ),
-		),
-		'description' => __( 'The button shape', 'woo-stripe-payment' ),
-	),*/
+	'button_radius'    => array(
+		'title'             => __( 'Button Radius', 'woo-stripe-payment' ),
+		'type'              => 'number',
+		'class'             => 'gpay-button-option button-radius',
+		'default'           => '4',
+		'description'       => __( 'The border radius of the button.', 'woo-stripe-payment' ),
+		'sanitize_callback' => function ( $value ) {
+			if ( ! preg_match( '/^[\d]+$/', $value ) ) {
+				$value = 0;
+			}
+
+			return absint( $value );
+		}
+	),
 	'button_render'    => array(
 		'type'        => 'button_demo',
 		'title'       => __( 'Button Design', 'woo-stripe-payment' ),

@@ -46,6 +46,7 @@
      */
     GPay.prototype.create_button = function () {
         wc_stripe.GooglePay.prototype.create_button.apply(this, arguments);
+        this.$button.find('button').attr('id', 'gpay-button-online-api-id-checkout');
         $('#place_order').after(this.$button);
         this.trigger_payment_method_selected();
     }

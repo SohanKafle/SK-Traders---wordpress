@@ -89,7 +89,7 @@ class Manage {
       $this->urlHelper->redirectBack();
     }
 
-    $sanitize = function($value) {
+    $sanitize = function ($value) {
       if (is_array($value)) {
         foreach ($value as $k => $v) {
           $value[sanitize_text_field($k)] = sanitize_text_field($v);
@@ -186,7 +186,7 @@ class Manage {
     }
 
     if ($subscriber->getStatus() === SubscriberEntity::STATUS_SUBSCRIBED && $newSegmentIds) {
-      $newSegments = $this->segmentsRepository->findBy(['id' => $newSegmentIds]);
+      $newSegments = $this->segmentsRepository->findByIds($newSegmentIds);
       $this->newSubscriberNotificationMailer->send($subscriber, $newSegments);
       $this->welcomeScheduler->scheduleSubscriberWelcomeNotification(
         $subscriber->getId(),

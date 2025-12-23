@@ -4,7 +4,7 @@
 
 namespace Composer\Autoload;
 
-class ComposerStaticInitba6e215da828d2bc2b4b768fa9cb0dec
+class ComposerStaticInitb5c9fee13999d9e3a4203b036345411b
 {
     public static $prefixLengthsPsr4 = array (
         'D' => 
@@ -14,6 +14,7 @@ class ComposerStaticInitba6e215da828d2bc2b4b768fa9cb0dec
         'A' => 
         array (
             'Automattic\\WooCommerce\\Pinterest\\' => 33,
+            'Automattic\\WooCommerce\\Grow\\Tools\\CompatChecker\\v0_0_1\\' => 55,
             'Automattic\\WooCommerce\\ActionSchedulerJobFramework\\' => 51,
             'Automattic\\Jetpack\\Autoloader\\' => 30,
         ),
@@ -27,6 +28,10 @@ class ComposerStaticInitba6e215da828d2bc2b4b768fa9cb0dec
         'Automattic\\WooCommerce\\Pinterest\\' => 
         array (
             0 => __DIR__ . '/../..' . '/src',
+        ),
+        'Automattic\\WooCommerce\\Grow\\Tools\\CompatChecker\\v0_0_1\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/woocommerce/grow/src',
         ),
         'Automattic\\WooCommerce\\ActionSchedulerJobFramework\\' => 
         array (
@@ -46,9 +51,9 @@ class ComposerStaticInitba6e215da828d2bc2b4b768fa9cb0dec
     public static function getInitializer(ClassLoader $loader)
     {
         return \Closure::bind(function () use ($loader) {
-            $loader->prefixLengthsPsr4 = ComposerStaticInitba6e215da828d2bc2b4b768fa9cb0dec::$prefixLengthsPsr4;
-            $loader->prefixDirsPsr4 = ComposerStaticInitba6e215da828d2bc2b4b768fa9cb0dec::$prefixDirsPsr4;
-            $loader->classMap = ComposerStaticInitba6e215da828d2bc2b4b768fa9cb0dec::$classMap;
+            $loader->prefixLengthsPsr4 = ComposerStaticInitb5c9fee13999d9e3a4203b036345411b::$prefixLengthsPsr4;
+            $loader->prefixDirsPsr4 = ComposerStaticInitb5c9fee13999d9e3a4203b036345411b::$prefixDirsPsr4;
+            $loader->classMap = ComposerStaticInitb5c9fee13999d9e3a4203b036345411b::$classMap;
 
         }, null, ClassLoader::class);
     }

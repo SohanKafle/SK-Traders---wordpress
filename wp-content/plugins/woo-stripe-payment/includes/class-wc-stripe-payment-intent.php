@@ -9,7 +9,7 @@ require_once( WC_STRIPE_PLUGIN_FILE_PATH . 'includes/abstract/abstract-wc-stripe
  * @since   3.1.0
  *
  * @author  Payment Plugins
- * @package Stripe/Classes
+ * @package PaymentPlugins\Classes
  */
 class WC_Stripe_Payment_Intent extends WC_Stripe_Payment {
 
@@ -50,12 +50,13 @@ class WC_Stripe_Payment_Intent extends WC_Stripe_Payment {
 		$order->update_meta_data( WC_Stripe_Constants::PAYMENT_METHOD_TOKEN, is_object( $intent->payment_method ) ? $intent->payment_method->id : $intent->payment_method );
 		$order->update_meta_data( WC_Stripe_Constants::MODE, wc_stripe_mode() );
 		$order->update_meta_data( WC_Stripe_Constants::PAYMENT_INTENT, WC_Stripe_Utils::sanitize_intent( $intent->toArray() ) );
+		$order->set_payment_method( $this->payment_method->id );
 		$order->save();
 
-		if ( $intent->status === 'requires_confirmation' ) {
+		if ( $intent->status === 'requires_confirmation' && $this->payment_method->process_server_side_confirmation( $intent, $order ) ) {
 			$intent = $this->gateway->paymentIntents->confirm(
 				$intent->id,
-				apply_filters( 'wc_stripe_payment_intent_confirmation_args', $this->payment_method->get_payment_intent_confirmation_args( $intent, $order ), $intent, $order )
+				apply_filters( 'wc_stripe_payment_intent_confirmation_args', $this->payment_method->get_payment_intent_confirmation_args( $intent, $order ), $intent, $order, $this->payment_method )
 			);
 			if ( is_wp_error( $intent ) ) {
 				$this->post_payment_process_error_handling( $intent, $order );
@@ -93,7 +94,7 @@ class WC_Stripe_Payment_Intent extends WC_Stripe_Payment {
 				'redirect'         => $this->payment_method->get_return_url( $order ),
 			);
 		}
-		if ( in_array( $intent->status, array( 'requires_action', 'requires_payment_method', 'requires_source_action', 'requires_source' ), true ) ) {
+		if ( in_array( $intent->status, array( 'requires_action', 'requires_payment_method', 'requires_confirmation' ), true ) ) {
 			/**
 			 * Allow 3rd party code to alter the order status of an asynchronous payment method.
 			 * The plugin uses the charge.pending event to set the order's status to on-hold.
@@ -116,6 +117,25 @@ class WC_Stripe_Payment_Intent extends WC_Stripe_Payment {
 		$update_subscription = false;
 		$subscription        = null;
 		$args                = $this->get_payment_intent_args( $order );
+		$intent_id           = $order->get_meta( WC_Stripe_Constants::PAYMENT_INTENT_ID );
+
+		// if the renewal order already has an intent_id, this could be a duplicate request. If the intent has already succeeded,
+		// don't continue with the payment.
+		if ( $intent_id ) {
+			$intent = $this->gateway->mode( $order )->paymentIntents->retrieve( $intent_id );
+			if ( ! is_wp_error( $intent ) ) {
+				if ( in_array( $intent->status, array( 'succeeded', 'requires_capture', 'processing' ) ) ) {
+					if ( isset( $intent->metadata['order_id'] ) && absint( $intent->metadata['order_id'] ) === $order->get_id() ) {
+						$charge = isset( $intent->charges->data[0] ) ? $intent->charges->data[0] : null;
+
+						return (object) array(
+							'complete_payment' => true,
+							'charge'           => $charge,
+						);
+					}
+				}
+			}
+		}
 
 		// unset in case 3rd party code adds this attribute.
 		unset( $args['setup_future_usage'] );
@@ -241,6 +261,20 @@ class WC_Stripe_Payment_Intent extends WC_Stripe_Payment {
 	public function can_update_payment_intent( $order, $intent = null ) {
 		$result = true;
 		if ( ! $this->update_payment_intent && ( defined( WC_Stripe_Constants::WOOCOMMERCE_STRIPE_ORDER_PAY ) || ! is_checkout() || defined( WC_Stripe_Constants::REDIRECT_HANDLER ) || defined( WC_Stripe_Constants::PROCESSING_PAYMENT ) ) ) {
+			if ( defined( WC_Stripe_Constants::WOOCOMMERCE_STRIPE_ORDER_PAY ) ) {
+				/**
+				 * The order is being paid for via the pay for order page. This intent likely requires_payment_method because
+				 * the initial payment attempt failed. Make sure the intent is updated with the payment method being used in this request.
+				 */
+				if ( $intent && $intent->status === 'requires_payment_method' ) {
+					$this->set_update_payment_intent( true );
+
+					return $this->can_update_payment_intent( $order, $intent );
+				}
+			}
+			$result = false;
+		} elseif ( $intent && in_array( $intent->status, array( 'succeeded', 'requires_capture' ) ) ) {
+			// if the intent's status is succeeded or requires capture, this can't be updated.
 			$result = false;
 		} else {
 			$intent = ! $intent ? $order->get_meta( WC_Stripe_Constants::PAYMENT_INTENT ) : $intent;
@@ -281,8 +315,15 @@ class WC_Stripe_Payment_Intent extends WC_Stripe_Payment {
 		$this->add_level3_order_data( $args, $order );
 
 		$args['capture_method'] = $this->get_payment_method_charge_type();
+
+		$args['payment_method_types'][] = $this->payment_method->get_payment_method_type();
+
 		if ( ( $statement_descriptor = stripe_wc()->advanced_settings->get_option( 'statement_descriptor' ) ) ) {
-			$args['statement_descriptor'] = WC_Stripe_Utils::sanitize_statement_descriptor( $statement_descriptor );
+			if ( \in_array( 'card', $args['payment_method_types'] ) ) {
+				$args['statement_descriptor_suffix'] = WC_Stripe_Utils::sanitize_statement_descriptor( $statement_descriptor );
+			} else {
+				$args['statement_descriptor'] = WC_Stripe_Utils::sanitize_statement_descriptor( $statement_descriptor );
+			}
 		}
 		if ( $new ) {
 			$args['confirmation_method'] = $this->payment_method->get_confirmation_method( $order );
@@ -303,6 +344,7 @@ class WC_Stripe_Payment_Intent extends WC_Stripe_Payment {
 				 * The statement_descriptor can't be updated when the intent's status is requires_action
 				 */
 				unset( $args['statement_descriptor'] );
+				unset( $args['statement_descriptor_suffix'] );
 			}
 		}
 
@@ -311,6 +353,8 @@ class WC_Stripe_Payment_Intent extends WC_Stripe_Payment {
 		}
 
 		if ( ( $customer_id = wc_stripe_get_customer_id( $order->get_customer_id() ) ) ) {
+			$args['customer'] = $customer_id;
+		} elseif ( ( $customer_id = $order->get_meta( WC_Stripe_Constants::CUSTOMER_ID ) ) ) {
 			$args['customer'] = $customer_id;
 		}
 
@@ -324,15 +368,13 @@ class WC_Stripe_Payment_Intent extends WC_Stripe_Payment {
 			$args['setup_future_usage'] = 'off_session';
 		}
 
-		$args['payment_method_types'][] = $this->payment_method->get_payment_method_type();
-
 		// if there is a payment method attached already, then ensure the payment_method_type
 		// associated with that attached payment_method is included.
 		if ( $intent && ! empty( $intent->payment_method ) && \is_array( $intent->payment_method_types ) ) {
 			$args['payment_method_types'] = array_values( array_unique( array_merge( $args['payment_method_types'], $intent->payment_method_types ) ) );
 		}
 
-		$this->payment_method->add_stripe_order_args( $args, $order );
+		$this->payment_method->add_stripe_order_args( $args, $order, $intent );
 
 		/**
 		 * @param array                    $args
@@ -383,14 +425,21 @@ class WC_Stripe_Payment_Intent extends WC_Stripe_Payment {
 	 */
 	public function void_charge( $order ) {
 		// fetch the intent and check its status
-		$payment_intent = $this->gateway->paymentIntents->mode( wc_stripe_order_mode( $order ) )->retrieve( $order->get_meta( WC_Stripe_Constants::PAYMENT_INTENT_ID ) );
+		$payment_intent = $this->gateway->mode( $order )->paymentIntents->retrieve( $order->get_meta( WC_Stripe_Constants::PAYMENT_INTENT_ID ) );
 		if ( is_wp_error( $payment_intent ) ) {
 			return $payment_intent;
 		}
 		$statuses = array( 'requires_payment_method', 'requires_capture', 'requires_confirmation', 'requires_action' );
 		if ( 'canceled' !== $payment_intent->status ) {
 			if ( in_array( $payment_intent->status, $statuses ) ) {
-				return $this->gateway->paymentIntents->mode( wc_stripe_order_mode( $order ) )->cancel( $payment_intent->id );
+				// update the charge with metadata so we know this cancellation request originates from the plugin.
+				$this->gateway->charges->update( $order->get_transaction_id(), array(
+					'metadata' => array(
+						'cancellation_via' => 'woocommerce_admin'
+					)
+				) );
+
+				return $this->gateway->paymentIntents->cancel( $payment_intent->id );
 			} elseif ( 'succeeded' === $payment_intent->status ) {
 				return $this->process_refund( $order, $order->get_total() - $order->get_total_refunded() );
 			}
@@ -425,26 +474,28 @@ class WC_Stripe_Payment_Intent extends WC_Stripe_Payment {
 	 * @param WC_Order $order
 	 */
 	public function can_use_payment_intent( $order ) {
-		$intent         = $order->get_meta( WC_Stripe_Constants::PAYMENT_INTENT );
-		$session_intent = (array) WC_Stripe_Utils::get_payment_intent_from_session();
+		$payment_intent_id = $order->get_meta( WC_Stripe_Constants::PAYMENT_INTENT_ID );
+		$session_intent    = (array) WC_Stripe_Utils::get_payment_intent_from_session();
 		if ( $session_intent ) {
-			if ( ! $intent || $session_intent['id'] !== $intent['id'] ) {
-				$intent = $session_intent;
+			if ( ! $payment_intent_id || $session_intent['id'] !== $payment_intent_id ) {
+				$payment_intent_id = $session_intent['id'];
 			}
 		}
-		$intent = $intent ? $this->gateway->paymentIntents->retrieve( $intent['id'], apply_filters( 'wc_stripe_payment_intent_retrieve_args', array( 'expand' => array( 'payment_method' ) ), $order, $intent['id'] ) ) : false;
+		$intent = $payment_intent_id ? $this->gateway->paymentIntents->retrieve( $payment_intent_id, apply_filters( 'wc_stripe_payment_intent_retrieve_args', array( 'expand' => array( 'payment_method' ) ), $order, $payment_intent_id ) ) : false;
 		if ( $intent && ! is_wp_error( $intent ) ) {
 			// If an intent is cancelled, then it's likely that it timed out and can't be used.
 			if ( $intent->status === 'canceled' ) {
 				$intent = false;
 			} else {
-				if ( \in_array( $intent->status, array( 'succeeded', 'requires_capture', 'processing' ) ) && ! defined( WC_Stripe_Constants::REDIRECT_HANDLER ) ) {
-					/**
-					 * If the status is succeeded, and the order ID on the intent doesn't match this checkout's order ID, we know this is
-					 * a previously processed intent and so should not be used.
-					 */
-					if ( isset( $intent->metadata['order_id'] ) && $intent->metadata['order_id'] != $order->get_id() ) {
-						$intent = false;
+				if ( \in_array( $intent->status, array( 'succeeded', 'requires_capture', 'processing' ) ) ) {
+					if ( ! defined( WC_Stripe_Constants::REDIRECT_HANDLER ) ) {
+						/**
+						 * If the status is succeeded, and the order ID on the intent doesn't match this checkout's order ID, we know this is
+						 * a previously processed intent and so should not be used.
+						 */
+						if ( isset( $intent->metadata['order_id'] ) && $intent->metadata['order_id'] != $order->get_id() ) {
+							$intent = false;
+						}
 					}
 				} elseif ( $intent['confirmation_method'] != $this->payment_method->get_confirmation_method( $order ) ) {
 					$intent = false;
@@ -514,6 +565,10 @@ class WC_Stripe_Payment_Intent extends WC_Stripe_Payment {
 						$order->get_customer_id()
 					) );
 				}
+			} else {
+				if ( $order->get_meta( WC_Stripe_Constants::CUSTOMER_ID ) ) {
+					$order->delete_meta_data( WC_Stripe_Constants::CUSTOMER_ID );
+				}
 			}
 		};
 		$delete_payment_token = function () use ( $order ) {
@@ -546,14 +601,7 @@ class WC_Stripe_Payment_Intent extends WC_Stripe_Payment {
 		if ( $this->retry_count < 1 ) {
 			// $data can be an exception, so validate that it's an array.
 			if ( $data && is_array( $data ) ) {
-				if ( isset( $data['payment_intent'] ) ) {
-					if ( isset( $data['payment_intent']['status'] ) ) {
-						$result = in_array( $data['payment_intent']['status'], array( 'succeeded', 'requires_capture' ), true );
-						if ( $result ) {
-							$delete_data();
-						}
-					}
-				} elseif ( isset( $data['code'] ) ) {
+				if ( isset( $data['code'] ) ) {
 					if ( $data['code'] === 'resource_missing' ) {
 						if ( $data['param'] === 'customer' ) {
 							$create_customer();
@@ -574,6 +622,13 @@ class WC_Stripe_Payment_Intent extends WC_Stripe_Payment {
 				} elseif ( isset( $data['param'] ) && strpos( $data['param'], 'level3' ) !== false ) {
 					$result = true;
 					$remove_level3_data();
+				} elseif ( isset( $data['message'] ) && preg_match( '/(update\s+the).+payment_method_types.+link/', $data['message'] ) ) {
+					add_filter( 'wc_stripe_payment_intent_args', function ( $args ) {
+						$args['payment_method_types'][] = 'link';
+
+						return $args;
+					} );
+					$result = true;
 				}
 			}
 			if ( $result ) {
@@ -590,8 +645,9 @@ class WC_Stripe_Payment_Intent extends WC_Stripe_Payment {
 	 */
 	public function post_payment_process_error_handling( $error, $order ) {
 		$data = $error->get_error_data();
-		if ( isset( $data['payment_intent'] ) ) {
-			WC_Stripe_Utils::save_payment_intent_to_session( $data['payment_intent'], $order );
+		if ( isset( $data['code'] ) && $data['code'] === 'payment_intent_invalid_parameter' ) {
+			$order->delete_meta_data( WC_Stripe_Constants::PAYMENT_INTENT_ID );
+			$order->save();
 		}
 	}
 
@@ -646,6 +702,20 @@ class WC_Stripe_Payment_Intent extends WC_Stripe_Payment {
 				$line_item->quantity            = round( $item->get_quantity() );
 				$line_item->tax_amount          = wc_stripe_add_number_precision( $item->get_total_tax(), $currency );
 				$line_item->discount_amount     = wc_stripe_add_number_precision( (float) $item_total - (float) $item->get_total(), $currency );
+
+				/**
+				 * Some plugins incorrectly create a discount using the fee API. If the unit_cost is negative, then this is actually a discount.
+				 * This code ensures the unit_cost is never negative. If it is negative, it's replaced with the discount_amount property.
+				 * The tax_amount must also be considered in the discount_amount total since tax_amount must be non-negative as well.
+				 */
+				if ( $line_item->unit_cost < 0 ) {
+					$line_item->discount_amount = $line_item->discount_amount + abs( $line_item->unit_cost );
+					$line_item->unit_cost       = 0;
+					if ( $line_item->tax_amount < 0 ) {
+						$line_item->discount_amount += abs( $line_item->tax_amount );
+						$line_item->tax_amount      = 0;
+					}
+				}
 
 				$totals->subtotal += $line_item->unit_cost * $line_item->quantity;
 				$totals->tax      += $line_item->tax_amount;

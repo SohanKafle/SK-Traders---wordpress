@@ -18,6 +18,7 @@ use MailPoet\Statistics\StatisticsClicksRepository;
 use MailPoet\Statistics\UserAgentsRepository;
 use MailPoet\Subscribers\SubscribersRepository;
 use MailPoet\Util\Cookies;
+use MailPoet\Util\Request;
 use MailPoet\WP\Functions as WPFunctions;
 
 class Clicks {
@@ -52,6 +53,9 @@ class Clicks {
   /** @var TrackingConfig */
   private $trackingConfig;
 
+  /** @var Request */
+  private $request;
+
   public function __construct(
     Cookies $cookies,
     SubscriberCookie $subscriberCookie,
@@ -61,7 +65,8 @@ class Clicks {
     UserAgentsRepository $userAgentsRepository,
     LinkShortcodeCategory $linkShortcodeCategory,
     SubscribersRepository $subscribersRepository,
-    TrackingConfig $trackingConfig
+    TrackingConfig $trackingConfig,
+    Request $request
   ) {
     $this->cookies = $cookies;
     $this->subscriberCookie = $subscriberCookie;
@@ -72,6 +77,7 @@ class Clicks {
     $this->userAgentsRepository = $userAgentsRepository;
     $this->subscribersRepository = $subscribersRepository;
     $this->trackingConfig = $trackingConfig;
+    $this->request = $request;
   }
 
   /**
@@ -151,14 +157,23 @@ class Clicks {
     bool $wpUserPreview
   ) {
     if (preg_match('/\[link:(?P<action>.*?)\]/', $url, $shortcode)) {
-      if (!$shortcode['action']) $this->abort();
-      $url = $this->linkShortcodeCategory->processShortcodeAction(
-        $shortcode['action'],
+      if (empty($shortcode['action'])) $this->abort();
+      $processedUrl = $this->linkShortcodeCategory->processShortcodeAction(
+        $shortcode[0],
         $newsletter,
         $subscriber,
         $queue,
         $wpUserPreview
       );
+      // If shortcode was not processed, return original shortcode unchanged
+      if ($processedUrl === null) {
+        return $shortcode[0];
+      }
+      $url = $processedUrl;
+      // We need to know the original method for unsubscribe actions
+      if ($this->request->isPost() && $url) {
+        $url = $url . (parse_url($url, PHP_URL_QUERY) ? '&' : '?') . 'request_method=POST';
+      }
     } else {
       $this->shortcodes->setQueue($queue);
       $this->shortcodes->setNewsletter($newsletter);

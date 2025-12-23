@@ -72,20 +72,27 @@ class MailPoetMapper {
       case API::RESPONSE_CODE_PAYLOAD_ERROR:
         $resultParsed = json_decode($result['message'], true);
         $message = __('Error while sending.', 'mailpoet');
-        if (!is_array($resultParsed)) {
-          if (isset($result['error']) && $result['error'] === API::ERROR_MESSAGE_DMRAC) {
-            $message .= $this->getDmarcMessage($result, $sender);
-          } else {
-            $message .= ' ' . $result['message'];
+
+        if (is_array($resultParsed)) {
+          try {
+            $subscribersErrors = $this->getSubscribersErrors($resultParsed, $subscribers);
+            $level = MailerError::LEVEL_SOFT;
+          } catch (InvalidArgumentException $e) {
+            $message .= ' ' . $e->getMessage();
           }
           break;
         }
-        try {
-          $subscribersErrors = $this->getSubscribersErrors($resultParsed, $subscribers);
-          $level = MailerError::LEVEL_SOFT;
-        } catch (InvalidArgumentException $e) {
-          $message .= ' ' . $e->getMessage();
+
+        $appendedMessage = ' ' . $result['message'];
+        if (isset($result['error']) && in_array($result['error'], [API::ERROR_MESSAGE_DMRAC, API::ERROR_MESSAGE_BULK_EMAIL_FORBIDDEN])) {
+            $appendedMessage = $this->getDmarcMessage($result, $sender);
+
+          if ($result['error'] === API::ERROR_MESSAGE_BULK_EMAIL_FORBIDDEN) {
+            $operation = MailerError::OPERATION_DOMAIN_AUTHORIZATION;
+            $level = MailerError::LEVEL_SOFT;
+          }
         }
+        $message .= $appendedMessage;
         break;
       case API::RESPONSE_CODE_INTERNAL_SERVER_ERROR:
       case API::RESPONSE_CODE_BAD_GATEWAY:
@@ -156,7 +163,7 @@ class MailPoetMapper {
   }
 
   private function getAccountBannedMessage(): string {
-    $message = __('MailPoet Sending Service has been temporarily suspended for your site due to [link1]degraded email deliverability[/link1]. Please [link2]contact our support team[/link2] to resolve the issue.', 'mailpoet');
+    $message = __('The MailPoet Sending Service has been temporarily suspended for your site due to a high number of [link1]undeliverable emails or emails marked as unwanted by recipients[/link1]. Please [link2]contact our support team[/link2] to resolve the issue.', 'mailpoet');
     $message = Helpers::replaceLinkTags(
       $message,
       'https://kb.mailpoet.com/article/231-sending-does-not-work#suspended',
@@ -168,7 +175,7 @@ class MailPoetMapper {
     );
     $message = Helpers::replaceLinkTags(
       $message,
-      'https://www.mailpoet.com/support/',
+      'https://www.mailpoet.com/support-for-banned-users/',
       [
         'target' => '_blank',
         'rel' => 'noopener noreferrer',

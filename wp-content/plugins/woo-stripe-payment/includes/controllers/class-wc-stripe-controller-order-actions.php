@@ -5,7 +5,7 @@ defined( 'ABSPATH' ) || exit();
 /**
  *
  * @author  PaymentPlugins
- * @package Stripe/Controllers
+ * @package PaymentPlugins\Controllers
  *
  */
 class WC_Stripe_Controller_Order_Actions extends WC_Stripe_Rest_Controller {
@@ -186,6 +186,7 @@ class WC_Stripe_Controller_Order_Actions extends WC_Stripe_Rest_Controller {
 		$order        = wc_get_order( $order_id );
 		$use_token    = $payment_type === 'token';
 		try {
+			$client = WC_Stripe_Gateway::load( wc_stripe_order_mode( $order ) );
 			// perform some validations
 			if ( $order->get_total() == 0 ) {
 				if ( ! wcs_stripe_active() ) {
@@ -202,10 +203,19 @@ class WC_Stripe_Controller_Order_Actions extends WC_Stripe_Rest_Controller {
 			}
 
 			if ( $order->get_transaction_id() ) {
-				throw new Exception( sprintf( __( 'This order has already been processed. Transaction ID: %1$s. Payment method: %2$s', 'woo-stripe-payment' ),
-					$order->get_transaction_id(),
-					$order->get_payment_method_title() ) );
+				// confirm if the payment intent was authorized.
+				$charge = $client->mode( $order )->charges->retrieve( $order->get_transaction_id() );
+
+				if ( $charge->captured ) {
+					throw new Exception( sprintf( __( 'This order has already been processed. Transaction ID: %1$s. Payment method: %2$s', 'woo-stripe-payment' ),
+						$order->get_transaction_id(),
+						$order->get_payment_method_title() ) );
+				}
+				$order->set_transaction_id( '' );
 			}
+
+			$order->delete_meta_data( WC_Stripe_Constants::PAYMENT_INTENT_ID );
+
 			if ( ! $use_token ) {
 				// only credit card payments are allowed for one off payments as an admin.
 				$payment_method = 'stripe_cc';
@@ -217,11 +227,12 @@ class WC_Stripe_Controller_Order_Actions extends WC_Stripe_Rest_Controller {
 				}
 				$payment_method = $token->get_gateway_id();
 			}
+
 			/**
-			 *
-			 * @var WC_Payment_Gateway_Stripe $gateway
+			 * @var \WC_Stripe_Payment_Gateway $gateway
 			 */
 			$gateway = WC()->payment_gateways()->payment_gateways()[ $payment_method ];
+
 			// temporarily set the charge type of the gateway to whatever the admin has selected.
 			$gateway->settings['charge_type'] = $request->get_param( 'wc_stripe_charge_type' );
 			// set the payment gateway to the order.

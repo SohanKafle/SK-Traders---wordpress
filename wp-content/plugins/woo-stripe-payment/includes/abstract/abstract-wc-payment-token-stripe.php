@@ -8,7 +8,7 @@ require_once( WC_STRIPE_PLUGIN_FILE_PATH . 'includes/traits/wc-stripe-payment-to
  *
  * @since   3.0.0
  * @author  PaymentPlugins
- * @package Stripe/Abstract
+ * @package PaymentPlugins\Abstract
  *
  */
 abstract class WC_Payment_Token_Stripe extends WC_Payment_Token {
@@ -189,6 +189,10 @@ abstract class WC_Payment_Token_Stripe extends WC_Payment_Token {
 	 */
 	public function get_basic_payment_method_title() {
 		return '';
+	}
+
+	public function get_display_name( $deprecated = '' ) {
+		return $this->get_payment_method_title();
 	}
 
 }

@@ -6,7 +6,7 @@ defined( 'ABSPATH' ) || exit();
  *
  * @since   3.0.0
  * @author  Payment Plugins
- * @package Stripe/Classes
+ * @package PaymentPlugins\Settings
  *
  */
 class WC_Stripe_API_Settings extends WC_Stripe_Settings_API {
@@ -157,7 +157,7 @@ class WC_Stripe_API_Settings extends WC_Stripe_Settings_API {
 				'type'        => 'paragraph',
 				'title'       => __( 'Webhook url', 'woo-stripe-payment' ),
 				'class'       => 'wc-stripe-webhook',
-				'text'        => stripe_wc()->rest_api->webhook->rest_url( 'webhook' ),
+				'text'        => '',
 				'desc_tip'    => true,
 				'description' => __( '<strong>Important:</strong> the webhook url is called by Stripe when events occur in your account, like a source becomes chargeable. Use the Create Webhook button or add the webhook manually in your Stripe account.',
 					'woo-stripe-payment' ),
@@ -167,7 +167,7 @@ class WC_Stripe_API_Settings extends WC_Stripe_Settings_API {
 				'title'             => __( 'Live Webhook Secret', 'woo-stripe-payment' ),
 				'description'       => sprintf( __( 'The webhook secret is used to authenticate webhooks sent from Stripe. It ensures no 3rd party can send you events, pretending to be Stripe. %1$sWebhook guide%2$s',
 					'woo-stripe-payment' ),
-					'<a target="_blank" href="https://docs.paymentplugins.com/wc-stripe/config/#/webhooks?id=configure-webhooks">',
+					'<a target="_blank" href="https://paymentplugins.com/documentation/stripe/webhooks">',
 					'</a>' ),
 				'custom_attributes' => array( 'data-show-if' => array( 'mode' => 'live' ) ),
 			),
@@ -176,7 +176,7 @@ class WC_Stripe_API_Settings extends WC_Stripe_Settings_API {
 				'title'             => __( 'Test Webhook Secret', 'woo-stripe-payment' ),
 				'description'       => sprintf( __( 'The webhook secret is used to authenticate webhooks sent from Stripe. It ensures no 3rd party can send you events, pretending to be Stripe. %1$sWebhook guide%2$s',
 					'woo-stripe-payment' ),
-					'<a target="_blank" href="https://docs.paymentplugins.com/wc-stripe/config/#/webhooks?id=configure-webhooks">',
+					'<a target="_blank" href="https://paymentplugins.com/documentation/stripe/webhooks">',
 					'</a>' ),
 				'custom_attributes' => array( 'data-show-if' => array( 'mode' => 'test' ) ),
 			),
@@ -302,6 +302,8 @@ class WC_Stripe_API_Settings extends WC_Stripe_Settings_API {
 				}
 			}
 		}
+		// Set webhook URL here (after init has run) to avoid calling get_rest_url() too early
+		$this->form_fields['webhook_url']['text'] = get_rest_url( null, '/wc-stripe/v1/webhook' );
 		parent::admin_options();
 	}
 
@@ -361,7 +363,7 @@ class WC_Stripe_API_Settings extends WC_Stripe_Settings_API {
 			);
 		}
 		$webhook = $client->mode( $mode )->webhookEndpoints->create( array(
-			'api_version'    => '2020-03-02',
+			'api_version'    => '2022-08-01',
 			'url'            => $url,
 			'enabled_events' => $events,
 		) );
@@ -396,6 +398,28 @@ class WC_Stripe_API_Settings extends WC_Stripe_Settings_API {
 
 	public function delete_account_settings() {
 		delete_option( $this->get_option_key() );
+	}
+
+	public function has_secret_key( $mode ) {
+		$key = wc_stripe_get_secret_key( $mode );
+
+		return ! empty( $key );
+	}
+
+	protected function validate_secret_key_test_field( $key, $value ) {
+		if ( preg_match( '/^rk_live|^sk_live/', $value ) ) {
+			throw new Exception( sprintf( __( 'Live mode keys are not allowed in the "%s field.', 'woo-stripe-payment' ), __( 'Test Secret Key', 'woo-stripe-payment' ) ) );
+		}
+
+		return $value;
+	}
+
+	protected function validate_publishable_key_test_field( $key, $value ) {
+		if ( preg_match( '/^pk_live/', $value ) ) {
+			throw new Exception( sprintf( __( 'Live mode keys are not allowed in the "%s" field.', 'woo-stripe-payment' ), __( 'Test Publishable Key', 'woo-stripe-payment' ) ) );
+		}
+
+		return $value;
 	}
 
 }

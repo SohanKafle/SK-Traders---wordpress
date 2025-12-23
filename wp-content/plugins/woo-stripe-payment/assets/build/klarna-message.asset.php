@@ -1,1 +1,1 @@
-<?php return array('dependencies' => array('jquery', 'wc-stripe-wc-stripe', 'wp-polyfill'), 'version' => '63ac76fcda146e388666c767bcc8721c');
+<?php return array('dependencies' => array('jquery', 'wc-stripe-checkout-modules', 'wc-stripe-message-modules', 'wc-stripe-wc-stripe', 'wp-polyfill'), 'version' => '1bec11bd3b56ff353b95');

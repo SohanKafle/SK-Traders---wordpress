@@ -52,7 +52,7 @@ class WooCommercePastOrders extends SimpleWorker {
     add_filter('posts_where', function ($where = '') use ($lastId) {
       global $wpdb;
       return $where . " AND {$wpdb->prefix}posts.ID > " . $lastId;
-    }, 10, 2);
+    }, 10, 1);
 
     $orderIds = $this->woocommerceHelper->wcGetOrders([
       'date_completed' => '>=' . (($createdAt = $oldestClick->getCreatedAt()) ? $createdAt->format('Y-m-d H:i:s') : null),
@@ -78,6 +78,6 @@ class WooCommercePastOrders extends SimpleWorker {
   }
 
   public function getNextRunDate() {
-    return Carbon::createFromTimestamp($this->wp->currentTime('timestamp')); // schedule immediately
+    return Carbon::now()->millisecond(0); // schedule immediately
   }
 }

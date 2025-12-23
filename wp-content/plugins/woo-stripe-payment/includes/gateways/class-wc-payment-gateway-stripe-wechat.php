@@ -8,7 +8,7 @@ if ( ! class_exists( 'WC_Payment_Gateway_Stripe_Local_Payment' ) ) {
 
 /**
  *
- * @package Stripe/Gateways
+ * @package PaymentPlugins\Gateways
  * @author  PaymentPlugins
  *
  */
@@ -35,19 +35,4 @@ class WC_Payment_Gateway_Stripe_WeChat extends WC_Payment_Gateway_Stripe_Local_P
 		parent::init_form_fields();
 		$this->form_fields['allowed_countries']['default'] = 'all';
 	}
-
-	public function get_payment_intent_confirmation_args( $intent, $order ) {
-		return array(
-			'payment_method_options' => array(
-				$this->get_payment_method_type() => array(
-					'client' => 'web'
-				)
-			),
-			'return_url'             => add_query_arg( array(
-				'payment_intent'               => $intent->id,
-				'payment_intent_client_secret' => $intent->client_secret
-			), $this->get_local_payment_return_url( $order ) )
-		);
-	}
-
 }

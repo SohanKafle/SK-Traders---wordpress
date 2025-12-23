@@ -34,6 +34,9 @@ class WorkersFactory {
     StatsNotificationsWorker::TASK_TYPE,
     BackfillEngagementData::TASK_TYPE,
     Mixpanel::TASK_TYPE,
+    AbandonedCartWorker::TASK_TYPE,
+    LogCleanup::TASK_TYPE,
+    Tracks::TASK_TYPE,
   ];
 
   /** @var ContainerWrapper */
@@ -90,9 +93,9 @@ class WorkersFactory {
     return $this->container->get(ExportFilesCleanup::class);
   }
 
-  /** @return Beamer */
-  public function createBeamerkWorker() {
-    return $this->container->get(Beamer::class);
+  /** @return LogCleanup */
+  public function createLogCleanupWorker() {
+    return $this->container->get(LogCleanup::class);
   }
 
   /** @return InactiveSubscribers */
@@ -167,5 +170,9 @@ class WorkersFactory {
 
   public function createMixpanelWorker() {
     return $this->container->get(Mixpanel::class);
+  }
+
+  public function createTracksWorker() {
+    return $this->container->get(Tracks::class);
   }
 }

@@ -10,7 +10,7 @@ if ( ! class_exists( 'WC_Payment_Gateway_Stripe_Local_Payment' ) ) {
  * Class WC_Payment_Gateway_Stripe_Afterpay
  *
  * @since   3.3.1
- * @package Stripe/Gateways
+ * @package PaymentPlugins\Gateways
  */
 class WC_Payment_Gateway_Stripe_Afterpay extends WC_Payment_Gateway_Stripe_Local_Payment {
 
@@ -30,7 +30,6 @@ class WC_Payment_Gateway_Stripe_Afterpay extends WC_Payment_Gateway_Stripe_Local
 		$this->method_description = __( 'Afterpay gateway that integrates with your Stripe account.', 'woo-stripe-payment' );
 		$this->icon               = stripe_wc()->assets_url( 'img/afterpay.svg' );
 		parent::__construct();
-		$this->template_name = 'afterpay.php';
 		add_filter( 'woocommerce_gateway_icon', array( $this, 'get_woocommerce_gateway_icon' ), 10, 2 );
 	}
 
@@ -73,6 +72,16 @@ class WC_Payment_Gateway_Stripe_Afterpay extends WC_Payment_Gateway_Stripe_Local
 				'description' => __( 'This option determines whether the customer\'s funds are captured immediately or authorized and can be captured at a later date.',
 					'woo-stripe-payment' ),
 			),
+			'order_status'     => array(
+				'type'        => 'select',
+				'title'       => __( 'Order Status', 'woo-stripe-payment' ),
+				'default'     => 'default',
+				'class'       => 'wc-enhanced-select',
+				'options'     => array_merge( array( 'default' => __( 'Default', 'woo-stripe-payment' ) ), wc_get_order_statuses() ),
+				'tool_tip'    => true,
+				'description' => __( 'This is the status of the order once payment is complete. If <b>Default</b> is selected, then WooCommerce will set the order status automatically based on internal logic which states if a product is virtual and downloadable then status is set to complete. Products that require shipping are set to Processing. Default is the recommended setting as it allows standard WooCommerce code to process the order status.',
+					'woo-stripe-payment' ),
+			),
 			'icon'                        => array(
 				'title'       => __( 'Icon', 'woo-stripe-payment' ),
 				'type'        => 'select',
@@ -97,7 +106,7 @@ class WC_Payment_Gateway_Stripe_Afterpay extends WC_Payment_Gateway_Stripe_Local
 					'mini_cart' => __( 'Mini Cart', 'woo-stripe-payment' ),
 					'shop'      => __( 'Shop/Category Page', 'woo-stripe-payment' )
 				),
-				'default'     => array( 'product', 'cart', 'checkout' ),
+				'default'     => array(),
 				'description' => __( 'These are the additional sections where the Afterpay messaging will be enabled. You can control individual products via the Edit product page.',
 					'woo-stripe-payment' ),
 			),
@@ -395,19 +404,20 @@ class WC_Payment_Gateway_Stripe_Afterpay extends WC_Payment_Gateway_Stripe_Local
 
 	public function enqueue_checkout_scripts( $scripts ) {
 		parent::enqueue_checkout_scripts( $scripts );
-		$scripts->assets_api->register_script( 'wc-stripe-afterpay-checkout', 'assets/build/afterpay-message.js' );
+		$scripts->assets_api->register_script( 'wc-stripe-afterpay-checkout', 'assets/build/afterpay-message.js', array( 'wc-stripe-vendors', 'wc-stripe-local-payment' ) );
 		wp_enqueue_script( 'wc-stripe-afterpay-checkout' );
 	}
 
 	public function enqueue_product_scripts( $scripts ) {
-		$scripts->assets_api->register_script( 'wc-stripe-afterpay-product', 'assets/build/afterpay-message.js' );
+		$scripts->assets_api->register_script( 'wc-stripe-afterpay-product', 'assets/build/afterpay-message.js', array( 'wc-stripe-vendors' ) );
 		wp_enqueue_script( 'wc-stripe-afterpay-product' );
 		$scripts->localize_script( 'wc-stripe-afterpay-product', $this->get_localized_params( 'product' ) );
 	}
 
 	public function enqueue_cart_scripts( $scripts ) {
-		$scripts->assets_api->register_script( 'wc-stripe-afterpay-cart', 'assets/build/afterpay-message.js' );
+		$scripts->assets_api->register_script( 'wc-stripe-afterpay-cart', 'assets/build/afterpay-message.js', array( 'wc-stripe-vendors' ) );
 		wp_enqueue_script( 'wc-stripe-afterpay-cart' );
+		$this->enqueue_payment_method_styles();
 		$scripts->localize_script( 'wc-stripe-afterpay-cart', $this->get_localized_params( 'cart' ) );
 	}
 
@@ -418,7 +428,7 @@ class WC_Payment_Gateway_Stripe_Afterpay extends WC_Payment_Gateway_Stripe_Local
 	 * @return void
 	 */
 	public function enqueue_category_scripts( $assets_api, $asset_data ) {
-		$assets_api->register_script( 'wc-stripe-afterpay-messaging', 'assets/build/afterpay-message.js' );
+		$assets_api->register_script( 'wc-stripe-afterpay-messaging', 'assets/build/afterpay-message.js', array( 'wc-stripe-vendors' ) );
 		$asset_data->add( $this->id, [
 			'supportedCurrencies' => $this->currencies,
 			'requiredParams'      => $this->get_required_parameters(),
@@ -448,8 +458,8 @@ class WC_Payment_Gateway_Stripe_Afterpay extends WC_Payment_Gateway_Stripe_Local
 			'AUD' => array( 'AU', 1, 2000 ),
 			'CAD' => array( 'CA', 1, 2000 ),
 			'NZD' => array( 'NZ', 1, 2000 ),
-			'GBP' => array( 'GB', 1, 1000 ),
-			'USD' => array( 'US', 1, 2000 )
+			'GBP' => array( 'GB', 1, 1200 ),
+			'USD' => array( 'US', 1, 4000 )
 		), $this );
 	}
 
@@ -580,7 +590,7 @@ class WC_Payment_Gateway_Stripe_Afterpay extends WC_Payment_Gateway_Stripe_Local
 		$scripts->localize_script( 'mini-cart', $this->get_localized_params( 'cart' ), 'wc_' . $this->id . '_mini_cart_params' );
 	}
 
-	public function add_stripe_order_args( &$args, $order ) {
+	public function add_stripe_order_args( &$args, $order, $intent = null ) {
 		if ( empty( $args['shipping'] ) ) {
 			// This ensures digital products can be processed
 			$args['shipping'] = array(
@@ -596,35 +606,6 @@ class WC_Payment_Gateway_Stripe_Afterpay extends WC_Payment_Gateway_Stripe_Local
 			);
 		}
 	}
-
-	/*
-	 * @todo - uncomment in future version when subscriptions are supported.
-	 * public function get_payment_intent_confirmation_args( $intent, $order ) {
-		$args = array();
-		if ( ( wcs_stripe_active() && wcs_order_contains_subscription( $order ) )
-		     || $this->order_contains_pre_order( $order )
-		) {
-			$ip_address = $order->get_customer_ip_address();
-			$user_agent = $order->get_customer_user_agent();
-			if ( ! $ip_address ) {
-				$ip_address = WC_Geolocation::get_external_ip_address();
-			}
-			if ( ! $user_agent ) {
-				$user_agent = 'WordPress/' . get_bloginfo( 'version' ) . '; ' . get_bloginfo( 'url' );
-			}
-			$args['mandate_data'] = array(
-				'customer_acceptance' => array(
-					'type'   => 'online',
-					'online' => array(
-						'ip_address' => $ip_address,
-						'user_agent' => $user_agent
-					)
-				)
-			);
-		}
-
-		return $args;
-	}*/
 
 	private function is_restricted_account_country() {
 		//$result = false;

@@ -5,7 +5,7 @@ defined( 'ABSPATH' ) || exit();
 /**
  *
  * @author  PaymentPlugins
- * @package Stripe/Classes
+ * @package PaymentPlugins\Classes
  *
  */
 class WC_Stripe_Update {
@@ -28,7 +28,9 @@ class WC_Stripe_Update {
 			'3.3.28' => 'update-3.3.28.php',
 			'3.3.34' => 'update-3.3.34.php',
 			'3.3.47' => 'update-3.3.47.php',
-			'3.3.53' => 'update-3.3.53.php'
+			'3.3.53' => 'update-3.3.53.php',
+			'3.3.70' => 'update-3.3.70.php',
+			'3.3.89' => 'update-3.3.89.php'
 		);
 
 	public static function init() {
@@ -40,7 +42,7 @@ class WC_Stripe_Update {
 	 */
 	public static function update() {
 		// if option is not set, make the default version 3.0.6.
-		$current_version = get_option( WC_Stripe_Constants::VERSION_KEY, '3.0.6' );
+		$current_version = get_option( WC_Stripe_Constants::VERSION_KEY, stripe_wc()->version() );
 
 		// if database version is less than plugin version, an update might be required.
 		if ( version_compare( $current_version, stripe_wc()->version(), '<' ) ) {

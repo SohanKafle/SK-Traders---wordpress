@@ -1,10 +1,10 @@
 === Payment Plugins for Stripe WooCommerce ===
 Contributors: mr.clayton
-Tags: stripe, ach, klarna, credit card, apple pay, google pay, ideal, sepa, sofort
+Tags: stripe, klarna, credit card, apple pay, google pay
 Requires at least: 3.0.1
-Tested up to: 6.4
+Tested up to: 6.9
 Requires PHP: 5.6
-Stable tag: 3.3.55
+Stable tag: 3.3.96
 Copyright: Payment Plugins
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
@@ -12,14 +12,14 @@ License URI: http://www.gnu.org/licenses/gpl-2.0.html
 == Description ==
 Accept Credit Cards, Google Pay, ApplePay, Afterpay, Affirm, ACH, Klarna, iDEAL and more all in one plugin for free!
 
-= Official Stripe Partner = 
-Payment Plugins is an official partner of Stripe. 
+= Official Stripe Partner =
+Payment Plugins is an official partner of Stripe.
 
 = Boost conversion by offering product and cart page checkout =
 Stripe for WooCommerce is made to supercharge your conversion rate by decreasing payment friction for your customer.
 Offer Google Pay, Apple Pay, and Stripe's Browser payment methods on product pages, cart pages, and at the top of your checkout page.
 
-= Visit our demo site to see all the payment methods in action = 
+= Visit our demo site to see all the payment methods in action =
 [Demo Site](https://demos.paymentplugins.com/wc-stripe/product/pullover/)
 
 To see Apple Pay, visit the site using an iOS device. Google Pay will display for supported browsers like Chrome.
@@ -39,16 +39,16 @@ To see Apple Pay, visit the site using an iOS device. Google Pay will display fo
 - Integrates with [CheckoutWC](https://www.checkoutwc.com/payment-plugins-stripe-woocommerce/)
 
 == Frequently Asked Questions ==
-= How do I test this plugin? = 
+= How do I test this plugin? =
  You can enable the plugin's test mode, which allows you to simulate transactions.
- 
-= Does your plugin support WooCommerce Subscriptions? = 
+
+= Does your plugin support WooCommerce Subscriptions? =
 Yes, the plugin supports all functionality related to WooCommerce Subscriptions.
 
-= Where is your documentation? = 
-https://docs.paymentplugins.com/wc-stripe/config/#/
+= Where is your documentation? =
+https://paymentplugins.com/documentation/stripe/
 
-= Why isn't the Payment Request button showing on my local machine? = 
+= Why isn't the Payment Request button showing on my local machine? =
 If your site is not loading over https, then Stripe won't render the Payment Request button. Make sure you are using https.
 
 == Screenshots ==
@@ -63,7 +63,160 @@ If your site is not loading over https, then Stripe won't render the Payment Req
 9. Stripe Link for high conversion
 
 == Changelog ==
-= 3.3.55 - 01/01/24 =
+= 3.3.96 - 11/30/25 =
+* Added - tested up to WordPress 6.9
+* Updated - Load wc-stripe-functions.php earlier than "init" action. Some 3rd party plugins were causing a conflict which is resolved by earlier loading of Stripe plugin functions.
+* Updated - Modified payment button logic on product variation pages to use the DOM value instead of Javascript variable values. [https://wordpress.org/support/topic/more-than-one-variation-on-a-product-causes-googlepay-error/](https://wordpress.org/support/topic/more-than-one-variation-on-a-product-causes-googlepay-error/)
+= 3.3.95 - 10/29/25 =
+* Added - WC Tested to 10.3
+* Added - Support for Billie payment method
+* Added - Puerto Rico to Klarna supported countries
+* Updated - Changed script handles for WooCommerce to include the "wc-" prefix for WooCommerce 10.3.0.
+* Updated - When express payment is made on product and cart page, ensure attribution data is included in the request.
+* Updated - Removed Giropay and Sofort from payment method options since they have been deprecated by Stripe.
+= 3.3.94 - 10/15/25 =
+* Updated - Merchants using Bluehost reported that payment methods were not showing in settings or checkout page. This was caused by an update to the Bluehost plugin where it triggered the "woocommerce_payment_gateways" too early in the WordPress load sequence.
+ We have added additional code to ensure Stripe payment methods are loaded even if the filter "woocommerce_payment_gateways" is called before the WordPress "init" action.
+* Added - Filter "wc_stripe_order_cancelled_enabled". [https://wordpress.org/support/topic/limit-refund-on-cancel-option/](https://wordpress.org/support/topic/limit-refund-on-cancel-option/)
+= 3.3.93 - 10/03/25 =
+* Fixed - When Stripe inline form was enabled, Link was always active
+* Fixed - Apple Pay rounded button option on checkout block
+* Added - Klarna support for recurring payments and pre-orders
+* Added - WC Tested to 10.2
+* Updated - New documentation website. [Documentation](https://paymentplugins.com/documentation/stripe/)
+* Updated  - Stripe PHP library to version 13.18.0
+* Updated - Afterpay parameters updated for USD and GBP. Max cart total for USD is $4,000 and 1,200 for GBP.
+* Updated - Limit ACH payment option to US customers based on billing country. [https://wordpress.org/support/topic/no-option-to-limit-countries-for-ach-bank-transfer/](https://wordpress.org/support/topic/no-option-to-limit-countries-for-ach-bank-transfer/)
+= 3.3.92 - 08/21/25 =
+* Fixed - Incompatibility notice that was showing on block editor under certain conditions. The Stripe plugin has supported the cart and checkout block for several years.
+* Fixed - Issue where Link Checkout was not showing on product page if other express options were not enabled.
+* Updated - Improved integration with FunnelKit upsells when 3DS is required.
+* Added - WC Tested to 10.1
+* Fixed - [https://wordpress.org/support/topic/missing-label-association-for-saving-sepa-payment-method/](https://wordpress.org/support/topic/missing-label-association-for-saving-sepa-payment-method/)
+= 3.3.91 - 07/23/25 =
+* Fixed - Check that billing phone field exists on checkout page before requiring it in the Link Checkout wallet
+* Update - For level3 data, include logic for cases where discounts are added as a negative fee. [https://wordpress.org/support/topic/error-trying-to-capture-payment-in-woocommerce/](https://wordpress.org/support/topic/error-trying-to-capture-payment-in-woocommerce/)
+* Added - WC Tested to 10.0
+= 3.3.90 - 06/26/25 =
+* Fixed - If iDEAL was used to pay for a failed renewal order, it was not being converted to SEPA which caused the next renewal payment to fail.
+* Fixed - Javascript error in Firefox when Link Checkout enabled
+* Updated - If on variable product page and variation not in stock, disable express payment buttons
+= 3.3.89 -06/23/25 =
+* Added - Link Express Checkout gateway for the product, cart and checkout page. This feature has replaced the Link popup functionality. It can be enabled on the new "Link Checkout" settings page.
+* Fixed - Javascript error on Admin Order Details page when customer associated with order was changed.  [https://wordpress.org/support/topic/errors-in-admin-order-page-when-selecting-a-customer/](https://wordpress.org/support/topic/errors-in-admin-order-page-when-selecting-a-customer/)
+* Updated - Moved the Link enabled/disabled option for cards from the Advanced Settings page to the Credit Card Settings page now that there is a new Link Express Checkout gateway.
+* Removed - The Link popup feature has been replaced with our new Link Express Checkout feature, which offers a faster, more reliable one-click checkout experience similar to Apple Pay and Google Pay. This enhancement provides better conversion rates and a smoother path for your customers to complete their purchases.
+= 3.3.88 - 06/10/35 =
+* Fixed - WooCommerce 9.9.3 unexpectedly changed the operand type of the WC_Shipping_Rate $cost property, resulting in a possible PHP error. This change resolves that. [https://wordpress.org/support/topic/fatal-error-with-woocommerce-9-9-3/](https://wordpress.org/support/topic/fatal-error-with-woocommerce-9-9-3/)
+= 3.3.87 - 06/01/25 =
+* Added - Option to save customer's payment method when using the pay for order modal in the Edit Order admin page
+* Added - Missing text domain on two strings. [https://wordpress.org/support/topic/empty-text-domain-in-strings-translation-error/](https://wordpress.org/support/topic/empty-text-domain-in-strings-translation-error/)
+* Added - Pay By Bank payment method stand alone gateway. [https://wordpress.org/support/topic/pay-by-bank/](https://wordpress.org/support/topic/pay-by-bank/)
+* Added - Handle WooCommerce core notices for express payment methods. [https://wordpress.org/support/topic/subscription-using-apple-pay-crashes-block-checkout/](https://wordpress.org/support/topic/subscription-using-apple-pay-crashes-block-checkout/)
+* Updated - Payment Request Button locale format. [https://wordpress.org/support/topic/show-google-pay-button-in-users-language/](https://wordpress.org/support/topic/show-google-pay-button-in-users-language/)
+* Updated - Improved block editor preview for express payment methods
+= 3.3.86 - 04/29/25 =
+* Fixed - Error related to WC 9.8+ and the checkout block when express payment button like Apple Pay used. [https://wordpress.org/support/topic/applepay-on-checkout-block-broken-in-production-and-virgin-sandbox-test-mode/](https://wordpress.org/support/topic/applepay-on-checkout-block-broken-in-production-and-virgin-sandbox-test-mode/)
+= 3.3.85 - 04/24/25 =
+* Added - Amazon Pay support for currencies USD, AUD, GBP, DKK, EUR, HKD, JPY, NZD, NOK, ZAR, SEK, CHF.
+* Added - WC Tested to 9.8
+= 3.3.84 - 03/18/25 =
+* Fixed - Pay for order error when order created manually by admin. [https://wordpress.org/support/topic/500-error-when-trying-to-pay-for-order-from-admin/](https://wordpress.org/support/topic/500-error-when-trying-to-pay-for-order-from-admin/)
+= 3.3.83 - 03/15/25 =
+* Fixed - Error on checkout block "The type of the provided source is link. This does not match the expected type card."
+* Fixed - Horizontal scroll on checkout page when Apple Pay selected.
+* Fixed - On checkout block, don't show "use another payment method" if there are no saved payment methods
+* Fixed - Card option for UPM would not deactivate when unchecked. [https://wordpress.org/support/topic/universal-payment-method-card-issue/](https://wordpress.org/support/topic/universal-payment-method-card-issue/)
+= 3.3.82 - 02/17/25 =
+* Fixed - Klarna not showing for certain EEA countries.
+* Added - Improved description on Klarna Settings page showing the plugin rules for when Klarna is available.
+= 3.3.81 - 02/11/25 =
+* Fixed - Incompatibility with WooCommerce Smart Coupons. Issue resolved where items were appearing in cart/removed from cart when payment buttons enabled on product pages.
+* Updated - Klarna rules so merchants can offer Klarna in more currencies and countries
+= 3.3.80 - 12/20/2024 =
+* Fixed - missing file introduced in 3.3.79
+= 3.3.79 - 12/20/2024 =
+* Added - Test mode validation so live keys can't be entered in test mode fields
+* Added - Bulk action on Products page so product level Stripe settings can be removed
+* Added - Alt tags to the credit card icons displayed next to the payment method title
+= 3.3.78 - 11/19/2024 =
+* Added - Buy Now Pay Later payment method support for manual subscription renewal
+* Added - Klarna support for Romania (RON currency)
+* Added - Klarna Order status option on Klarna Settings page
+* Fixed - SEPA error on Add Payment Method page if Stripe inline form enabled
+= 3.3.77 - 11/03/2024 =
+* Fixed - WeChat pay error on checkout block when place order button clicked
+* Added - Klarna support for Czech Republic (CZK currency)
+= 3.3.76 - 10/07/2024 =
+* Added - WC Tested to 9.3
+* Added - TWINT payments
+* Fixed - [https://wordpress.org/support/topic/bug-card-error-causes-inoperable-checkout-button/](https://wordpress.org/support/topic/bug-card-error-causes-inoperable-checkout-button/)
+= 3.3.75 - 08/20/2024 =
+* Fixed - If currency changes on checkout page, update universal payment element so available methods is current.
+* Fixed - Only re-render the card form if the updated_checkout event results in the HTML being replaced. [Support thread](https://wordpress.org/support/topic/changing-field-contents-reloads-stripe-dialog-and-empties-it/)
+* Fixed - Error related to micro-deposits when using ACH
+* Added - WC Tested to 9.2
+* Added - Scheduled action to ensure dropped card orders get processed if they're successful within Stripe but interrupted by a 3rd party plugin issue.
+* Updated - Webhook API version to 2022-08-01
+= 3.3.74 - 07/16/2024 =
+* Added - WordPress 6.6 compatibility
+= 3.3.73 - 06/27/2024 =
+* Fixed - Mandate error for ACH payments when using checkout block. [https://wordpress.org/support/topic/error-code-pops-up-when-customer-try-to-pay-with-ach/](https://wordpress.org/support/topic/error-code-pops-up-when-customer-try-to-pay-with-ach/)
+* Fixed - If there are duplicate payment methods saved in the WooCommerce payment_tokens table, ensure the row created by this plugin is used.
+* Added - Users can now switch seamlessly from the FunnelKit Stripe plugin to this plugin.
+= 3.3.72 - 06/20/2024 =
+* Fixed - handleCardAction action error triggered when GPay requires 3DS
+* Fixed - Apple Pay showing pending total for cart and checkout block when only digital goods in cart (this did not affect payment functionality)
+* Updated - Improved integration with German Market plugin by MarketPress
+= 3.3.71 - 05/30/2024 =
+* Added - MobilePay payments can be authorized or captured
+* Added - Extended authorizations for card payments. [Stripe Docs](https://docs.stripe.com/payments/extended-authorization). Make sure your account is eligible before enabling this feature.
+* Added - EUR support for Revolut. EUR support is in beta so make sure it's enabled on your Stripe account.
+= 3.3.70 - 05/21/2024 =
+* Added - Amazon Pay, Cash App, Revolut, Zip Pay, MobilePay can now be used as stand alone gateways. They can also be used in the Universal Payment Method.
+* Added - Support for recurring payments for iDEAL
+* Added - SEPA, ACH, and other payment methods added to the My Account > Add Payment Method page
+* Added - New payment notice for Apple Pay and GPay which provides improved instructions on checkout page. This must be enabled for all merchants that have used previous versions of the plugin. [Screenshot](https://imgur.com/aFD1Eq9d)
+* Added - Option to create Stripe customers for guest checkout. [https://wordpress.org/support/topic/create-a-stripe-customer-account-on-purchase/](https://wordpress.org/support/topic/create-a-stripe-customer-account-on-purchase/)
+* Updated - Consolidated code for smaller Javascript files
+* Updated - Improved ACH integration which now supports micro-deposit verification
+* Updated - If Afterpay/Clearpay is disabled, don't show messaging either. The messaging relied on the Messaging Section settings but Afterpay should also be enabled before messaging shows.
+= 3.3.62 - 05/9/2024 =
+* Added - Universal Payment Method integration
+* Added - Amazon Pay, Zip Pay, Cashapp, Revolut
+* Updated - Multibanco integration now uses Payment Intent API
+= 3.3.61 - 04/25/2024 =
+* Added - Klarna support for CZK
+* Added - WC Tested to 8.8
+* Added - GPay button radius option
+* Fixed - Only load the WooCommerce Product Add-On script if payment buttons are enabled on product pages
+* Fixed - [https://wordpress.org/support/topic/fatal-error-after-updated-to-latest-version/](https://wordpress.org/support/topic/fatal-error-after-updated-to-latest-version/)
+= 3.3.60 - 03/18/2024 =
+* Added - Order button text translations added to the wpml-config.xml file.
+* Added - Refund reason in the refund metadata. https://wordpress.org/support/topic/metadata-in-refunds/
+* Added - Stripe refund ID in order notes when a refund is processed
+* Fixed - Fullname is required error message encountered with Link using checkout shortcode.
+* Fixed - Ensure ACH payments use the order_status option if it's not set to default. https://wordpress.org/support/topic/the-order-status-feature-in-general-settings-doesnt-work/
+= 3.3.59 - 02/23/2024 =
+* Added - Support for the Swish payment method popular in Sweden
+* Updated - Translations used by the checkout blog integration. Translations used in the checkout shortcode will now work on the cart block and checkout block
+= 3.3.58 - 02/16/2024 =
+* Added - Filter wc_stripe_capture_charge_failed so merchants can perform custom actions after a failed capture of an authorized payment
+* Fixed - On pay for order page, resolved error if card triggered insufficient funds error and then customer used a saved card instead
+= 3.3.57 - 02/07/2024 =
+* Updated - Improved compatibility with FunnelKit order bump when cart total is $0
+* Updated - For card payments, replaced "statement_descriptor" property with "statement_descriptor_suffix". [Stripe announcement](https://support.stripe.com/questions/use-of-the-statement-descriptor-parameter-on-paymentintents-for-card-charges)
+* Updated - Improved Link Checkout integration with Checkout Block
+= 3.3.56 - 01/26/2024 =
+* Fixed - Stripe payment form not submitting if 100% off coupon used on subscription.
+* Fixed - Compatibility with CheckoutWC side-cart and GPay
+* Added - Add Link to payment_method_types array if needed on recurring payment
+* Added - Option on Advanced Settings page where the Link popup can be enabled/disabled
+* Added - Disable pay for order by phone if order is not created yet.
+[https://wordpress.org/support/topic/conflict-with-sequential-order-numbers-and-admin-phone-order-feature/](https://wordpress.org/support/topic/conflict-with-sequential-order-numbers-and-admin-phone-order-feature/)
+* Added - Option to save ACH payment method on checkout page
+* Updated - Removed the "created" key from payment intent metadata since it's redundant. The Payment Intent object already has the creation time as a property.
+= 3.3.55 - 01/01/2024 =
 * Added - Support for Afterpay, Affirm, and Klarna messaging on the Cart Block
 * Added - Clearpay icon so merchants can choose which icon appears on checkout page if they're not relying on the messaging element
 * Fixed - Afterpay message settings being ignored after version 3.3.53 release
@@ -290,321 +443,3 @@ to give merchants the option on what button style they use.
 * Fixed - Don't remove coupon notice on checkout page if there is an error message that should be displayed.
 * Fixed - Rare error that can occur when processing a subscription with a free trial on checkout page using Credit Card.
 * Fixed - If local payment method is unsupported due to currency or billing country on checkout page, select next available payment method so place order button text updates.
-= 3.3.15 =
-* Added - France and Ireland to Klarna
-* Added -Notice in capture modal if the capture amount is less than the order total. This notice is a reminder that merchants should update
-the order line items if the capture amount is less than the order amount as it leads to better accounting.
-* Added - OXXO voucher expiration days option
-* Added - Option to include OXXO voucher link in order on-hold email sent to customer.
-* Updated - WeChat redirect to thank you page after qrcode is scanned and user clicks "complete order".
-
-= 3.3.14 =
-* Added - Locale setting in Advanced Settings where you can use the site's locale or let Stripe determine it using the 'auto' feature.
-* Added - Statement descriptor option in the Advanced Settings section
-* Added - GPay button type options such as "Pay", "Order", "Checkout", "Subscribe"
-* Added - GPay button locale filter. Default is to use locale setting in Wordpress if it's a supported GPay locale.
-* Fixed - Afterpay error if 100% added to checkout page
-* Fixed - JS error in IE11 when 3DS processing
-= 3.3.13 =
-* Fixed - Error message when using saved payment method for zero total subscription.
-* Fixed - Undefined variable: gateways message on edit product page if no Stripe payment gateways are enabled.
-* Added - Webhooks can be created from API Settings page.
-* Added - Advanced Settings page where new options like Stripe fee, email receipt, etc can be managed.
-* Added - Option to refund on order cancellation
-* Added - Webhook charge.dispute.created, charge.dispute.closed, review.opened, review.closed functionality.
-* Added - Klarna PaymentIntent integration. This new integration redirects to the Klarna payment page rather then the Klarna widget.
-= 3.3.12 =
-* Fixed - Klarna bug on checkout where sometimes the form wouldn't submit after confirming payment in the Klarna modal.
-* Updated - Removed "browser icons" and replaced with the corresponding wallet icon. Example, if Browser Payments enabled and customer
-is using chrome, GPay icon will show instead of chrome icon.
-* Fixed - Only show the Stripe email option on the WooCommerce Email Settings page and not on individual email sections.
-* Fixed - Error on Blocks checkout page if custom form has not been implemented.
-* Added - Added new filter wc_stripe_should_save_payment_method
-= 3.3.11 =
-* Updated - Changed plugin name to "Payment Plugins for Stripe WooCommerce" at the request of Wordpress.org Plugin Review Team.
-* Updated - If user is logged out and guest checkout is disabled, show save card checkbox if enabled.
-* Added - Filter "wc_stripe_api_request_error_message" for more control over custom error messages.
-* Added - Filter "wc_stripe_pay_order_statuses" so merchants can control when the Pay for Order button appears on the order details page.
-= 3.3.10 =
-* Added - Save card checkbox now shows (if enabled in Credit Card Setting) for guest users that select to create new account on checkout page.
-* Added - Capability check to Admin profile
-* Added - Option in WeChat settings to control QRCode size
-* Added - Klarna test mode sms code "123456"
-* Added - Filter "wc_stripe_get_element_options" which can be used to control the locale.
-* Removed - Filter "wc_stripe_local_element_options" since "wc_stripe_get_element_options" can be used instead.
-* Fixed - WooCommerce Blocks express checkout error when currency's number of decimals set to 0
-* Updated - wpml-config.xml now includes additional admin-text entries
-= 3.3.9 =
-* Added - OXXO payment method support for standard checkout and [WooCommerce Blocks](https://wordpress.org/plugins/woo-gutenberg-products-block/)
-* Added - WeChat support for currencies CNY, DKK, NOK, SEC, CHF
-* Added - Validate that Boleto CPF / CNPJ field has been populated before placing order
-* Added - Filter "wc_stripe_local_element_options" which can be used to customize the locale of the local payment method
-* Updated - Don't rely on WooCommerce Setting "Number of decimals" when converting amount to cents.
-= 3.3.8 =
-* Added - Boleto payment method support for standard checkout and [WooCommerce Blocks](https://wordpress.org/plugins/woo-gutenberg-products-block/)
-* Added - Better support for WooCommerce One Page Checkout plugin. 3DS is now requested for cards when required on product page.
-* Added - Currencies with 3 decimal places (BHD, IQD, JOD, KWD, LYD, OMR, TND) to function wc_stripe_get_currencies
-* Updated - WC Tested up to 5.6
-* Fixed - Mini cart unblock if there is a payment processing error
-= 3.3.7 =
-* Added - If locale is "fi" change to "fi-FI"
-* Added - Filter "wc_stripe_get_klarna_args"
-* Updated - PHP8, replace round with wc_format_decimal for GPay
-= 3.3.6 =
-* Added - WooFunnels integration that supports credit cards, Apple Pay, GPay, and Payment Request gateway
-* Added - Support for "WooCommerce All Products For Subscriptions" plugin
-* Added - Round GPay totals to 2 decimals points since GPay will only accept a maximum of 2 decimals
-* Fixed - Klarna ensure item totals always add up to order total to prevent "Bad Value" error.
-= 3.3.5 =
-* Fixed - BECS not always redirecting to the order received thank you page
-* Fixed - Mini-cart issue where GPay button wasn't rendering due to styling change
-* Fixed - Apple Pay all white button which was rendering as a black button
-* Fixed - FPX "return_url" required when confirming payment intent error that could occasionally occur in test mode.
-* Fixed - Invalid argument supplied for foreach() notice if no credit card icons selected for the Credit Card Gateway
-* Fixed - If a saved SEPA payment method exists on checkout page, it was being selected instead of a new account.
-* Fixed - Credit card icons not rendering in IE11 browser.
-= 3.3.4 =
-* Fixed - Plaid charge.succeeded webhook
-* Fixed - Warning message when all credit card icons are disabled on checkout page
-* Added - Afterpay messaging to mini-cart
-* Added - Afterpay option to hide messaging if the items in the cart are not eligible for Afterpay
-* Updated - Afterpay can only process payments in the currency that maps to the Stripe account's registered country. Examples: US > USD AU > AUD. This is a requirement of Afterpay.
-* Updated - Made improvements to [Cartflows](https://wordpress.org/plugins/cartflows/) integration
-= 3.3.3 =
-* Added - [Cartflows](https://wordpress.org/plugins/cartflows/) support added for Credit Cards, Apple Pay, and Google Pay
-* Fixed - Klarna order status remaining as pending in some scenarios and checkout page would not redirect to thank you page
-* Fixed - Klarna [WooCommerce Blocks](https://wordpress.org/plugins/woo-gutenberg-products-block/) object comparison error
-= 3.3.2 =
-* Added - Render Clearpay logo when billing country is GB or currency is GBP
-* Updated - GPay buttonSizeMode set to fill
-* Fixed - Notice "handleCardAction: The PaymentIntent supplied is not in the requires_action state" if payment method uses 3DS and there are insufficient funds
-= 3.3.1 =
-* Added - Afterpay payment integration. Afterpay messaging can be added to the product pages, cart page, and checkout page
-* Fixed - Compatibility between new WooCommerce Blocks integration, Elementor, & Divi.
-* Updated - Converted P24 to use Payment Intents. Previously the integration used Sources. Stripe's API now requires that P24 use email address.
-* Updated - Only load WooCommerce Blocks integration if WooCommerce Blocks is installed as a feature plugin
-* Updated - Klarna disable place order button while payment options load. [Support request](https://wordpress.org/support/topic/klarna-problem-loading-frame/)
-= 3.3.0 =
-* Added - [WooCommerce Blocks](https://wordpress.org/plugins/woo-gutenberg-products-block/) plugin support. All Stripe plugin payment methods are supported.
-= 3.2.15 =
-* Fixed - Setup intent confirmation error if order contains subscription trail period and checkout fields fail validation.
-* Fixed - CheckoutWC plugin compatibility on checkout page load.
-* Added - Shortcode [wc_stripe_payment_buttons] for payment buttons so they can be rendered anywhere on product or cart pages.
-= 3.2.14 =
-* Added - Klarna pink background image
-* Added - Klarna locale prevent unsupported formats. Example: convert de-DE-formal to de-DE
-* Added - Klarna support for Spain, Belgium, and Italy
-* Added - Filter wc_stripe_klarna_get_required_parameters so available country and currencies can be  customized
-* Added - Filter wc_stripe_get_card_custom_field_options so attributes like placeholder can be added to custom forms
-* Fixed - Payment Wallets: split full name by spaces and pass last value as last name. Prevents issue where some users have name entered as Mr. John Smith and order name comes out as Mr John.
-= 3.2.13 =
-* Added - Save new payment method to subscription when failed renewal order is paid for.
-* Added - Permission check "manage_woocommerce" added to Edit Product page for rendering Stripe settings
-* Added - If shipping phone field exists and is empty, populate using GPay/Apple Pay phone number returned
-* Updated - WC Tested up to 5.0
-* Updated - Stripe PHP SDK 7.72.0
-* Updated - Fix change_payment_method request logic so it's processed in the process_payment function
-* Updated - Adjust cart page buttons so last button doesn't have bottom margin
-* Updated - Performance improvement on checkout page when saving a payment method and processing order
-* Updated - Don't show payment method buttons on external products
-= 3.2.12 =
-* Added - billing_details property to local payment methods
-* Added - Improved support for multisite. Replaced use of get_user_meta with get_user_option
-* Added - Filter wc_stripe_get_customer_id
-* Added - Filter wc_stripe_save_customer
-* Added - Stripe token object added to filter wc_stripe_get_token_formats
-* Added - Payment method formats (Credit Card, Apple Pay, Google Pay)
-* Added - Added address property to customer create and update API call
-* Added - New GPay rounded corners icon
-* Added - Additional credit card form error messages for translation.
-* Added - Guest checkout for Pre-Order products where payment method must be saved.
-* Updated - Removed stripe customer Id from metadata since it's redundant. Customer ID is already associated with charge object
-* Updated - Admin Pay for order - display message if order is not created or doesn't have pending payment status
-= 3.2.11 =
-* Added - WC tested up to: 4.9.0
-* Added - Compatibility for Cartflows redirect to global checkout when local payment method used.
-* Added - Refund webhook: if refunded total equals order total, re-stock product(s)
-* Fixed - Apple Pay and Payment Request button disabled on product page when variable product has multiple variations
-* Fixed - 3DS issue on order pay page if credit card gateway not pre-selected
-* Fixed - Setup intent not created if 100% coupon entered on checkout page for subscription
-* Updated - If any required fields missing on product or cart page checkout, redirect to checkout page where customer can enter required fields then click Place Order
-= 3.2.10 =
-* Added - Refund webhook support so refunds created in Stripe dashboard sync with WooCommerce store
-* Added - Option to control when local payment methods are visible on checkout page based on billing country
-* Added - wc_stripe_refund_args filter
-* Added - Support for SEPA subscription amount changes
-* Added - SEPA to subscription customer change payment method page
-* Added - Filter so frontend error html can be customized
-* Added - Authorize option for Klarna payments so they can be authorized or captured
-* Added - Handle SCA for subscriptions with free trial
-* Fixed - Sorting of Apple Pay payment methods in Apple Wallet
-* Updated - GPay gateway converted to payment intents for SCA.
-* Updated - Credit card form moved Saved Card label to right of checkbox
-= 3.2.9 =
-* Updated - WP tested to 5.6
-* Updated - Tested with PHP 8
-* Added - GrabPay gateway
-* Added - Promise polyfill for older browsers
-* Added - GPay added SCA required fields (https://developers.google.com/pay/api/web/guides/resources/sca)
-* Added - Order button text option for local payment methods
-* Added - new filter wc_stripe_force_save_payment_method
-= 3.2.8 =
-* Updated - Changed function wc_stripe to stripe_wc because WooCommerce Stripe Payment Gateway introduced a function with same name in version 4.5.4 which caused a fatal error.
-* Updated - Apple Pay and GPay - if billing address already populated, don't request it in wallet.
-* Updated - Convert long version of state/province for GPay to abbreviation. California = CA
-* Updated - Updated Klarna checkout flow for improved user experience.
-= 3.2.7 =
-* Added - Better support for mixed cart/checkout page using Elementor
-* Added - wc_stripe_save_order_meta action added so custom data can be added to order
-* Added - Improved support for WooCommerce Multilingual
-= 3.2.6 =
-* Fixed - Apple Pay duplicate button in express checkout
-* Added - Transaction url in order details
-* Added - Check for existence of WC queue when loading
-= 3.2.5 =
-* Added - Support for right to left (RTL) languages
-* Added - WPML gateway country availability compatibility
-* Added - WPML product page currency change
-* Fixed - Change event for ship_to_different_address
-* Fixed - Update required fields on checkout page load
-= 3.2.4 =
-* Fixed - Payment request button disappearing on variable product page
-* Updated - Only validate visible fields on checkout page
-* Update - WC tested up to 4.6.0
-* Added - SEPA WooCommerce Subscriptions support
-* Added - Autofocus on custom credit card forms
-= 3.2.3 =
-* Fixed - 3DS pop up on order pay page
-* Fixed - One time use coupon error when 3DS triggered on checkout page
-* Fixed - Formatting in class-wc-stripe-admin-notices.php
-* Added - Apple Pay, GPay, Payment Request, do not request shipping address or shipping options on checkout page if customer has already filled out shipping fields
-= 3.2.2 =
-* Fixed - 403 for logged out user when link-token fetched on checkout page
-* Added - Payment method format for GPay. Example: Visa 1111 (Google Pay)
-* Added - Filter for product and cart page checkout so 3rd party plugins can add custom fields to checkout process
-* Updated - Stripe PHP lib version to 7.52.0
-= 3.2.1 =
-* Updated - Plaid Link integration to use new Link Token
-* Updated - Convert state long name i.e. Texas = TX in case address is not abbreviated in wallet
-* Updated - On checkout page, only request phone and email in Apple Pay and GPay if fields are empty
-* Fixed - Issue where JS error triggered if cart/checkout page combined using Elementor
-* Fixed - Apple Pay and Payment Request wallet requiring shipping address for variable virtual products
-= 3.2.0 =
-* Fixed - Conflict with Checkout Field Editor for WooCommerce and JS checkout field variable
-* Fixed - Mini-cart html
-* Fixed - SEPA JS error on checkout page
-* Added - WC tested to 4.4.1
-* Updated - removed selectWoo as form-handler.js dependency
-= 3.1.9 =
-* Fixed - WP 5.5 rest permission_callback notice
-* Fixed - Conflict with SG Optimizer plugin
-* Fixed - Conflict with https://wordpress.org/plugins/woocommerce-gateway-paypal-express-checkout/ button on checkout page
-= 3.1.8 =
-* Fixed - Do not redirect to order received page if customer has not completed local payment process
-* Fixed - Disable Apple Pay button on variation product when no default product is selected
-* Added - Mini-cart integration for GPay and Apple Pay.
-* Added - Filter wc_stripe_get_source_args added
-* Added - Email validation for local payment methods
-* Added - WC tested up to: 4.3.2
-* Updated - Stripe PHP lib version 7.45.0
-= 3.1.7 =
-* Fixed - SEPA payment flow
-* Added - BECS payment method
-* Updated - Stripe php lib version 7.40.0
-* Updated - AliPay display logic
-= 3.1.6 = 
-* Updated - WC tested to 4.3.0
-* Updated - Bumped PHP min version to 5.6
-* Updated - Stripe php lib version 7.39.0
-* Updated - Apple domain registration check for existing domain
-* Fixed - Notice on cart page when payment request button active and cart emptied
-* Fixed - Google Pay fee line item in wallet
-* Added - New filters for API requests
-= 3.1.5 = 
-* Fixed - Capture type on product page checkout
-* Fixed - WP 5.4.2 deprecation message for namespaces
-* Fixed - PHP 7.4 warning message
-* Updated - Error message API uses $.scroll_to_notices when available
-* Updated - Apple Pay and Payment Request require phone and email based on required billing fields
-* Updated - Webkit autofill text color
-* Added - Non numerical check to wc_stripe_add_number_precision function
-= 3.1.4 = 
-* Updated - WC 4.2.0 support
-* Added - Validation for local payment methods to ensure payment option cannot be empty
-* Added - Account ID to Stripe JS initialization
-* Added - Local payment method support for manual subscriptions
-* Fixed - Exception that occurs after successful payment of a renewal order retry. 
-= 3.1.3 = 
-* Added - WC 4.1.1 support
-* Added - Klarna payment categories option
-* Added - Order ID filter added
-* Added - Local payment button filter so text on buttons can be changed
-* Update - Webhook controller returns 401 for failed signature
-= 3.1.2 = 
-* Added - Merchants can now control which payment buttons appear for each product and their positioning
-* Added - VAT tax display for Apple Pay, GPay, Payment Request
-* Added - Optional Stripe email receipt
-* Updated - Stripe API version to 2020-03-02
-* Fixed - iDEAL not redirecting on order pay page.
-= 3.1.1 = 
-* Fixed - Error when changing WCS payment method to new ACH payment method
-* Fixed - Error when payment_intent status 'success' and order cancelled status applied
-* Added - Recipient email for payment_intent
-* Added - Translations for credit card decline errors
-* Added - Option to force 3D secure for all transactions
-* Added - Option to show generic credit card decline error
-* Added - SEPA mandate message on checkout page
-* Updated - Google Pay documentation
-= 3.1.0 = 
-* Added - FPX payment method
-* Added - Alipay payment method
-* Updated - Stripe connect integration
-* Updated - WeChat support for other countries besides CN
-* Updated - CSS so prevent theme overrides
-* Fixed - WeChat QR code
-= 3.0.9 = 
-* Added - Payment methods with payment sheets like Apple Pay now show order items on order pay page instead of just total.
-* Fixed - Error if 100% off coupon is used on checkout page.
-= 3.0.8 = 
-* Updated - billing phone and email check added for card payment
-* Updated - template checkout/payment-method.php name changed to checkout/stripe-payment-method.php
-* Updated - cart checkout button styling
-* Added - Connection test in admin API settings
-* Misc - WC 3.9.1
-= 3.0.7 = 
-* Added - WPML support for gateway titles and descriptions
-* Added - ACH fee option
-* Added - Webhook registration option in Admin
-* Updated - Cart one click checkout buttons
-* Updated - WC 3.9
-= 3.0.6 = 
-* Added - ACH subscription support
-* Updated - Top of checkout styling
-* Updated =Positioning of cart buttons. They are now below cart checkout button
-= 3.0.5 =
-* Added - ACH payment support
-* Added - New credit card form
-* Fixed - Klarna error if item totals don't equal order total.
-* Updated - API version to 2019-12-03
-* Updated - Local payment logic.
-= 3.0.4 =
-* Added - Bootstrap form added
-* Updated - WC 3.8.1
-* Fixed - Check for customer object in Admin pages for local payment methods
-= 3.0.3 = 
-* Fixed - Check added to wc_stripe_order_status_completed function to ensure capture charge is only called when Stripe is the payment gateway for the order.
-* Updated - Stripe API version to 2019-11-05
-= 3.0.2 = 
-* Added - Klarna payments now supported
-* Added - Bancontact
-* Updated - Local payments webhook
-= 3.0.1 = 
-* Updated - Google Pay paymentDataCallbacks in JavaScript
-* Updated - Text domain to match plugin slug
-* Added - Dynamic price option for Google Pay
-* Added - Pre-orders support
-= 3.0.0 = 
-* First commit
-
-== Upgrade Notice ==
-= 3.0.0 = 

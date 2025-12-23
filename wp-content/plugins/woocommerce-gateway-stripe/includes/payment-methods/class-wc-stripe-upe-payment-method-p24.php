@@ -8,8 +8,13 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 class WC_Stripe_UPE_Payment_Method_P24 extends WC_Stripe_UPE_Payment_Method {
 
-	const STRIPE_ID = 'p24';
+	const STRIPE_ID = WC_Stripe_Payment_Methods::P24;
 
+	/**
+	 * Legacy payment method class reference.
+	 *
+	 * @deprecated 10.2.0 This constant is deprecated and will be removed in future versions.
+	 */
 	const LPM_GATEWAY_CLASS = WC_Gateway_Stripe_P24::class;
 
 	/**
@@ -18,9 +23,9 @@ class WC_Stripe_UPE_Payment_Method_P24 extends WC_Stripe_UPE_Payment_Method {
 	public function __construct() {
 		parent::__construct();
 		$this->stripe_id            = self::STRIPE_ID;
-		$this->title                = __( 'Pay with Przelewy24', 'woocommerce-gateway-stripe' );
+		$this->title                = __( 'Przelewy24', 'woocommerce-gateway-stripe' );
 		$this->is_reusable          = false;
-		$this->supported_currencies = [ 'EUR', 'PLN' ];
+		$this->supported_currencies = [ WC_Stripe_Currency_Code::EURO, WC_Stripe_Currency_Code::POLISH_ZLOTY ];
 		$this->label                = __( 'Przelewy24', 'woocommerce-gateway-stripe' );
 		$this->description          = __(
 			'Przelewy24 is a Poland-based payment method aggregator that allows customers to complete transactions online using bank transfers and other methods.',

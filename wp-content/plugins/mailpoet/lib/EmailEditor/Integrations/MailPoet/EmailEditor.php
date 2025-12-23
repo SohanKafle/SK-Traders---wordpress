@@ -5,46 +5,68 @@ namespace MailPoet\EmailEditor\Integrations\MailPoet;
 if (!defined('ABSPATH')) exit;
 
 
-use MailPoet\Entities\NewsletterEntity;
-use MailPoet\Features\FeaturesController;
-use MailPoet\Newsletter\NewslettersRepository;
-use MailPoet\Util\Security;
+use MailPoet\EmailEditor\Integrations\MailPoet\Patterns\PatternsController;
+use MailPoet\EmailEditor\Integrations\MailPoet\Templates\TemplatesController;
 use MailPoet\WP\Functions as WPFunctions;
+use MailPoet\WPCOM\DotcomHelperFunctions;
 
 class EmailEditor {
   const MAILPOET_EMAIL_POST_TYPE = 'mailpoet_email';
 
-  /** @var WPFunctions */
-  private $wp;
+  private WPFunctions $wp;
 
-  /** @var FeaturesController */
-  private $featuresController;
+  private EmailApiController $emailApiController;
 
-  /** @var NewslettersRepository */
-  private $newsletterRepository;
+  private EditorPageRenderer $editorPageRenderer;
 
-  /** @var EmailApiController */
-  private $emailApiController;
+  private PatternsController $patternsController;
+
+  private Cli $cli;
+
+  private EmailEditorPreviewEmail $emailEditorPreviewEmail;
+
+  private PersonalizationTagManager $personalizationTagManager;
+
+  private TemplatesController $templatesController;
+
+  private DotcomHelperFunctions $dotcomHelperFunctions;
 
   public function __construct(
     WPFunctions $wp,
-    FeaturesController $featuresController,
-    NewslettersRepository $newsletterRepository,
-    EmailApiController $emailApiController
+    EmailApiController $emailApiController,
+    EditorPageRenderer $editorPageRenderer,
+    EmailEditorPreviewEmail $emailEditorPreviewEmail,
+    PatternsController $patternsController,
+    TemplatesController $templatesController,
+    Cli $cli,
+    DotcomHelperFunctions $dotcomHelperFunctions,
+    PersonalizationTagManager $personalizationTagManager
   ) {
     $this->wp = $wp;
-    $this->featuresController = $featuresController;
-    $this->newsletterRepository = $newsletterRepository;
     $this->emailApiController = $emailApiController;
+    $this->editorPageRenderer = $editorPageRenderer;
+    $this->patternsController = $patternsController;
+    $this->templatesController = $templatesController;
+    $this->cli = $cli;
+    $this->dotcomHelperFunctions = $dotcomHelperFunctions;
+    $this->emailEditorPreviewEmail = $emailEditorPreviewEmail;
+    $this->personalizationTagManager = $personalizationTagManager;
   }
 
   public function initialize(): void {
-    if (!$this->featuresController->isSupported(FeaturesController::GUTENBERG_EMAIL_EDITOR)) {
-      return;
+    $this->cli->initialize();
+    $this->wp->addFilter('woocommerce_email_editor_post_types', [$this, 'addEmailPostType']);
+    $this->wp->addAction('rest_delete_mailpoet_email', [$this->emailApiController, 'trashEmail'], 10, 1);
+    $this->wp->addFilter('woocommerce_is_email_editor_page', [$this, 'isEditorPage'], 10, 1);
+    $this->wp->addFilter('replace_editor', [$this, 'replaceEditor'], 10, 2);
+    $this->wp->addFilter('woocommerce_email_editor_send_preview_email', [$this->emailEditorPreviewEmail, 'sendPreviewEmail'], 10, 1);
+    // Skip classic patterns and templates in Garden environment.
+    if (!$this->dotcomHelperFunctions->isGarden()) {
+      $this->patternsController->registerPatterns();
+      $this->templatesController->initialize();
     }
-    $this->wp->addFilter('mailpoet_email_editor_post_types', [$this, 'addEmailPostType']);
-    $this->wp->addFilter('save_post', [$this, 'onEmailSave'], 10, 2);
     $this->extendEmailPostApi();
+    $this->personalizationTagManager->initialize();
   }
 
   public function addEmailPostType(array $postTypes): array {
@@ -61,25 +83,16 @@ class EmailEditor {
     return $postTypes;
   }
 
-  /**
-   * This method ensures that saved email has an associated newsletter entity.
-   * In the future we will also need to save additional parameters like subject, type, etc.
-   */
-  public function onEmailSave($postId, \WP_Post $post): void {
-    if ($post->post_type !== self::MAILPOET_EMAIL_POST_TYPE) { // phpcs:ignore Squiz.NamingConventions.ValidVariableName.MemberNotCamelCaps
-      return;
+  public function isEditorPage(bool $isEditorPage): bool {
+    if ($isEditorPage) {
+      return $isEditorPage;
     }
-    $newsletter = $this->newsletterRepository->findOneBy(['wpPostId' => $postId]);
-    if ($newsletter) {
-      return;
+    // We need to check early if we are on the email editor page. The check runs early so we can't use current_screen() here.
+    if ($this->wp->isAdmin() && isset($_GET['post']) && isset($_GET['action']) && $_GET['action'] === 'edit') {
+      $post = $this->wp->getPost((int)$_GET['post']);
+      return $post && $post->post_type === self::MAILPOET_EMAIL_POST_TYPE; // phpcs:ignore Squiz.NamingConventions.ValidVariableName.MemberNotCamelCaps
     }
-    $newsletter = new NewsletterEntity();
-    $newsletter->setWpPostId($postId);
-    $newsletter->setSubject('New Editor Email ' . $postId);
-    $newsletter->setType(NewsletterEntity::TYPE_STANDARD); // We allow only standard emails in the new editor for now
-    $newsletter->setHash(Security::generateHash());
-    $this->newsletterRepository->persist($newsletter);
-    $this->newsletterRepository->flush();
+    return false;
   }
 
   public function extendEmailPostApi() {
@@ -88,5 +101,14 @@ class EmailEditor {
       'update_callback' => [$this->emailApiController, 'saveEmailData'],
       'schema' => $this->emailApiController->getEmailDataSchema(),
     ]);
+  }
+
+  public function replaceEditor($replace, $post) {
+    $currentScreen = get_current_screen();
+    if ($post->post_type === self::MAILPOET_EMAIL_POST_TYPE && $currentScreen) { // phpcs:ignore Squiz.NamingConventions.ValidVariableName.MemberNotCamelCaps
+      $this->editorPageRenderer->render();
+      return true;
+    }
+    return $replace;
   }
 }

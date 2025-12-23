@@ -82,7 +82,8 @@ class Widget extends \WP_Widget {
     }
 
     $languageAttributes = WPFunctions::get()->applyFilters(
-      'language_attributes', implode(' ', $languageAttributes)
+      'language_attributes',
+      implode(' ', $languageAttributes)
     );
 
     $data = [
@@ -99,7 +100,7 @@ class Widget extends \WP_Widget {
 
     try {
       // We control the template and the data is sanitized
-      // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped, WordPressDotOrg.sniffs.OutputEscaping.UnescapedOutputParameter
+      // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
       echo $this->renderer->render('form/iframe.html', $data);
     } catch (\Exception $e) {
       echo esc_html($e->getMessage());
@@ -113,8 +114,8 @@ class Widget extends \WP_Widget {
    */
   public function update($newInstance, $oldInstance) {
     $instance = $oldInstance;
-    $instance['title'] = strip_tags($newInstance['title']);
-    $instance['form'] = (int)$newInstance['form'];
+    $instance['title'] = strip_tags(is_string($newInstance['title']) ? $newInstance['title'] : '');
+    $instance['form'] = is_numeric($newInstance['form']) ? (int)$newInstance['form'] : null;
     return $instance;
   }
 
@@ -140,7 +141,7 @@ class Widget extends \WP_Widget {
     // get forms list
     $forms = $this->formsRepository->findBy(['deletedAt' => null], ['name' => 'asc']);
     ?><p>
-      <label for="<?php esc_attr($this->get_field_id( 'title' )) ?>"><?php echo esc_html(__('Title:', 'mailpoet')); ?></label>
+      <label for="<?php echo esc_attr($this->get_field_id('title')) ?>"><?php echo esc_html(__('Title:', 'mailpoet')); ?></label>
       <input
         type="text"
         class="widefat"
@@ -170,6 +171,8 @@ class Widget extends \WP_Widget {
   }
 
   /**
+   * @phpstan-ignore-next-line $args are not passed to parent and our rendering is custom so it is ok that $args doesn't match parent's $arg shape.
+   * @param array{form?: int|string, form_type?: string, before_widget?: string, after_widget?: string, before_title?: string, after_title?: string } $args Widget arguments.
    * Output the widget itself.
    */
   public function widget($args, $instance = null) {
@@ -264,15 +267,45 @@ class Widget extends \WP_Widget {
       try {
         $output = $renderer->render('form/front_end_form.html', $data);
         $output = WPFunctions::get()->doShortcode($output);
-        $output = $this->wp->applyFilters('mailpoet_form_widget_post_process', $output);
+
+        // Define the exact keys we want to keep for the filter context
+        $allowed_keys = [
+            'form_html_id' => null,
+            'form_id' => null,
+            'form_type' => null,
+            'form_success_message' => null,
+            'title' => null,
+            'styles' => null,
+            'html' => null,
+            'before_widget' => null,
+            'after_widget' => null,
+            'before_title' => null,
+            'after_title' => null,
+        ];
+
+        // Create a new context array for the filter, containing only the allowed keys.
+        // This automatically excludes 'success', 'error', 'token', and 'api_version'.
+        $filter_context_data = array_intersect_key($data, $allowed_keys);
+        
+        /**
+        * Filters the rendered MailPoet form HTML after shortcodes are processed.
+        *
+        * @since TBD Added the $data context parameter.
+        *
+        * @param string                $output Rendered form HTML.
+        * @param array<string, mixed>  $filter_context_data   Rendering context (form id, type, styles, and more).
+        * @return string Filtered HTML.
+        */
+        $output = $this->wp->applyFilters('mailpoet_form_widget_post_process', $output, $filter_context_data);
       } catch (\Exception $e) {
         $output = $e->getMessage();
       }
     }
 
     if ($formType === 'widget') {
+      /** @var string $output */
       // We control the template and the data is sanitized
-      // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped, WordPressDotOrg.sniffs.OutputEscaping.UnescapedOutputParameter
+      // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
       echo $output;
     } else {
       return $output;

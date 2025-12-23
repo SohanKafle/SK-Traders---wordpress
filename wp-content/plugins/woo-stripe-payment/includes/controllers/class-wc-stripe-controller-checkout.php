@@ -10,7 +10,7 @@ if ( ! class_exists( 'WC_Stripe_Rest_Controller' ) ) {
  *
  * @since   3.0.0
  * @author  PaymentPlugins
- * @package Stripe/Controllers
+ * @package PaymentPlugins\Controllers
  */
 class WC_Stripe_Controller_Checkout extends WC_Stripe_Rest_Controller {
 
@@ -173,6 +173,9 @@ class WC_Stripe_Controller_Checkout extends WC_Stripe_Rest_Controller {
 		try {
 			if ( ! $order || ! hash_equals( $order_key, $order->get_order_key() ) ) {
 				throw new Exception( __( 'You are not authorized to update this order.', 'woo-stripe-payment' ) );
+			}
+			if ( ! $order->needs_payment() ) {
+				throw new Exception( sprintf( __( 'This order&rsquo;s status is &ldquo;%s&rdquo;&mdash;it cannot be paid for. Please contact us if you need assistance.', 'woocommerce' ), wc_get_order_status_name( $order->get_status() ) ) );
 			}
 			$wp->set_query_var( 'order-pay', $order_id );
 			$order->set_payment_method( $payment_method->id );

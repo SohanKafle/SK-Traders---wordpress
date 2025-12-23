@@ -8,13 +8,15 @@ if ( ! class_exists( 'WC_Payment_Gateway_Stripe' ) ) {
 
 /**
  *
- * @package Stripe/Gateways
+ * @package PaymentPlugins\Gateways
  * @author  PaymentPlugins
  *
  */
 class WC_Payment_Gateway_Stripe_ApplePay extends WC_Payment_Gateway_Stripe {
 
 	use WC_Stripe_Payment_Intent_Trait;
+
+	use WC_Stripe_Express_Payment_Trait;
 
 	protected $payment_method_type = 'card';
 
