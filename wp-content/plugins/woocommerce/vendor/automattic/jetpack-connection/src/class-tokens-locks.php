@@ -17,6 +17,8 @@ namespace Automattic\Jetpack\Connection;
  *
  * @see https://github.com/Automattic/jetpack/pull/23597
  * @see \Automattic\Jetpack\Connection\Tokens::is_locked()
+ *
+ * @phan-constructor-used-for-side-effects
  */
 class Tokens_Locks {
 
@@ -73,5 +75,4 @@ class Tokens_Locks {
 		add_filter( 'ai1wm_export', array( $this, 'aiowpm_set_lock' ), 180 );
 		add_filter( 'ai1wm_export', array( $this, 'aiowpm_remove_lock' ), 250 );
 	}
-
 }
